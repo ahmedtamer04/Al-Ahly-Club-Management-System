@@ -7,3 +7,31 @@ Database tables
   5-Vendor
   6-Admin
   7-Events Office
+
+/project-root
+  /backend
+    /config
+      db.js                 <-- Mongo connection
+    /models                 <-- Mongoose schemas
+      User.js
+      Event.js
+      Registration.js
+      VendorApplication.js
+      Comment.js
+      Facility.js
+    /routes                 <-- API endpoints
+      authRoutes.js
+      userRoutes.js
+      eventRoutes.js
+      vendorRoutes.js
+    /controllers            <-- Business logic
+    /middleware
+    server.js               <-- Express entry point
+    package.json
+  /frontend
+    /src
+      /components
+      /pages
+      /services             <-- API calls (axios/fetch)
+    package.json
+.env                        <-- secrets (MONGO_URI, JWT_SECRET, etc.)
