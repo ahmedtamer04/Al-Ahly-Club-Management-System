@@ -11,8 +11,8 @@ import { auth, requireAdmin } from "../middleware/auth.js";
 const router = express.Router();
 
 // All admin routes require authentication and Admin role
-router.use(auth);
-router.use(requireAdmin);
+router.use(auth);           // ← Must have valid token (any role)
+router.use(requireAdmin);   // ← Must be Admin role specifically
 
 // Create Admin or EventsOffice user
 router.post("/create-admin", createAdminUser);
