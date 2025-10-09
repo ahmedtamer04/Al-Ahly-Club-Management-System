@@ -4,7 +4,7 @@ import {
   deleteAdminUser, 
   getAdminUsers, 
   getUserById 
-} from "../controllers/adminController.JS";
+} from "../controllers/adminController.js"; // Changed from .JS to .js
 import { auth, requireAdmin } from "../middleware/auth.js";
 
 const router = express.Router();
