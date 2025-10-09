@@ -4,7 +4,7 @@ import { getAllFacilities, addFacility } from "../controllers/facilityController
 const router = express.Router();
 
 // Routes
-router.get("/", getAllFacilities);    // GET all courts
-router.post("/", addFacility);        // Add a new court (for testing)
+router.get("/courts", getAllFacilities);    // GET all courts
+router.post("/courts", addFacility);        // Add a new court (for testing)
 
 export default router;
