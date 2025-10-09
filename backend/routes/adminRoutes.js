@@ -5,6 +5,7 @@ import {
   getAdminUsers, 
   getUserById 
 } from "../controllers/adminController.js"; // Changed from .JS to .js
+
 import { auth, requireAdmin } from "../middleware/auth.js";
 
 const router = express.Router();
