@@ -105,3 +105,31 @@ export const logoutUser = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
+
+// Add this to authController.js (TEMPORARY - remove after creating admin)
+export const createFirstAdmin = async (req, res) => {
+  try {
+    const salt = await bcrypt.genSalt(10);
+    const hash = await bcrypt.hash("admin123", salt);
+
+    const admin = await User.create({
+      first_name: "Super",
+      last_name: "Admin", 
+      email: "superadmin@guc.edu.eg",
+      id_number: "SUPER-ADMIN",
+      password_hash: hash,
+      role: "Admin",
+      status: "active",
+      is_verified: true,
+      role_admin_verified: true
+    });
+
+    // Remove password from response
+    const adminResponse = { ...admin.toObject() };
+    delete adminResponse.password_hash;
+
+    res.status(201).json({ message: "First admin created", admin: adminResponse });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
