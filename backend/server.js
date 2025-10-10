@@ -11,6 +11,7 @@ import authRoutes from "./routes/authRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
 import facilityRoutes from "./routes/facilityRoutes.js";
 import gymSessionsRoutes from "./routes/gymSessionsRoutes.js";
+import bazaarRoutes from "./routes/bazaarRoutes.js";
 
 
 const app = express();
@@ -32,6 +33,7 @@ app.use("/auth", authRoutes);
 app.use("/admin", adminRoutes);
 app.use("/api/facilities", facilityRoutes);
 app.use("/api/gym-sessions", gymSessionsRoutes);
+app.use("/api/bazaars", bazaarRoutes);
 // Basic route for testing
 app.get("/", (req, res) => {
   res.json({ message: "Al-Ahly Club Management System API" });
