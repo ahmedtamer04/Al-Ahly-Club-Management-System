@@ -2,11 +2,11 @@ import nodemailer from 'nodemailer';
 import crypto from 'crypto';
 
 // Configure email transporter (using Gmail as example)
-const transporter = nodemailer.createTransporter({
+const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
     user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS  // Use app password, not regular password
+    pass: process.env.EMAIL_PASS
   }
 });
 
@@ -49,8 +49,9 @@ export const sendVerificationEmail = async (email, token, userRole, userName) =>
   };
 
   try {
-    await transporter.sendMail(mailOptions);
+    const info = await transporter.sendMail(mailOptions);
     console.log(`✅ Verification email sent to ${email}`);
+    console.log(`Message ID: ${info.messageId}`);
   } catch (error) {
     console.error('❌ Error sending email:', error);
     throw new Error('Failed to send verification email');

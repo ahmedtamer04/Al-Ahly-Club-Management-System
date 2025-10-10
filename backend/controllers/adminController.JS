@@ -1,6 +1,5 @@
 import User from "../models/User.js";
 import bcrypt from "bcryptjs";
-import { generateVerificationToken, sendVerificationEmail } from "../services/emailService.js";
 
 // Create Admin or EventsOffice user
 export const createAdminUser = async (req, res) => {
@@ -193,26 +192,27 @@ export const approveUser = async (req, res) => {
       return res.status(400).json({ message: "Only Staff, TA, and Professor users need approval" });
     }
 
-    // Generate verification token (24 hours expiry)
-    const verificationToken = generateVerificationToken();
-    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
-
-    // 1. Admin approval happens
+    // INSTANT ACTIVATION - NO EMAIL NEEDED
     user.role_admin_verified = true;
-    user.email_verification_token = verificationToken;
-    user.email_verification_expires = expiresAt;
+    user.is_verified = true;          // ← Set to true immediately
+    user.status = "active";           // ← Set to active immediately
     await user.save();
 
-    // 2. Email is sent AUTOMATICALLY right here! ⚡
-    await sendVerificationEmail(
-      user.email, 
-      verificationToken, 
-      user.role, 
-      `${user.first_name} ${user.last_name}`
-    );
+    res.json({ 
+      message: `${user.role} user approved and activated successfully`,
+      user: {
+        id: user._id,
+        name: `${user.first_name} ${user.last_name}`,
+        email: user.email,
+        role: user.role,
+        status: user.status,           // Will be "active"
+        is_verified: user.is_verified, // Will be true
+        role_admin_verified: user.role_admin_verified // Will be true
+      }
+    });
 
-    res.json({ message: `User approved. Verification email sent to ${user.email}` });
   } catch (err) {
+    console.error('Error approving user:', err);
     res.status(500).json({ message: err.message });
   }
 };
