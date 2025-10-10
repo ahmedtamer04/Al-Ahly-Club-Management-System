@@ -1,5 +1,6 @@
 import User from "../models/User.js";
 import bcrypt from "bcryptjs";
+import { generateVerificationToken, sendVerificationEmail } from "../services/emailService.js";
 
 // Create Admin or EventsOffice user
 export const createAdminUser = async (req, res) => {
@@ -150,6 +151,152 @@ export const getUserById = async (req, res) => {
 
   } catch (err) {
     console.error('Error fetching user:', err);
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// Get all pending users (Staff, TA, Professor)
+export const getPendingUsers = async (req, res) => {
+  try {
+    const pendingUsers = await User.find({ 
+      status: "pending",
+      role: { $in: ["Staff", "TA", "Professor"] }
+    }).select('-password_hash -email_verification_token');
+
+    res.json({
+      message: "Pending users retrieved successfully",
+      users: pendingUsers,
+      total: pendingUsers.length
+    });
+
+  } catch (err) {
+    console.error('Error fetching pending users:', err);
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// Admin approves user and sends verification email
+export const approveUser = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    if (user.status !== "pending") {
+      return res.status(400).json({ message: "User is not pending approval" });
+    }
+
+    if (!["Staff", "TA", "Professor"].includes(user.role)) {
+      return res.status(400).json({ message: "Only Staff, TA, and Professor users need approval" });
+    }
+
+    // Generate verification token (24 hours expiry)
+    const verificationToken = generateVerificationToken();
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+
+    // 1. Admin approval happens
+    user.role_admin_verified = true;
+    user.email_verification_token = verificationToken;
+    user.email_verification_expires = expiresAt;
+    await user.save();
+
+    // 2. Email is sent AUTOMATICALLY right here! ⚡
+    await sendVerificationEmail(
+      user.email, 
+      verificationToken, 
+      user.role, 
+      `${user.first_name} ${user.last_name}`
+    );
+
+    res.json({ message: `User approved. Verification email sent to ${user.email}` });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// Email verification endpoint
+export const verifyEmail = async (req, res) => {
+  try {
+    const { token } = req.params;
+
+    const user = await User.findOne({
+      email_verification_token: token,
+      email_verification_expires: { $gt: Date.now() }
+    });
+
+    if (!user) {
+      return res.status(400).json({ 
+        message: "Invalid or expired verification token. Please contact admin to resend verification email." 
+      });
+    }
+
+    // Complete user registration
+    user.is_verified = true;
+    user.status = "active";
+    user.email_verification_token = undefined;
+    user.email_verification_expires = undefined;
+    await user.save();
+
+    res.json({ 
+      message: "Email verified successfully! Your registration is now complete and your account is active.",
+      user: {
+        id: user._id,
+        name: `${user.first_name} ${user.last_name}`,
+        email: user.email,
+        role: user.role,
+        status: user.status
+      }
+    });
+
+  } catch (err) {
+    console.error('Error verifying email:', err);
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// Resend verification email (if needed)
+export const resendVerificationEmail = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    if (!user.role_admin_verified) {
+      return res.status(400).json({ message: "User is not approved by admin yet" });
+    }
+
+    if (user.is_verified) {
+      return res.status(400).json({ message: "User is already verified" });
+    }
+
+    // Generate new verification token
+    const verificationToken = generateVerificationToken();
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+    user.email_verification_token = verificationToken;
+    user.email_verification_expires = expiresAt;
+    await user.save();
+
+    // Send verification email
+    await sendVerificationEmail(
+      user.email, 
+      verificationToken, 
+      user.role, 
+      `${user.first_name} ${user.last_name}`
+    );
+
+    res.json({ 
+      message: `Verification email resent to ${user.email}` 
+    });
+
+  } catch (err) {
+    console.error('Error resending verification email:', err);
     res.status(500).json({ message: err.message });
   }
 };

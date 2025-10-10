@@ -3,27 +3,36 @@ import {
   createAdminUser, 
   deleteAdminUser, 
   getAdminUsers, 
-  getUserById 
-} from "../controllers/adminController.js"; // Changed from .JS to .js
-
+  getUserById,
+  getPendingUsers,
+  approveUser,
+  verifyEmail,
+  resendVerificationEmail
+} from "../controllers/adminController.js";
 import { auth, requireAdmin } from "../middleware/auth.js";
 
 const router = express.Router();
 
-// All admin routes require authentication and Admin role
-router.use(auth);           // ← Must have valid token (any role)
-router.use(requireAdmin);   // ← Must be Admin role specifically
+// Admin authentication required for all routes except email verification
+router.use("/verify-email", (req, res, next) => next()); // Allow email verification without auth
 
-// Create Admin or EventsOffice user
+// All other admin routes require authentication and Admin role
+router.use(auth);
+router.use(requireAdmin);
+
+// Admin user management
 router.post("/create-admin", createAdminUser);
-
-// Delete Admin or EventsOffice user
 router.delete("/delete-admin/:userId", deleteAdminUser);
-
-// Get all Admin and EventsOffice users
 router.get("/admin-users", getAdminUsers);
-
-// Get specific user by ID
 router.get("/user/:userId", getUserById);
 
+// User approval system
+router.get("/pending-users", getPendingUsers);
+router.post("/approve/:userId", approveUser);
+router.post("/resend-verification/:userId", resendVerificationEmail);
+
 export default router;
+
+// Email verification route (no auth required)
+export const emailVerificationRoute = express.Router();
+emailVerificationRoute.get("/verify-email/:token", verifyEmail);
