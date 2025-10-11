@@ -6,12 +6,12 @@ const conferenceSchema = new mongoose.Schema({
         required: [true, "Please enter conference name"]
     },
 
-    start_date: {
+    startDate: {
         type: Date,
         required: true
     },
 
-    end_date: {
+    endDate: {
         type: Date,
         required: true
     },
@@ -36,7 +36,7 @@ const conferenceSchema = new mongoose.Schema({
         required: [true, "Please enter the required budget"]
     },
 
-    funding_source: {
+    fundingSource: {
         type: String,
         required: [true, "Please enter the source of funding"],
         enum: ["External", "GUC"]

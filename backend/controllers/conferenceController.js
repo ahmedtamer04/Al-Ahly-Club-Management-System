@@ -2,13 +2,17 @@ import Conference from "../models/conference.js";
 
 export const createConference = async (req, res) => {
   try {
-    const { name, start_date, end_date, description, agenda, website, budget, funding_source, resources } = req.body;
+    const { name, startDate, endDate, description, agenda, website, budget, fundingSource, resources } = req.body;
 
-    if (!name || !start_date || !end_date || !description || !agenda || !website || !budget || !funding_source || !resources) {
-      return res.status(400).json({ message: "All fields are required" });
+    if (!name || !startDate || !endDate || !description || !agenda || !website || !budget || !fundingSource || !resources) {
+      return res.status(400).json({ message: "All fields are required: name, startDate, endDate, description, agenda, website, budget, fundingSource, resources" });
     }
 
-    const conference = new Conference({ name, start_date, end_date, description, agenda, website, budget, funding_source, resources });
+    if (!startDate || new Date(startDate) < new Date()) {
+      return res.status(400).json({ message: "Start date must be in the future" });
+    }
+
+    const conference = new Conference({ name, startDate, endDate, description, agenda, website, budget, fundingSource, resources });
     await conference.save();
 
     res.status(201).json({ message: " Conference created successfully", conference });
@@ -20,11 +24,11 @@ export const createConference = async (req, res) => {
 export const editConference = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, start_date, end_date, description, agenda, website, budget, funding_source, resources } = req.body;
+    const { name, startDate, endDate, description, agenda, website, budget, fundingSource, resources } = req.body;
 
     const updatedConference = await Conference.findByIdAndUpdate(
       id,
-      { name, start_date, end_date, description, agenda, website, budget, funding_source, resources },
+      { name, startDate, endDate, description, agenda, website, budget, fundingSource, resources },
       { new: true }
     );
 

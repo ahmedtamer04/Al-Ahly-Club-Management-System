@@ -1,4 +1,5 @@
 import express from "express";
+import { auth, requireEventsOffice, requireStudentOrAbove} from "../middleware/auth.js";
 import {
   createConference,
   editConference
@@ -6,7 +7,9 @@ import {
 
 const router = express.Router();
 
-router.post("/", createConference);
-router.put("/:id", editConference); 
+router.use(auth);
+
+router.post("/create", requireEventsOffice, createConference);
+router.put("/:id", requireEventsOffice, editConference); 
 
 export default router;
