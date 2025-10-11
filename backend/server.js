@@ -33,7 +33,7 @@ app.use("/auth", authRoutes);
 app.use("/admin", adminRoutes);
 app.use("/api/facilities", facilityRoutes);
 app.use("/api/gym-sessions", gymSessionsRoutes);
-app.use("/api/bazaars", bazaarRoutes);
+app.use("/bazaar", bazaarRoutes);
 // Basic route for testing
 app.get("/", (req, res) => {
   res.json({ message: "Al-Ahly Club Management System API" });
