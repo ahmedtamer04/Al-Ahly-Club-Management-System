@@ -1,5 +1,4 @@
 import express from "express";
-import { requireAuth, requireRole } from "../middleware/auth.js";
 import { createTrip, updateTrip, getTrip, listTrips } from "../controllers/tripController.js";
 
 const router = express.Router();
