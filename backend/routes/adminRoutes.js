@@ -25,6 +25,11 @@ router.post("/create-admin", createAdminUser);
 router.delete("/delete-admin/:userId", deleteAdminUser);
 router.get("/admin-users", getAdminUsers);
 router.get("/user/:userId", getUserById);
+router.get("/users", getAllUsers);
+
+// User management and moderation
+router.post("/user/:userId/block", toggleUserBlock);
+router.delete("/comment/:commentId", deleteComment);
 
 // User approval system
 router.get("/pending-users", getPendingUsers);
