@@ -7,11 +7,13 @@ import express from "express";
 import cors from "cors";
 import connectDB from "./config/db.js";
 import authRoutes from "./routes/authRoutes.js";
+import tripRoutes from "./routes/tripRoutes.js";
 
 import adminRoutes from "./routes/adminRoutes.js";
 import facilityRoutes from "./routes/facilityRoutes.js";
 import gymSessionsRoutes from "./routes/gymSessionsRoutes.js";
 import conferenceRoutes from "./routes/conferenceRoutes.js";
+import bazaarRoutes from "./routes/bazaarRoutes.js";
 
 
 const app = express();
@@ -29,15 +31,19 @@ connectDB();
 
 // Routes
 
+
 app.use("/auth", authRoutes);
 app.use("/admin", adminRoutes);
 app.use("/api/facilities", facilityRoutes);
 app.use("/api/gym-sessions", gymSessionsRoutes);
 app.use("/api/conference", conferenceRoutes);
+app.use("/bazaar", bazaarRoutes);
+app.use("/api/trips", tripRoutes);
 // Basic route for testing
 app.get("/", (req, res) => {
   res.json({ message: "Al-Ahly Club Management System API" });
 });
+
 
 const PORT = process.env.PORT || 5000;
 
