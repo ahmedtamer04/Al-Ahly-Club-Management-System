@@ -8,13 +8,10 @@ const router = express.Router();
 router.use(auth);
 
 // Create trip (EventsOffice only)
-
-
-// Create trip (EventsOffice only)
 router.post("/createTrip", requireEventsOffice, createTrip);
 
 // Edit trip (EventsOffice only, with server-side edit lock)
-router.patch("/updateTrip/:id", requireEventsOffice, updateTrip);
+router.put("/updateTrip/:id", requireEventsOffice, updateTrip);
 
 // Fetch single trip (any authenticated)
 router.get("/getTrip/:id", requireStudentOrAbove, getTrip);
