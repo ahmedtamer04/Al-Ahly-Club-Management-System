@@ -5,19 +5,19 @@ import { createTrip, updateTrip, getTrip, listTrips } from "../controllers/tripC
 const router = express.Router();
 
 // All routes require authentication
-router.use(requireAuth);
+
 
 // Create trip (EventsOffice only)
-router.post("/", requireRole(["EventsOffice"]), createTrip);
+router.post("/createTrip", createTrip);
 
 // Edit trip (EventsOffice only, with server-side edit lock)
-router.patch("/:id", requireRole(["EventsOffice"]), updateTrip);
+router.patch("updateTrip/:id", updateTrip);
 
 // Fetch single trip (any authenticated)
-router.get("/:id", getTrip);
+router.get("/getTrip/:id", getTrip);
 
 // List trips with filters (any authenticated)
-router.get("/", listTrips);
+router.get("/listTrips", listTrips);
 
 export default router;
 
