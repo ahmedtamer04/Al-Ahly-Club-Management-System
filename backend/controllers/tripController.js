@@ -1,4 +1,5 @@
 import Trip from "../models/Trip.js";
+import mongoose from "mongoose";
 
 const parsePagination = (req) => {
   const page = Math.max(1, parseInt(req.query.page || "1", 10));
@@ -54,57 +55,51 @@ export const createTrip = async (req, res) => {
 
 export const updateTrip = async (req, res) => {
   try {
-    const id = req.params.id;
-    const updates = (({
-      name,
-      location,
-      price,
-      startDate,
-      endDate,
-      time,
-      shortDescription,
-      capacity,
-      registrationDeadline,
-      status,
-      lastEditReason
-    }) => ({
-      name,
-      location,
-      price,
-      startDate,
-      endDate,
-      time,
-      shortDescription,
-      capacity,
-      registrationDeadline,
-      status,
-      lastEditReason
-    }))(req.body);
+    // Change from req.params._id to req.params.id
+    const tripId = req.params.id;  // ← Fix this line
+    
+    console.log("Trip ID received:", tripId); // Debug log
+    
+    if (!tripId) {
+      return res.status(400).json({ message: "Trip ID is required" });
+    }
 
-    // Remove undefined fields
-    Object.keys(updates).forEach((k) => updates[k] === undefined && delete updates[k]);
+    // Validate ObjectId format
+    if (!mongoose.Types.ObjectId.isValid(tripId)) {
+      return res.status(400).json({ message: "Invalid trip ID format" });
+    }
 
-    const existing = await Trip.findById(id);
-    if (!existing) return res.status(404).json({ message: "Trip not found" });
+    const existing = await Trip.findById(tripId);
+    console.log("Trip found:", existing ? "Yes" : "No"); // Debug log
+    
+    if (!existing) {
+      return res.status(404).json({ message: "Trip not found" });
+    }
 
+    // Check if trip can still be edited
     if (Date.now() >= new Date(existing.startDate).getTime()) {
-      return res.status(409).json({ message: "Cannot edit a trip that has already started" });
+      return res.status(409).json({ 
+        message: "Cannot edit a trip that has already started" 
+      });
     }
 
-    // If dates being changed, re-validate relationships will run in schema validate
-    updates.lastEditedBy = req.user._id;
+    // Rest of your existing update logic...
+    const updates = req.body;
+    if (req.user && req.user._id) {
+      updates.lastEditedBy = req.user._id;
+    }
 
-    // Use findByIdAndUpdate with runValidators for mongoose validation and unique index handling
-    const updated = await Trip.findByIdAndUpdate(id, updates, { new: true, runValidators: true, context: "query" });
-    return res.status(200).json(updated);
+    Object.assign(existing, updates);
+    const updated = await existing.save();
+
+    res.json({
+      message: "Trip updated successfully",
+      trip: updated
+    });
+
   } catch (err) {
-    if (err && err.code === 11000) {
-      return res.status(409).json({ message: "Trip with same name and startDate already exists" });
-    }
-    if (err?.errors) {
-      return res.status(422).json({ message: "Validation error", errors: err.errors });
-    }
-    return res.status(500).json({ message: err.message });
+    console.error('Update trip error:', err);
+    res.status(500).json({ message: err.message });
   }
 };
 
