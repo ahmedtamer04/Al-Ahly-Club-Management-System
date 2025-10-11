@@ -30,6 +30,13 @@ export const createBazaar = async (req, res) => {
       return res.status(400).json({ message: "Invalid date format. Use YYYY-MM-DD format" });
     }
 
+    // Prevent creating bazaars in the past
+    const currentDate = new Date();
+    currentDate.setHours(0, 0, 0, 0); // Start of today for fair comparison
+    if (startDate < currentDate) {
+      return res.status(400).json({ message: "Cannot create a bazaar with a start date in the past" });
+    }
+
     // Business logic validations are handled by the model's pre-save middleware
     // But we can add extra checks here if needed
     if (startDate > endDate) {
@@ -151,6 +158,13 @@ export const editBazaar = async (req, res) => {
     const finalStartDate = updates.start_date || bazaar.start_date;
     const finalEndDate = updates.end_date || bazaar.end_date;
     const finalRegDeadline = updates.registration_deadline || bazaar.registration_deadline;
+
+    // Prevent editing bazaar to start in the past
+    const currentDate = new Date();
+    currentDate.setHours(0, 0, 0, 0); // Start of today for fair comparison
+    if (finalStartDate < currentDate) {
+      return res.status(400).json({ message: "Cannot update bazaar to start in the past" });
+    }
 
     if (finalStartDate > finalEndDate) {
       return res.status(400).json({ message: "Start date must be before end date" });
