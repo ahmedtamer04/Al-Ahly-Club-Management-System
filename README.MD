@@ -36,7 +36,7 @@ hello
 
 ---
 
-## 📊 Database Schema Documentation
+## 📊 Database Schema Documentat
 
 This project uses MongoDB with Mongoose for data modeling. Below is the comprehensive schema structure for the Al-Ahly University Platform.
 
@@ -172,4 +172,4 @@ The system follows a document-based NoSQL approach using MongoDB, with the follo
 - **Status Enums**: Consistent state management
 - **Timestamp Tracking**: Audit trail for all operations
 
-This schema supports a comprehensive university platform with event management, user authentication, vendor services, and facility booking capabilities.
+This schema supports a comprehensive university platform with event management, user authentication, vendor services, and facility booking capabilitis
