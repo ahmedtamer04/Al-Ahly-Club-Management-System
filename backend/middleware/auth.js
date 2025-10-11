@@ -48,6 +48,7 @@ export const authorize = (...roles) => {
 
 // Specific role middlewares
 export const requireAdmin = authorize('Admin');
+export const requireEventsOffice = authorize('EventsOffice');
 export const requireAdminOrEventsOffice = authorize('Admin', 'EventsOffice');
 export const requireStaffOrAbove = authorize('Admin', 'EventsOffice', 'Staff', 'Professor', 'TA');
 export const requireStudentOrAbove = authorize('Admin', 'EventsOffice', 'Staff', 'Professor', 'TA', 'Student');
