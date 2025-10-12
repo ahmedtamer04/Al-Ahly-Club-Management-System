@@ -53,3 +53,7 @@ export const requireAdminOrEventsOffice = authorize('Admin', 'EventsOffice');
 export const requireStaffOrAbove = authorize('Admin', 'EventsOffice', 'Staff', 'Professor', 'TA');
 export const requireStudentOrAbove = authorize('Admin', 'EventsOffice', 'Staff', 'Professor', 'TA', 'Student');
 export const requireVendor = authorize('Vendor');
+
+// Aliases for backward compatibility
+export const requireAuth = auth;
+export const requireRole = authorize;
