@@ -1,6 +1,8 @@
 import User from "../models/User.js";
 import VendorApplication from "../models/VendorApplication.js";
+import Comment from "../models/Comment.js";
 import bcrypt from "bcryptjs";
+import { generateVerificationToken, sendVerificationEmail } from "../services/emailService.js";
 
 // Create Admin or EventsOffice user
 export const createAdminUser = async (req, res) => {
