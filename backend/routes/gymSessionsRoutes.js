@@ -9,9 +9,9 @@ import {
 const router = express.Router();
 
 // Gym Session Routes
-router.post("/", createGymSession);              // Create a session
-router.put("/:id", editGymSession);              // Edit session (date/time/duration)
-router.patch("/:id/cancel", cancelGymSession);   // Cancel session
-router.get("/schedule", viewGymSchedule);        // View monthly schedule
+router.post("/createGymSession", createGymSession);              // Create a session
+router.put("/editGymSession/:id", editGymSession);              // Edit session (date/time/duration)
+router.patch("/cancelGymSession/:id", cancelGymSession);   // Cancel session
+router.get("/viewGymSchedule", viewGymSchedule);        // View monthly schedule
 
 export default router;
