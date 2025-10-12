@@ -258,6 +258,108 @@ export const verifyEmail = async (req, res) => {
   }
 };
 
+// Delete inappropriate comment
+export const deleteComment = async (req, res) => {
+  try {
+    const { commentId } = req.params;
+    
+    const comment = await Comment.findById(commentId);
+    if (!comment) {
+      return res.status(404).json({ message: "Comment not found" });
+    }
+
+    // Mark comment as deleted and store who deleted it
+    comment.status = "deleted";
+    comment.deleted_by = req.user._id;
+    await comment.save();
+
+    res.json({ 
+      message: "Comment deleted successfully",
+      comment: {
+        id: comment._id,
+        event_id: comment.event_id,
+        deleted_by: req.user._id,
+        deleted_at: new Date()
+      }
+    });
+
+  } catch (err) {
+    console.error('Error deleting comment:', err);
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// Block/Unblock user
+export const toggleUserBlock = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { action } = req.body; // action should be either "block" or "unblock"
+
+    if (!["block", "unblock"].includes(action)) {
+      return res.status(400).json({ message: "Invalid action. Use 'block' or 'unblock'" });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Prevent blocking other admins
+    if (user.role === "Admin") {
+      return res.status(403).json({ message: "Cannot block admin users" });
+    }
+
+    // Update user status
+    user.status = action === "block" ? "blocked" : "active";
+    await user.save();
+
+    res.json({
+      message: `User ${action}ed successfully`,
+      user: {
+        id: user._id,
+        name: `${user.first_name} ${user.last_name}`,
+        email: user.email,
+        role: user.role,
+        status: user.status
+      }
+    });
+
+  } catch (err) {
+    console.error('Error toggling user block status:', err);
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// Get all users with details
+export const getAllUsers = async (req, res) => {
+  try {
+    const users = await User.find()
+      .select('-password_hash -email_verification_token')
+      .sort({ createdAt: -1 });
+
+    res.json({
+      message: "Users retrieved successfully",
+      users: users.map(user => ({
+        id: user._id,
+        name: `${user.first_name} ${user.last_name}`,
+        email: user.email,
+        role: user.role,
+        status: user.status,
+        id_number: user.id_number,
+        is_verified: user.is_verified,
+        role_admin_verified: user.role_admin_verified,
+        created_at: user.createdAt,
+        updated_at: user.updatedAt
+      })),
+      total: users.length
+    });
+
+  } catch (err) {
+    console.error('Error fetching all users:', err);
+    res.status(500).json({ message: err.message });
+  }
+};
+
 // Resend verification email (if needed)
 export const resendVerificationEmail = async (req, res) => {
   try {
