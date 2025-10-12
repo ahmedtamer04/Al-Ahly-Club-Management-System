@@ -9,6 +9,19 @@ export const createGymSession = async (req, res) => {
       return res.status(400).json({ message: "All fields are required" });
     }
 
+    // Prevent creating gym sessions in the past
+    const sessionDate = new Date(date);
+    const currentDate = new Date();
+    currentDate.setHours(0, 0, 0, 0); // Start of today for fair comparison
+    
+    if (isNaN(sessionDate.getTime())) {
+      return res.status(400).json({ message: "Invalid date format" });
+    }
+    
+    if (sessionDate < currentDate) {
+      return res.status(400).json({ message: "Cannot create a gym session with a date in the past" });
+    }
+
     const session = new GymSession({ date, time, duration, type, maxParticipants });
     await session.save();
 
@@ -23,6 +36,21 @@ export const editGymSession = async (req, res) => {
   try {
     const { id } = req.params;
     const { date, time, duration } = req.body;
+
+    // Validate date if it's being updated
+    if (date) {
+      const sessionDate = new Date(date);
+      const currentDate = new Date();
+      currentDate.setHours(0, 0, 0, 0); // Start of today for fair comparison
+      
+      if (isNaN(sessionDate.getTime())) {
+        return res.status(400).json({ message: "Invalid date format" });
+      }
+      
+      if (sessionDate < currentDate) {
+        return res.status(400).json({ message: "Cannot update gym session to a date in the past" });
+      }
+    }
 
     const updatedSession = await GymSession.findByIdAndUpdate(
       id,
