@@ -39,6 +39,8 @@ router.get("/users", getAllUsers);
 // User management and moderation
 router.post("/user/:userId/block", toggleUserBlock);
 router.delete("/comment/:commentId", deleteComment);
+router.get("/admin-users", requireAdmin, getAdminUsers);
+router.get("/user/:userId", requireAdmin, getUserById);
 
 // User approval system
 router.get("/pending-users", getPendingUsers);
