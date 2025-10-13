@@ -50,6 +50,12 @@ export const authorize = (...roles) => {
 export const requireAdmin = authorize('Admin');
 export const requireEventsOffice = authorize('EventsOffice');
 export const requireAdminOrEventsOffice = authorize('Admin', 'EventsOffice');
+export const requireStudent=authorize('Student');
+export const requireProfessor=authorize('Professor');
 export const requireStaffOrAbove = authorize('Admin', 'EventsOffice', 'Staff', 'Professor', 'TA');
 export const requireStudentOrAbove = authorize('Admin', 'EventsOffice', 'Staff', 'Professor', 'TA', 'Student');
 export const requireVendor = authorize('Vendor');
+
+// Aliases for backward compatibility
+export const requireAuth = auth;
+export const requireRole = authorize;

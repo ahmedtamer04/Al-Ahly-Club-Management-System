@@ -1,5 +1,8 @@
 import User from "../models/User.js";
+import VendorApplication from "../models/VendorApplication.js";
+import Comment from "../models/Comment.js";
 import bcrypt from "bcryptjs";
+import { generateVerificationToken, sendVerificationEmail } from "../services/emailService.js";
 
 // Create Admin or EventsOffice user
 export const createAdminUser = async (req, res) => {
@@ -257,6 +260,108 @@ export const verifyEmail = async (req, res) => {
   }
 };
 
+// Delete inappropriate comment
+export const deleteComment = async (req, res) => {
+  try {
+    const { commentId } = req.params;
+    
+    const comment = await Comment.findById(commentId);
+    if (!comment) {
+      return res.status(404).json({ message: "Comment not found" });
+    }
+
+    // Mark comment as deleted and store who deleted it
+    comment.status = "deleted";
+    comment.deleted_by = req.user._id;
+    await comment.save();
+
+    res.json({ 
+      message: "Comment deleted successfully",
+      comment: {
+        id: comment._id,
+        event_id: comment.event_id,
+        deleted_by: req.user._id,
+        deleted_at: new Date()
+      }
+    });
+
+  } catch (err) {
+    console.error('Error deleting comment:', err);
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// Block/Unblock user
+export const toggleUserBlock = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { action } = req.body; // action should be either "block" or "unblock"
+
+    if (!["block", "unblock"].includes(action)) {
+      return res.status(400).json({ message: "Invalid action. Use 'block' or 'unblock'" });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Prevent blocking other admins
+    if (user.role === "Admin") {
+      return res.status(403).json({ message: "Cannot block admin users" });
+    }
+
+    // Update user status
+    user.status = action === "block" ? "blocked" : "active";
+    await user.save();
+
+    res.json({
+      message: `User ${action}ed successfully`,
+      user: {
+        id: user._id,
+        name: `${user.first_name} ${user.last_name}`,
+        email: user.email,
+        role: user.role,
+        status: user.status
+      }
+    });
+
+  } catch (err) {
+    console.error('Error toggling user block status:', err);
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// Get all users with details
+export const getAllUsers = async (req, res) => {
+  try {
+    const users = await User.find()
+      .select('-password_hash -email_verification_token')
+      .sort({ createdAt: -1 });
+
+    res.json({
+      message: "Users retrieved successfully",
+      users: users.map(user => ({
+        id: user._id,
+        name: `${user.first_name} ${user.last_name}`,
+        email: user.email,
+        role: user.role,
+        status: user.status,
+        id_number: user.id_number,
+        is_verified: user.is_verified,
+        role_admin_verified: user.role_admin_verified,
+        created_at: user.createdAt,
+        updated_at: user.updatedAt
+      })),
+      total: users.length
+    });
+
+  } catch (err) {
+    console.error('Error fetching all users:', err);
+    res.status(500).json({ message: err.message });
+  }
+};
+
 // Resend verification email (if needed)
 export const resendVerificationEmail = async (req, res) => {
   try {
@@ -297,6 +402,347 @@ export const resendVerificationEmail = async (req, res) => {
 
   } catch (err) {
     console.error('Error resending verification email:', err);
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// ================================
+// VENDOR APPLICATION MANAGEMENT
+// ================================
+
+// 1. View all vendor participation requests
+export const getAllVendorRequests = async (req, res) => {
+  try {
+    const { status, bazaar_id, kind, page = 1, limit = 20 } = req.query;
+    
+    // Build filter object
+    let filter = {};
+    
+    if (status && ['pending', 'accepted', 'rejected'].includes(status)) {
+      filter.status = status;
+    }
+    
+    if (bazaar_id) {
+      filter.bazaar_id = bazaar_id;
+    }
+    
+    if (kind && ['bazaar', 'booth_platform'].includes(kind)) {
+      filter.kind = kind;
+    }
+
+    // Calculate pagination
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    // Get vendor applications with populated data
+    const applications = await VendorApplication.find(filter)
+      .populate({
+        path: 'vendor_user_id',
+        select: 'first_name last_name email vendor_info role'
+      })
+      .populate({
+        path: 'bazaar_id',
+        select: 'name start_date end_date location time status registration_deadline'
+      })
+      .populate({
+        path: 'approved_by',
+        select: 'first_name last_name email role'
+      })
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(parseInt(limit));
+
+    // Get total count for pagination
+    const totalCount = await VendorApplication.countDocuments(filter);
+
+    // Format the response
+    const formattedApplications = applications.map(app => ({
+      _id: app._id,
+      vendor: {
+        _id: app.vendor_user_id._id,
+        name: `${app.vendor_user_id.first_name} ${app.vendor_user_id.last_name}`,
+        email: app.vendor_user_id.email,
+        company_name: app.vendor_user_id.vendor_info?.company_name || 'N/A'
+      },
+      bazaar: app.bazaar_id ? {
+        _id: app.bazaar_id._id,
+        name: app.bazaar_id.name,
+        start_date: app.bazaar_id.start_date,
+        end_date: app.bazaar_id.end_date,
+        location: app.bazaar_id.location,
+        time: app.bazaar_id.time,
+        status: app.bazaar_id.status,
+        registration_deadline: app.bazaar_id.registration_deadline
+      } : null,
+      application: {
+        kind: app.kind,
+        staff: app.application.staff,
+        booth_size: app.application.booth_size,
+        setup_duration_weeks: app.application.setup_duration_weeks,
+        booth_location: app.application.booth_location
+      },
+      status: app.status,
+      rejection_reason: app.rejection_reason,
+      approved_by: app.approved_by ? {
+        name: `${app.approved_by.first_name} ${app.approved_by.last_name}`,
+        email: app.approved_by.email,
+        role: app.approved_by.role
+      } : null,
+      approved_at: app.approved_at,
+      submitted_at: app.createdAt,
+      updated_at: app.updatedAt
+    }));
+
+    res.json({
+      message: "Vendor applications retrieved successfully",
+      applications: formattedApplications,
+      pagination: {
+        current_page: parseInt(page),
+        total_pages: Math.ceil(totalCount / parseInt(limit)),
+        total_count: totalCount,
+        limit: parseInt(limit)
+      },
+      filters_applied: {
+        status: status || 'all',
+        bazaar_id: bazaar_id || 'all',
+        kind: kind || 'all'
+      }
+    });
+
+  } catch (err) {
+    console.error('Error fetching vendor applications:', err);
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// 2. View vendor request details by ID
+export const getVendorRequestById = async (req, res) => {
+  try {
+    const { applicationId } = req.params;
+
+    const application = await VendorApplication.findById(applicationId)
+      .populate({
+        path: 'vendor_user_id',
+        select: 'first_name last_name email vendor_info role id_number'
+      })
+      .populate({
+        path: 'bazaar_id'
+      })
+      .populate({
+        path: 'approved_by',
+        select: 'first_name last_name email role'
+      });
+
+    if (!application) {
+      return res.status(404).json({ message: "Vendor application not found" });
+    }
+
+    const formattedApplication = {
+      _id: application._id,
+      vendor: {
+        _id: application.vendor_user_id._id,
+        name: `${application.vendor_user_id.first_name} ${application.vendor_user_id.last_name}`,
+        email: application.vendor_user_id.email,
+        id_number: application.vendor_user_id.id_number,
+        company_name: application.vendor_user_id.vendor_info?.company_name || 'N/A',
+        role: application.vendor_user_id.role
+      },
+      bazaar: application.bazaar_id,
+      application: {
+        kind: application.kind,
+        staff: application.application.staff,
+        booth_size: application.application.booth_size,
+        setup_duration_weeks: application.application.setup_duration_weeks,
+        booth_location: application.application.booth_location
+      },
+      status: application.status,
+      rejection_reason: application.rejection_reason,
+      approved_by: application.approved_by ? {
+        name: `${application.approved_by.first_name} ${application.approved_by.last_name}`,
+        email: application.approved_by.email,
+        role: application.approved_by.role
+      } : null,
+      approved_at: application.approved_at,
+      submitted_at: application.createdAt,
+      updated_at: application.updatedAt
+    };
+
+    res.json({
+      message: "Vendor application details retrieved successfully",
+      application: formattedApplication
+    });
+
+  } catch (err) {
+    console.error('Error fetching vendor application details:', err);
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// 3. Accept vendor participation request
+export const acceptVendorRequest = async (req, res) => {
+  try {
+    const { applicationId } = req.params;
+
+    const application = await VendorApplication.findById(applicationId)
+      .populate('vendor_user_id', 'first_name last_name email')
+      .populate('bazaar_id', 'name start_date location');
+
+    if (!application) {
+      return res.status(404).json({ message: "Vendor application not found" });
+    }
+
+    if (application.status !== 'pending') {
+      return res.status(400).json({ 
+        message: `Cannot accept application. Current status: ${application.status}` 
+      });
+    }
+
+    // Use the model's approve method
+    await application.approve(req.user._id);
+
+    res.json({
+      message: "Vendor application accepted successfully",
+      application: {
+        _id: application._id,
+        vendor_name: `${application.vendor_user_id.first_name} ${application.vendor_user_id.last_name}`,
+        vendor_email: application.vendor_user_id.email,
+        bazaar_name: application.bazaar_id.name,
+        status: application.status,
+        approved_by: `${req.user.first_name} ${req.user.last_name}`,
+        approved_at: application.approved_at
+      }
+    });
+
+  } catch (err) {
+    console.error('Error accepting vendor application:', err);
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// 4. Reject vendor participation request
+export const rejectVendorRequest = async (req, res) => {
+  try {
+    const { applicationId } = req.params;
+    const { rejection_reason } = req.body;
+
+    if (!rejection_reason || rejection_reason.trim().length === 0) {
+      return res.status(400).json({ 
+        message: "Rejection reason is required" 
+      });
+    }
+
+    const application = await VendorApplication.findById(applicationId)
+      .populate('vendor_user_id', 'first_name last_name email')
+      .populate('bazaar_id', 'name start_date location');
+
+    if (!application) {
+      return res.status(404).json({ message: "Vendor application not found" });
+    }
+
+    if (application.status !== 'pending') {
+      return res.status(400).json({ 
+        message: `Cannot reject application. Current status: ${application.status}` 
+      });
+    }
+
+    // Use the model's reject method
+    await application.reject(rejection_reason.trim(), req.user._id);
+
+    res.json({
+      message: "Vendor application rejected successfully",
+      application: {
+        _id: application._id,
+        vendor_name: `${application.vendor_user_id.first_name} ${application.vendor_user_id.last_name}`,
+        vendor_email: application.vendor_user_id.email,
+        bazaar_name: application.bazaar_id.name,
+        status: application.status,
+        rejection_reason: application.rejection_reason,
+        rejected_by: `${req.user.first_name} ${req.user.last_name}`,
+        rejected_at: application.approved_at
+      }
+    });
+
+  } catch (err) {
+    console.error('Error rejecting vendor application:', err);
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// 5. Get vendor requests statistics
+export const getVendorRequestsStats = async (req, res) => {
+  try {
+    const { bazaar_id } = req.query;
+    
+    let matchFilter = {};
+    if (bazaar_id) {
+      matchFilter.bazaar_id = bazaar_id;
+    }
+
+    const stats = await VendorApplication.aggregate([
+      { $match: matchFilter },
+      {
+        $group: {
+          _id: null,
+          total_requests: { $sum: 1 },
+          pending_requests: {
+            $sum: { $cond: [{ $eq: ["$status", "pending"] }, 1, 0] }
+          },
+          accepted_requests: {
+            $sum: { $cond: [{ $eq: ["$status", "accepted"] }, 1, 0] }
+          },
+          rejected_requests: {
+            $sum: { $cond: [{ $eq: ["$status", "rejected"] }, 1, 0] }
+          }
+        }
+      }
+    ]);
+
+    const kindStats = await VendorApplication.aggregate([
+      { $match: matchFilter },
+      {
+        $group: {
+          _id: "$kind",
+          count: { $sum: 1 },
+          pending: {
+            $sum: { $cond: [{ $eq: ["$status", "pending"] }, 1, 0] }
+          },
+          accepted: {
+            $sum: { $cond: [{ $eq: ["$status", "accepted"] }, 1, 0] }
+          },
+          rejected: {
+            $sum: { $cond: [{ $eq: ["$status", "rejected"] }, 1, 0] }
+          }
+        }
+      }
+    ]);
+
+    const result = {
+      overall: stats[0] || {
+        total_requests: 0,
+        pending_requests: 0,
+        accepted_requests: 0,
+        rejected_requests: 0
+      },
+      by_type: kindStats.reduce((acc, item) => {
+        acc[item._id] = {
+          total: item.count,
+          pending: item.pending,
+          accepted: item.accepted,
+          rejected: item.rejected
+        };
+        return acc;
+      }, {})
+    };
+
+    res.json({
+      message: "Vendor application statistics retrieved successfully",
+      statistics: result,
+      filters_applied: {
+        bazaar_id: bazaar_id || 'all'
+      }
+    });
+
+  } catch (err) {
+    console.error('Error fetching vendor application statistics:', err);
     res.status(500).json({ message: err.message });
   }
 };

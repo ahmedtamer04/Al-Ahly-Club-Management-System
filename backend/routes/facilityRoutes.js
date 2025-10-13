@@ -1,10 +1,14 @@
 import express from "express";
 import { getAllFacilities, addFacility } from "../controllers/facilityController.js";
-
+import { auth, requireStudent, requireAdminOrEventsOffice } from "../middleware/auth.js";
 const router = express.Router();
 
 // Routes
-router.get("/courts", getAllFacilities);    // GET all courts
-router.post("/courts", addFacility);        // Add a new court (for testing)
+//  View all courts (available to everyone logged in)
+router.get("/getAll", auth, requireStudent, getAllFacilities);
 
+//  For admin/events office to add a new court (for testing)
+router.post("/add", auth, requireAdminOrEventsOffice, addFacility);
 export default router;
+
+
