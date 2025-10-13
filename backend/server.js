@@ -17,6 +17,7 @@ import conferenceRoutes from "./routes/conferenceRoutes.js";
 import bazaarRoutes from "./routes/bazaarRoutes.js";
 import registrationRoutes from "./routes/registrationRoutes.js";
 import workshopRoutes from "./routes/workshopRoutes.js";
+import vendorRoutes from "./routes/vendorRoutes.js"; // ← Add this
 
 
 const app = express();

@@ -1,15 +1,21 @@
-const express = require('express');
+import express from "express";
+import { 
+  createWorkshop, 
+  editWorkshop, 
+  getMyWorkshops 
+} from "../controllers/workshopController.js";
+import { auth, requireEventsOffice } from "../middleware/auth.js";
+
 const router = express.Router();
-const workshopController = require('../controllers/workshopController');
-const { auth, requireProfessor } = require('../middleware/auth');
 
-// Create a workshop (Professor only)
-router.post('/', auth, requireProfessor, workshopController.createWorkshop);
+// Create a workshop (EventsOffice only)
+router.post("/", auth, requireEventsOffice, createWorkshop);
 
-// Edit a workshop (Professor only)
-router.put('/:id', auth, requireProfessor, workshopController.editWorkshop);
+// Edit a workshop (EventsOffice only)  
+router.put("/:id", auth, requireEventsOffice, editWorkshop);
 
-// View all workshops created by the user (Professor only)
-router.get('/my', auth, requireProfessor, workshopController.getMyWorkshops);
+// View all workshops created by the user (EventsOffice only)
+router.get("/my", auth, requireEventsOffice, getMyWorkshops);
 
-module.exports = router;
+// ✅ CRITICAL: ES6 export instead of module.exports
+export default router;
