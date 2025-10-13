@@ -7,7 +7,7 @@ export const getUpcomingEvents = async (req, res) => {
       status: "upcoming",
       start_date: { $gt: new Date() },
     }).sort({ start_date: 1 });
-    res.json(events);
+    res.status(200).send(JSON.stringify(events, null, 2));
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Server error" });
@@ -44,7 +44,7 @@ export const filterEvents = async (req, res) => {
     }
 
     const events = await Event.find(filter).sort({ start_date: 1 });
-    res.json(events);
+    res.status(200).send(JSON.stringify(events, null, 2));
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Server error" });
@@ -58,7 +58,7 @@ export const sortEventsByDate = async (req, res) => {
     const sortOrder = order === "desc" ? -1 : 1;
 
     const events = await Event.find().sort({ start_date: sortOrder });
-    res.json(events);
+    res.status(200).send(JSON.stringify(events, null, 2));
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Server error" });

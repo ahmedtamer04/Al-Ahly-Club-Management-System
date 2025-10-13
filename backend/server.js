@@ -18,6 +18,7 @@ import bazaarRoutes from "./routes/bazaarRoutes.js";
 import registrationRoutes from "./routes/registrationRoutes.js";
 import workshopRoutes from "./routes/workshopRoutes.js";
 import vendorRoutes from "./routes/vendorRoutes.js"; // ← Add this
+import eventRoutes from "./routes/eventRoutes.js"; // ← Add this
 
 
 const app = express();
@@ -50,6 +51,8 @@ app.use("/workshops", workshopRoutes);
 app.get("/", (req, res) => {
   res.json({ message: "Al-Ahly Club Management System API" });
 });
+app.use("/events", eventRoutes);
+
 
 
 const PORT = process.env.PORT || 5000;
