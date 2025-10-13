@@ -52,6 +52,7 @@ export const requireEventsOffice = authorize('EventsOffice');
 export const requireAdminOrEventsOffice = authorize('Admin', 'EventsOffice');
 export const requireStudent=authorize('Student');
 export const requireProfessor=authorize('Professor');
+export const requireRegistering=authorize('Student', 'TA', 'Staff','Professor');
 export const requireStaffOrAbove = authorize('Admin', 'EventsOffice', 'Staff', 'Professor', 'TA');
 export const requireStudentOrAbove = authorize('Admin', 'EventsOffice', 'Staff', 'Professor', 'TA', 'Student');
 export const requireVendor = authorize('Vendor');
