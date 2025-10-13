@@ -6,6 +6,7 @@ dotenv.config();
 import express from "express";
 import cors from "cors";
 import connectDB from "./config/db.js";
+
 import authRoutes from "./routes/authRoutes.js";
 
 import tripRoutes from "./routes/tripRoutes.js";
@@ -14,6 +15,7 @@ import facilityRoutes from "./routes/facilityRoutes.js";
 import gymSessionsRoutes from "./routes/gymSessionsRoutes.js";
 import conferenceRoutes from "./routes/conferenceRoutes.js";
 import bazaarRoutes from "./routes/bazaarRoutes.js";
+import registrationRoutes from "./routes/registrationRoutes.js";
 import workshopRoutes from "./routes/workshopRoutes.js";
 
 
@@ -40,6 +42,7 @@ app.use("/api/gym-sessions", gymSessionsRoutes);
 app.use("/api/conference", conferenceRoutes);
 app.use("/bazaar", bazaarRoutes);
 app.use("/trips", tripRoutes);
+app.use("/api/registration", registrationRoutes);
 app.use("/api/workshops", workshopRoutes);
 // Basic route for testing
 app.get("/", (req, res) => {
