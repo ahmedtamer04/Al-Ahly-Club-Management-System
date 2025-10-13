@@ -37,13 +37,14 @@ connectDB();
 
 app.use("/auth", authRoutes);
 app.use("/admin", adminRoutes);
-app.use("/api/facilities", facilityRoutes);
-app.use("/api/gym-sessions", gymSessionsRoutes);
-app.use("/api/conference", conferenceRoutes);
+app.use("/facilities", facilityRoutes);
+app.use("/gym-sessions", gymSessionsRoutes);
+app.use("/conference", conferenceRoutes);
 app.use("/bazaar", bazaarRoutes);
 app.use("/trips", tripRoutes);
-app.use("/api/registration", registrationRoutes);
-app.use("/api/workshops", workshopRoutes);
+app.use("/registration", registrationRoutes);
+app.use("/vendor", vendorRoutes); // ← Add this
+app.use("/workshops", workshopRoutes);
 // Basic route for testing
 app.get("/", (req, res) => {
   res.json({ message: "Al-Ahly Club Management System API" });

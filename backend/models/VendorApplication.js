@@ -8,7 +8,7 @@ const vendorAppSchema = new mongoose.Schema({
   },
   bazaar_id: { 
     type: mongoose.Schema.Types.ObjectId, 
-    ref: "Bazaar", 
+    ref: "Event", // Changed from "Bazaar" to "Event"
     required: true 
   },
   kind: { 

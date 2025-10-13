@@ -1,4 +1,4 @@
-import Trip from "../models/Trip.js";
+import Event from "../models/Events.js";
 import mongoose from "mongoose";
 
 const parsePagination = (req) => {
@@ -13,84 +13,127 @@ export const createTrip = async (req, res) => {
       name,
       location,
       price,
-      startDate,
-      endDate,
+      start_date, // ← Changed field name
+      end_date,   // ← Changed field name
       time,
-      shortDescription,
+      short_description, // ← Changed field name
       capacity,
-      registrationDeadline,
-      status
+      registration_deadline // ← Changed field name
     } = req.body;
 
-    // Reject trips that start in the past
-    if (!startDate || new Date(startDate) < new Date()) {
-      return res.status(400).json({ message: "startDate must be in the future" });
+    // Validate required fields
+    if (!name || !location || price === undefined || !start_date || !end_date || !time || !short_description || !capacity || !registration_deadline) {
+      return res.status(400).json({ 
+        message: "Missing required fields" 
+      });
     }
 
-    const created = await Trip.create({
+    // Convert dates
+    const startDate = new Date(start_date);
+    const endDate = new Date(end_date);
+    const regDeadline = new Date(registration_deadline);
+
+    // Validate dates
+    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime()) || isNaN(regDeadline.getTime())) {
+      return res.status(400).json({ message: "Invalid date format" });
+    }
+
+    // Create trip using Events model
+    const trip = await Event.create({
+      type: "Trip", // ← REQUIRED: Specify event type
       name,
       location,
-      price,
-      startDate,
-      endDate,
+      short_description,
+      start_date: startDate,
+      end_date: endDate,
       time,
-      shortDescription,
-      capacity,
-      registrationDeadline,
-      status,
-      createdBy: req.user._id
+      created_by: req.user._id,
+      status: "upcoming",
+      trip: { // ← REQUIRED: Trip-specific fields
+        price: Number(price),
+        capacity: Number(capacity),
+        registration_deadline: regDeadline
+      }
     });
-    return res.status(201).json(created);
+
+    res.status(201).json({ 
+      message: "Trip created successfully", 
+      trip 
+    });
+
   } catch (err) {
-    // Handle unique conflict (name + startDate)
-    if (err && err.code === 11000) {
-      return res.status(409).json({ message: "Trip with same name and startDate already exists" });
+    console.error('Error creating trip:', err);
+    
+    if (err.name === 'ValidationError') {
+      const errors = Object.values(err.errors).map(e => e.message);
+      return res.status(400).json({ 
+        message: "Validation failed", 
+        errors 
+      });
     }
-    if (err?.errors) {
-      return res.status(422).json({ message: "Validation error", errors: err.errors });
-    }
-    return res.status(500).json({ message: err.message });
+    
+    res.status(500).json({ message: err.message });
   }
 };
 
 export const updateTrip = async (req, res) => {
   try {
-    // Change from req.params._id to req.params.id
-    const tripId = req.params.id;  // ← Fix this line
+    const tripId = req.params.id;
     
-    console.log("Trip ID received:", tripId); // Debug log
-    
-    if (!tripId) {
-      return res.status(400).json({ message: "Trip ID is required" });
-    }
-
-    // Validate ObjectId format
     if (!mongoose.Types.ObjectId.isValid(tripId)) {
       return res.status(400).json({ message: "Invalid trip ID format" });
     }
 
-    const existing = await Trip.findById(tripId);
-    console.log("Trip found:", existing ? "Yes" : "No"); // Debug log
+    // Find trip (filter by type)
+    const existing = await Event.findOne({ _id: tripId, type: "Trip" });
     
     if (!existing) {
       return res.status(404).json({ message: "Trip not found" });
     }
 
     // Check if trip can still be edited
-    if (Date.now() >= new Date(existing.startDate).getTime()) {
+    if (!existing.canEdit()) {
       return res.status(409).json({ 
         message: "Cannot edit a trip that has already started" 
       });
     }
 
-    // Rest of your existing update logic...
     const updates = req.body;
-    if (req.user && req.user._id) {
-      updates.lastEditedBy = req.user._id;
+    
+    // Handle nested trip field updates
+    if (updates.price !== undefined || updates.capacity !== undefined || updates.registration_deadline !== undefined) {
+      if (!updates.trip) updates.trip = {};
+      
+      if (updates.price !== undefined) {
+        updates.trip.price = Number(updates.price);
+        delete updates.price;
+      }
+      if (updates.capacity !== undefined) {
+        updates.trip.capacity = Number(updates.capacity);
+        delete updates.capacity;
+      }
+      if (updates.registration_deadline !== undefined) {
+        updates.trip.registration_deadline = new Date(updates.registration_deadline);
+        delete updates.registration_deadline;
+      }
     }
 
-    Object.assign(existing, updates);
-    const updated = await existing.save();
+    // Handle date updates
+    if (updates.start_date) {
+      updates.start_date = new Date(updates.start_date);
+    }
+    if (updates.end_date) {
+      updates.end_date = new Date(updates.end_date);
+    }
+
+    const updated = await Event.findByIdAndUpdate(
+      tripId, 
+      updates, 
+      { 
+        new: true, 
+        runValidators: true 
+      }
+    );
 
     res.json({
       message: "Trip updated successfully",
@@ -105,18 +148,27 @@ export const updateTrip = async (req, res) => {
 
 export const getTrip = async (req, res) => {
   try {
-    const trip = await Trip.findById(req.params.id);
-    if (!trip) return res.status(404).json({ message: "Trip not found" });
-    return res.status(200).json(trip);
+    const trip = await Event.findOne({ _id: req.params.id, type: "Trip" })
+      .populate('created_by', 'first_name last_name email');
+
+    if (!trip) {
+      return res.status(404).json({ message: "Trip not found" });
+    }
+
+    res.json({
+      message: "Trip retrieved successfully",
+      trip
+    });
   } catch (err) {
-    return res.status(500).json({ message: err.message });
+    console.error('Error fetching trip:', err);
+    res.status(500).json({ message: err.message });
   }
 };
 
 export const listTrips = async (req, res) => {
   try {
     const { q, from, to, status } = req.query;
-    const filter = {};
+    const filter = { type: "Trip" }; // ← Filter by type
 
     if (q) {
       filter.$text = { $search: q };
@@ -125,20 +177,34 @@ export const listTrips = async (req, res) => {
       filter.status = status;
     }
     if (from || to) {
-      filter.startDate = {};
-      if (from) filter.startDate.$gte = new Date(from);
-      if (to) filter.startDate.$lte = new Date(to);
+      filter.start_date = {};
+      if (from) filter.start_date.$gte = new Date(from);
+      if (to) filter.start_date.$lte = new Date(to);
     }
 
     const { page, limit, skip } = parsePagination(req);
     const [data, total] = await Promise.all([
-      Trip.find(filter).sort({ startDate: 1 }).skip(skip).limit(limit),
-      Trip.countDocuments(filter)
+      Event.find(filter)
+        .populate('created_by', 'first_name last_name email')
+        .sort({ start_date: 1 })
+        .skip(skip)
+        .limit(limit),
+      Event.countDocuments(filter)
     ]);
 
-    return res.status(200).json({ data, page, limit, total });
+    res.json({
+      message: "Trips retrieved successfully",
+      trips: data,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit)
+      }
+    });
   } catch (err) {
-    return res.status(500).json({ message: err.message });
+    console.error('Error listing trips:', err);
+    res.status(500).json({ message: err.message });
   }
 };
 
