@@ -36,12 +36,12 @@ const router = express.Router();
 router.get("/schedule", auth, requireStudentOrAbove, viewGymSchedule);
 
 // Create Gym Session (only Events Office or Admin)
-router.post("/", auth, requireAdminOrEventsOffice, createGymSession);
+router.post("/create", auth, requireAdminOrEventsOffice, createGymSession);
 
 // Edit Gym Session (only Events Office or Admin)
-router.put("/:id", auth, requireAdminOrEventsOffice, editGymSession);
+router.put("/edit/:id", auth, requireAdminOrEventsOffice, editGymSession);
 
 // Cancel Gym Session (only Events Office or Admin)
-router.patch("/:id/cancel", auth, requireAdminOrEventsOffice, cancelGymSession);
+router.patch("/cancel/:id", auth, requireAdminOrEventsOffice, cancelGymSession);
 
 export default router;

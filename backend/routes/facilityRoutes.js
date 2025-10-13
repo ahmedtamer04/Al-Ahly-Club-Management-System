@@ -5,10 +5,10 @@ const router = express.Router();
 
 // Routes
 //  View all courts (available to everyone logged in)
-router.get("/", auth, requireStudent, getAllFacilities);
+router.get("/getAll", auth, requireStudent, getAllFacilities);
 
 //  For admin/events office to add a new court (for testing)
-router.post("/", auth, requireAdminOrEventsOffice, addFacility);
+router.post("/add", auth, requireAdminOrEventsOffice, addFacility);
 export default router;
 
 
