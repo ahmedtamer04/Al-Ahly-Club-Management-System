@@ -1,4 +1,5 @@
 import Event from "../models/Events.js";
+import Registration from "../models/Registration.js";
 
 /* -------------------------- GET /events/upcoming -------------------------- */
 export const getUpcomingEvents = async (req, res) => {
@@ -62,6 +63,37 @@ export const sortEventsByDate = async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Server error" });
+  }
+};
+
+export const deleteEvent = async (req, res) => {
+  try {
+    const { eventId } = req.params;
+
+    const eventToDelete = await Event.findById(eventId);
+    
+    if (!eventToDelete) {
+      return res.status(404).json({ message: "Event not found" });
+    }
+
+    const registered = await Registration.countDocuments({ event_id: id });
+
+    if (registered > 0) {
+      return res.status(400).json({
+        message: "Cannot delete event as there are registered users"
+      });
+    }
+
+    await Event.findByIdAndDelete(eventId);
+
+    res.status(200).json({ 
+      message: "Event deleted successfully", 
+      conference 
+    });
+
+  } catch (err) {
+    console.error('Error deleting event:', err);
+    res.status(500).json({ message: err.message });
   }
 };
 
