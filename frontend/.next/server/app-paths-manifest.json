@@ -1,12 +1,8 @@
 {
-  "/auth/login/page": "app/auth/login/page.js",
-  "/auth/register/page": "app/auth/register/page.js",
-  "/page": "app/page.js",
   "/professor/page": "app/professor/page.js",
-  "/admin/page": "app/admin/page.js",
-  "/admin/events/page": "app/admin/events/page.js",
-  "/admin/registrations/page": "app/admin/registrations/page.js",
-  "/admin/vendors/page": "app/admin/vendors/page.js",
-  "/admin/reports/page": "app/admin/reports/page.js",
-  "/admin/facilities/page": "app/admin/facilities/page.js"
+  "/professor/conferences/page": "app/professor/conferences/page.js",
+  "/professor/create/page": "app/professor/create/page.js",
+  "/professor/workshops/page": "app/professor/workshops/page.js",
+  "/professor/workshops/create/page": "app/professor/workshops/create/page.js",
+  "/page": "app/page.js"
 }

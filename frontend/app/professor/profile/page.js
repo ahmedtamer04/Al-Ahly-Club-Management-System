@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
-import '../dashboard.css';
+import '@/app/dashboard.css';
 
 export default function ProfessorProfilePage() {
   const [profile, setProfile] = useState({
@@ -33,6 +33,8 @@ export default function ProfessorProfilePage() {
         <aside className="sidebar">
           <ul className="sidebar-menu">
             <li><Link href="/professor">🏠 Dashboard</Link></li>
+            <li><Link href="/professor/workshops">🎨 My Workshops</Link></li>
+            <li><Link href="/professor/workshops/create">➕ Create Workshop</Link></li>
             <li><Link href="/professor/conferences">🎓 Conferences</Link></li>
             <li><Link href="/professor/create">➕ Create Conference</Link></li>
             <li><Link href="/professor/profile">👤 Profile</Link></li>

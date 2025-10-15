@@ -1,21 +1,15 @@
 {
   "pages": {
-    "/auth/login/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/css/app/auth/login/page.css",
-      "static/chunks/app/auth/login/page.js"
-    ],
     "/layout": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/app/layout.js"
     ],
-    "/auth/register/page": [
+    "/vendor/applications/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/css/app/auth/register/page.css",
-      "static/chunks/app/auth/register/page.js"
+      "static/css/app/vendor/applications/page.css",
+      "static/chunks/app/vendor/applications/page.js"
     ],
     "/page": [
       "static/chunks/webpack.js",
@@ -23,47 +17,125 @@
       "static/css/app/page.css",
       "static/chunks/app/page.js"
     ],
+    "/auth/login/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/css/app/auth/login/page.css",
+      "static/chunks/app/auth/login/page.js"
+    ],
+    "/vendor/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/css/app/vendor/page.css",
+      "static/chunks/app/vendor/page.js"
+    ],
+    "/vendor/bazaars/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/css/app/vendor/bazaars/page.css",
+      "static/chunks/app/vendor/bazaars/page.js"
+    ],
+    "/vendor/booths/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/css/app/vendor/booths/page.css",
+      "static/chunks/app/vendor/booths/page.js"
+    ],
+    "/vendor/profile/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/css/app/vendor/profile/page.css",
+      "static/chunks/app/vendor/profile/page.js"
+    ],
+    "/eventsoffice/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/css/app/eventsoffice/page.css",
+      "static/chunks/app/eventsoffice/page.js"
+    ],
+    "/eventsoffice/create/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/css/app/eventsoffice/create/page.css",
+      "static/chunks/app/eventsoffice/create/page.js"
+    ],
+    "/eventsoffice/workshops/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/css/app/eventsoffice/workshops/page.css",
+      "static/chunks/app/eventsoffice/workshops/page.js"
+    ],
+    "/eventsoffice/trips/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/css/app/eventsoffice/trips/page.css",
+      "static/chunks/app/eventsoffice/trips/page.js"
+    ],
+    "/eventsoffice/bazaars/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/css/app/eventsoffice/bazaars/page.css",
+      "static/chunks/app/eventsoffice/bazaars/page.js"
+    ],
+    "/eventsoffice/gym/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/css/app/eventsoffice/gym/page.css",
+      "static/chunks/app/eventsoffice/gym/page.js"
+    ],
+    "/eventsoffice/vendors/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/css/app/eventsoffice/vendors/page.css",
+      "static/chunks/app/eventsoffice/vendors/page.js"
+    ],
+    "/eventsoffice/facilities/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/css/app/eventsoffice/facilities/page.css",
+      "static/chunks/app/eventsoffice/facilities/page.js"
+    ],
+    "/eventsoffice/registrations/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/css/app/eventsoffice/registrations/page.css",
+      "static/chunks/app/eventsoffice/registrations/page.js"
+    ],
+    "/eventsoffice/profile/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/css/app/eventsoffice/profile/page.css",
+      "static/chunks/app/eventsoffice/profile/page.js"
+    ],
     "/professor/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/css/app/professor/page.css",
       "static/chunks/app/professor/page.js"
     ],
-    "/admin/page": [
+    "/professor/conferences/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/css/app/admin/page.css",
-      "static/chunks/app/admin/page.js"
+      "static/css/app/professor/conferences/page.css",
+      "static/chunks/app/professor/conferences/page.js"
     ],
-    "/admin/events/page": [
+    "/professor/create/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/css/app/admin/events/page.css",
-      "static/chunks/app/admin/events/page.js"
+      "static/css/app/professor/create/page.css",
+      "static/chunks/app/professor/create/page.js"
     ],
-    "/admin/registrations/page": [
+    "/professor/workshops/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/css/app/admin/registrations/page.css",
-      "static/chunks/app/admin/registrations/page.js"
+      "static/css/app/professor/workshops/page.css",
+      "static/chunks/app/professor/workshops/page.js"
     ],
-    "/admin/vendors/page": [
+    "/professor/workshops/create/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/css/app/admin/vendors/page.css",
-      "static/chunks/app/admin/vendors/page.js"
-    ],
-    "/admin/facilities/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/css/app/admin/facilities/page.css",
-      "static/chunks/app/admin/facilities/page.js"
-    ],
-    "/admin/reports/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/css/app/admin/reports/page.css",
-      "static/chunks/app/admin/reports/page.js"
+      "static/css/app/professor/workshops/create/page.css",
+      "static/chunks/app/professor/workshops/create/page.js"
     ]
   }
 }

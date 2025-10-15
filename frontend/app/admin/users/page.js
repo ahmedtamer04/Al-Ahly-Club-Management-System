@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
-import '../../dashboard.css';
+import '@/app/dashboard.css';
 
 export default function ManageUsersPage() {
   const [users, setUsers] = useState([]);

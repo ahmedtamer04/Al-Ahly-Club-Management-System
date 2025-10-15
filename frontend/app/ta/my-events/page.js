@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import '../dashboard.css';
+import '@/app/dashboard.css';
 
 export default function TAMyEventsPage() {
   return (

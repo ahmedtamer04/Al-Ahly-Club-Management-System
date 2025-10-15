@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
-import '../../dashboard.css';
+import '@/app/dashboard.css';
 
 export default function GymSchedulePage() {
   const [selectedMonth, setSelectedMonth] = useState('2025-10');

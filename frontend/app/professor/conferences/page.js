@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import '../dashboard.css';
+import '@/app/dashboard.css';
 
 export default function ProfessorConferencesPage() {
   return (
@@ -20,6 +20,8 @@ export default function ProfessorConferencesPage() {
         <aside className="sidebar">
           <ul className="sidebar-menu">
             <li><Link href="/professor">🏠 Dashboard</Link></li>
+            <li><Link href="/professor/workshops">🎨 My Workshops</Link></li>
+            <li><Link href="/professor/workshops/create">➕ Create Workshop</Link></li>
             <li><Link href="/professor/conferences">🎓 Conferences</Link></li>
             <li><Link href="/professor/create">➕ Create Conference</Link></li>
             <li><Link href="/professor/profile">👤 Profile</Link></li>
