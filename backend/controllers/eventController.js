@@ -76,7 +76,7 @@ export const deleteEvent = async (req, res) => {
       return res.status(404).json({ message: "Event not found" });
     }
 
-    const registered = await Registration.countDocuments({ event_id: id });
+    const registered = await Registration.countDocuments({ event_id: eventId });
 
     if (registered > 0) {
       return res.status(400).json({
@@ -86,9 +86,9 @@ export const deleteEvent = async (req, res) => {
 
     await Event.findByIdAndDelete(eventId);
 
-    res.status(200).json({ 
-      message: "Event deleted successfully", 
-      conference 
+    res.status(200).json({
+      message: "Event deleted successfully",
+      deletedEvent: eventToDelete
     });
 
   } catch (err) {
