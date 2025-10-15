@@ -2,6 +2,8 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { authAPI } from '../../../utils/api';
 import '../auth.css';
 
 export default function LoginPage() {
@@ -10,10 +12,71 @@ export default function LoginPage() {
     password: ''
   });
 
+  const [message, setMessage] = useState({ text: '', type: '' });
+  const [loading, setLoading] = useState(false);
+  const router = useRouter();
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    // TODO: Connect to backend API
-    console.log('Login:', formData);
+    setMessage({ text: '', type: '' });
+    setLoading(true);
+
+    try {
+      const response = await authAPI.login(formData);
+      
+      // Success - redirect based on role
+      const userRole = response.user.role;
+      
+      // Show success message briefly before redirect
+      setMessage({ text: 'Login successful! Redirecting...', type: 'success' });
+      
+      // Redirect to appropriate dashboard
+      setTimeout(() => {
+        switch(userRole) {
+          case 'Student':
+            router.push('/student');
+            break;
+          case 'Staff':
+            router.push('/staff');
+            break;
+          case 'TA':
+            router.push('/ta');
+            break;
+          case 'Professor':
+            router.push('/professor');
+            break;
+          case 'Vendor':
+            router.push('/vendor');
+            break;
+          case 'Admin':
+            router.push('/admin');
+            break;
+          case 'EventsOffice':
+            router.push('/eventsoffice');
+            break;
+          default:
+            router.push('/');
+        }
+      }, 1000);
+
+    } catch (error) {
+      // Handle different error messages from backend
+      const errorMessage = error.message;
+      
+      if (errorMessage.includes('blocked')) {
+        setMessage({ text: 'Your account has been blocked. Please contact admin.', type: 'error' });
+      } else if (errorMessage.includes('pending') || errorMessage.includes('approval')) {
+        setMessage({ text: 'Your account is pending approval. Please wait for admin verification.', type: 'warning' });
+      } else if (errorMessage.includes('not active')) {
+        setMessage({ text: 'Account is not active. Please contact support.', type: 'error' });
+      } else if (errorMessage.includes('Invalid') || errorMessage.includes('credentials')) {
+        setMessage({ text: 'Invalid email or password. Please try again.', type: 'error' });
+      } else {
+        setMessage({ text: error.message || 'Login failed. Please try again.', type: 'error' });
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -25,16 +88,25 @@ export default function LoginPage() {
           <p>Sign in to access your dashboard</p>
         </div>
 
+        {message.text && (
+          <div className={`alert alert-${message.type}`}>
+            {message.text}
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="auth-form">
           <div className="form-group">
             <label>Email Address</label>
             <input
               type="email"
-              placeholder="student@university.edu"
+              placeholder="your.email@example.com"
               value={formData.email}
               onChange={(e) => setFormData({...formData, email: e.target.value})}
               required
             />
+            <small style={{color: '#666', fontSize: '0.85rem'}}>
+              Use your registered email (GUC email or vendor email)
+            </small>
           </div>
 
           <div className="form-group">
@@ -56,8 +128,8 @@ export default function LoginPage() {
             <a href="#" className="forgot-link">Forgot password?</a>
           </div>
 
-          <button type="submit" className="btn-submit">
-            Sign In
+          <button type="submit" className="btn-submit" disabled={loading}>
+            {loading ? 'Signing In...' : 'Sign In'}
           </button>
         </form>
 
@@ -68,7 +140,7 @@ export default function LoginPage() {
 
         {/* Quick Access for Testing */}
         <div className="quick-access">
-          <p>Quick Access (Development):</p>
+          <p>🔧 Quick Access (Development Only):</p>
           <div className="quick-links">
             <Link href="/student">Student</Link>
             <Link href="/staff">Staff</Link>
@@ -78,6 +150,18 @@ export default function LoginPage() {
             <Link href="/admin">Admin</Link>
             <Link href="/eventsoffice">Events Office</Link>
           </div>
+          <small style={{color: '#999', fontSize: '0.8rem', marginTop: '5px', display: 'block'}}>
+            Remove this section in production
+          </small>
+        </div>
+
+        <div className="info-box">
+          <h4>ℹ️ Login Information:</h4>
+          <ul>
+            <li><strong>Blocked accounts:</strong> Cannot login (contact admin)</li>
+            <li><strong>Pending accounts:</strong> Staff/TA/Professor waiting for approval</li>
+            <li><strong>Active accounts:</strong> Student, Vendor, Admin, EventsOffice can login immediately</li>
+          </ul>
         </div>
       </div>
     </div>
