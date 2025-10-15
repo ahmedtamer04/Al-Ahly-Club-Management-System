@@ -4,18 +4,18 @@ import {
   editWorkshop, 
   getMyWorkshops 
 } from "../controllers/workshopController.js";
-import { auth, requireEventsOffice } from "../middleware/auth.js";
+import { auth, requireProfessor } from "../middleware/auth.js";
 
 const router = express.Router();
 
-// Create a workshop (EventsOffice only)
-router.post("/", auth, requireEventsOffice, createWorkshop);
+// Create a workshop (Professor only)
+router.post("/", auth, requireProfessor, createWorkshop);
 
-// Edit a workshop (EventsOffice only)  
-router.put("/:id", auth, requireEventsOffice, editWorkshop);
+// Edit a workshop (Professor only)  
+router.put("/:id", auth, requireProfessor, editWorkshop);
 
-// View all workshops created by the user (EventsOffice only)
-router.get("/my", auth, requireEventsOffice, getMyWorkshops);
+// View all workshops created by the user (Professor only)
+router.get("/my", auth, requireProfessor, getMyWorkshops);
 
 // ✅ CRITICAL: ES6 export instead of module.exports
 export default router;

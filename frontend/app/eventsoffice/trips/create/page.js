@@ -1,0 +1,193 @@
+'use client';
+
+import Link from 'next/link';
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { tripAPI } from '@/utils/api';
+import '@/app/dashboard.css';
+
+export default function CreateTripPage() {
+  const router = useRouter();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [formData, setFormData] = useState({
+    name: '',
+    location: '',
+    price: '',
+    start_date: '',
+    end_date: '',
+    time: '',
+    short_description: '',
+    capacity: '',
+    registration_deadline: '',
+  });
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+
+    try {
+      await tripAPI.create(formData);
+      alert('Trip created successfully!');
+      router.push('/eventsoffice/trips');
+    } catch (err) {
+      setError(err.message || 'Failed to create trip');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="dashboard">
+      <nav className="dashboard-nav">
+        <div className="nav-container">
+          <h1 className="nav-brand">Al-Ahly Events</h1>
+          <div className="nav-links">
+            <span className="nav-user">🎯 Events Office Dashboard</span>
+            <Link href="/">Logout</Link>
+          </div>
+        </div>
+      </nav>
+
+      <div className="dashboard-content">
+        <aside className="sidebar">
+          <ul className="sidebar-menu">
+            <li><Link href="/eventsoffice">🏠 Dashboard</Link></li>
+            <li><Link href="/eventsoffice/conferences">🎓 Conferences</Link></li>
+            <li><Link href="/eventsoffice/trips">🚌 Trips</Link></li>
+            <li><Link href="/eventsoffice/trips/create" className="active">➕ Create Trip</Link></li>
+            <li><Link href="/eventsoffice/bazaars">🛍️ Bazaars</Link></li>
+            <li><Link href="/eventsoffice/gym">💪 Gym Sessions</Link></li>
+            <li><Link href="/eventsoffice/facilities">🏛️ Facilities</Link></li>
+            <li><Link href="/eventsoffice/vendors">👥 Vendor Requests</Link></li>
+            <li><Link href="/eventsoffice/registrations">📋 Registrations</Link></li>
+            <li><Link href="/eventsoffice/profile">👤 Profile</Link></li>
+          </ul>
+        </aside>
+
+        <main className="main-content">
+          <h1>Create New Trip 🚌</h1>
+
+          {error && (
+            <div className="alert alert-error">
+              {error}
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="form">
+            <div className="form-group">
+              <label>Trip Name *</label>
+              <input
+                type="text"
+                required
+                value={formData.name}
+                onChange={(e) => setFormData({...formData, name: e.target.value})}
+                placeholder="e.g., Desert Safari Adventure"
+              />
+            </div>
+
+            <div className="form-row">
+              <div className="form-group">
+                <label>Location *</label>
+                <input
+                  type="text"
+                  required
+                  value={formData.location}
+                  onChange={(e) => setFormData({...formData, location: e.target.value})}
+                  placeholder="e.g., Siwa Oasis"
+                />
+              </div>
+              <div className="form-group">
+                <label>Time *</label>
+                <input
+                  type="text"
+                  required
+                  value={formData.time}
+                  onChange={(e) => setFormData({...formData, time: e.target.value})}
+                  placeholder="e.g., 8:00 AM"
+                />
+              </div>
+            </div>
+
+            <div className="form-group">
+              <label>Description *</label>
+              <textarea
+                rows="4"
+                required
+                value={formData.short_description}
+                onChange={(e) => setFormData({...formData, short_description: e.target.value})}
+                placeholder="Describe the trip itinerary, activities, and what's included..."
+              />
+            </div>
+
+            <div className="form-row">
+              <div className="form-group">
+                <label>Start Date *</label>
+                <input
+                  type="date"
+                  required
+                  value={formData.start_date}
+                  onChange={(e) => setFormData({...formData, start_date: e.target.value})}
+                />
+              </div>
+              <div className="form-group">
+                <label>End Date *</label>
+                <input
+                  type="date"
+                  required
+                  value={formData.end_date}
+                  onChange={(e) => setFormData({...formData, end_date: e.target.value})}
+                />
+              </div>
+            </div>
+
+            <div className="form-row">
+              <div className="form-group">
+                <label>Price (EGP) *</label>
+                <input
+                  type="number"
+                  required
+                  min="0"
+                  value={formData.price}
+                  onChange={(e) => setFormData({...formData, price: e.target.value})}
+                  placeholder="e.g., 500"
+                />
+              </div>
+              <div className="form-group">
+                <label>Capacity *</label>
+                <input
+                  type="number"
+                  required
+                  min="1"
+                  value={formData.capacity}
+                  onChange={(e) => setFormData({...formData, capacity: e.target.value})}
+                  placeholder="e.g., 50"
+                />
+              </div>
+            </div>
+
+            <div className="form-group">
+              <label>Registration Deadline *</label>
+              <input
+                type="date"
+                required
+                value={formData.registration_deadline}
+                onChange={(e) => setFormData({...formData, registration_deadline: e.target.value})}
+              />
+            </div>
+
+            <div className="form-actions">
+              <Link href="/eventsoffice/trips" className="btn-secondary">
+                Cancel
+              </Link>
+              <button type="submit" className="btn-primary" disabled={loading}>
+                {loading ? 'Creating...' : 'Create Trip'}
+              </button>
+            </div>
+          </form>
+        </main>
+      </div>
+    </div>
+  );
+}

@@ -34,24 +34,27 @@ app.use(express.json());
 // Connect to MongoDB
 connectDB();
 
-// Routes
-
-
-app.use("/auth", authRoutes);
-app.use("/admin", adminRoutes);
-app.use("/facilities", facilityRoutes);
-app.use("/gym-sessions", gymSessionsRoutes);
-app.use("/conference", conferenceRoutes);
-app.use("/bazaar", bazaarRoutes);
-app.use("/trips", tripRoutes);
-app.use("/registration", registrationRoutes);
-app.use("/vendor", vendorRoutes); // ← Add this
-app.use("/workshops", workshopRoutes);
-// Basic route for testing
+// Basic route for testing (before API routes)
 app.get("/", (req, res) => {
-  res.json({ message: "Al-Ahly Club Management System API" });
+  res.json({ 
+    message: "Al-Ahly Club Management System API",
+    status: "running",
+    version: "1.0.0"
+  });
 });
-app.use("/events", eventRoutes);
+
+// API Routes (all routes prefixed with /api)
+app.use("/api/auth", authRoutes);
+app.use("/api/admin", adminRoutes);
+app.use("/api/facilities", facilityRoutes);
+app.use("/api/gym-sessions", gymSessionsRoutes);
+app.use("/api/conference", conferenceRoutes);
+app.use("/api/bazaar", bazaarRoutes);
+app.use("/api/trips", tripRoutes);
+app.use("/api/registration", registrationRoutes);
+app.use("/api/vendor", vendorRoutes);
+app.use("/api/workshop", workshopRoutes);
+app.use("/api/events", eventRoutes);
 
 
 
