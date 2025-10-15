@@ -1,8 +1,7 @@
 {
-  "/professor/page": "app/professor/page.js",
-  "/professor/conferences/page": "app/professor/conferences/page.js",
-  "/professor/create/page": "app/professor/create/page.js",
-  "/professor/workshops/page": "app/professor/workshops/page.js",
-  "/professor/workshops/create/page": "app/professor/workshops/create/page.js",
-  "/page": "app/page.js"
+  "/auth/login/page": "app/auth/login/page.js",
+  "/eventsoffice/trips/page": "app/eventsoffice/trips/page.js",
+  "/eventsoffice/page": "app/eventsoffice/page.js",
+  "/eventsoffice/vendors/page": "app/eventsoffice/vendors/page.js",
+  "/eventsoffice/bazaars/page": "app/eventsoffice/bazaars/page.js"
 }

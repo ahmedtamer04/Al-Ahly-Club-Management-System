@@ -35,8 +35,6 @@ export default function ProfessorProfilePage() {
             <li><Link href="/professor">🏠 Dashboard</Link></li>
             <li><Link href="/professor/workshops">🎨 My Workshops</Link></li>
             <li><Link href="/professor/workshops/create">➕ Create Workshop</Link></li>
-            <li><Link href="/professor/conferences">🎓 Conferences</Link></li>
-            <li><Link href="/professor/create">➕ Create Conference</Link></li>
             <li><Link href="/professor/profile">👤 Profile</Link></li>
           </ul>
         </aside>

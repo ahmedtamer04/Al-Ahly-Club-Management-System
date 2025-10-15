@@ -20,14 +20,14 @@ export default function EventsOfficeDashboard() {
         <aside className="sidebar">
           <ul className="sidebar-menu">
             <li><Link href="/eventsoffice">🏠 Dashboard</Link></li>
-            <li><Link href="/eventsoffice/create">➕ Create Event</Link></li>
-            <li><Link href="/eventsoffice/workshops">🎨 Workshops</Link></li>
-            <li><Link href="/eventsoffice/trips">🚌 Trips</Link></li>
-            <li><Link href="/eventsoffice/bazaars">🎪 Bazaars</Link></li>
-            <li><Link href="/eventsoffice/gym">🏋️ Gym Sessions</Link></li>
-            <li><Link href="/eventsoffice/vendors">🏪 Vendor Requests</Link></li>
-            <li><Link href="/eventsoffice/facilities">🏟️ Facilities</Link></li>
-            <li><Link href="/eventsoffice/registrations">🎫 Registrations</Link></li>
+            <li><Link href="/eventsoffice/conferences">🎓 Conferences</Link></li>
+            <li><Link href="/eventsoffice/conferences/create">➕ Create Conference</Link></li>
+            <li><Link href="/eventsoffice/trips">✈️ Trips</Link></li>
+            <li><Link href="/eventsoffice/bazaars">🛍️ Bazaars</Link></li>
+            <li><Link href="/eventsoffice/gym">💪 Gym Sessions</Link></li>
+            <li><Link href="/eventsoffice/facilities">�️ Facilities</Link></li>
+            <li><Link href="/eventsoffice/vendors">👥 Vendor Requests</Link></li>
+            <li><Link href="/eventsoffice/registrations">📋 Registrations</Link></li>
             <li><Link href="/eventsoffice/profile">👤 Profile</Link></li>
           </ul>
         </aside>
@@ -37,28 +37,28 @@ export default function EventsOfficeDashboard() {
           
           <div className="stats-grid">
             <div className="stat-card">
-              <div className="stat-icon">🎨</div>
+              <div className="stat-icon">�</div>
               <div className="stat-info">
                 <h3>0</h3>
-                <p>Workshops</p>
+                <p>Conferences</p>
               </div>
             </div>
             <div className="stat-card">
-              <div className="stat-icon">🚌</div>
+              <div className="stat-icon">✈️</div>
               <div className="stat-info">
                 <h3>0</h3>
                 <p>Trips</p>
               </div>
             </div>
             <div className="stat-card">
-              <div className="stat-icon">🎪</div>
+              <div className="stat-icon">🛍️</div>
               <div className="stat-info">
                 <h3>0</h3>
                 <p>Bazaars</p>
               </div>
             </div>
             <div className="stat-card">
-              <div className="stat-icon">🎫</div>
+              <div className="stat-icon">📋</div>
               <div className="stat-info">
                 <h3>0</h3>
                 <p>Total Registrations</p>
@@ -69,21 +69,21 @@ export default function EventsOfficeDashboard() {
           <section className="section">
             <div className="section-header">
               <h2>Quick Actions</h2>
-              <Link href="/eventsoffice/create" className="btn-primary">➕ Create New Event</Link>
+              <Link href="/eventsoffice/conferences/create" className="btn-primary">➕ Create New Conference</Link>
             </div>
             <div className="admin-grid">
-              <Link href="/eventsoffice/workshops" className="admin-card">
-                <div className="admin-icon">🎨</div>
-                <h3>Manage Workshops</h3>
-                <p>Create and manage workshop events</p>
+              <Link href="/eventsoffice/conferences" className="admin-card">
+                <div className="admin-icon">�</div>
+                <h3>Manage Conferences</h3>
+                <p>Create and manage conference events</p>
               </Link>
               <Link href="/eventsoffice/trips" className="admin-card">
-                <div className="admin-icon">🚌</div>
+                <div className="admin-icon">✈️</div>
                 <h3>Manage Trips</h3>
                 <p>Organize and manage trip events</p>
               </Link>
               <Link href="/eventsoffice/bazaars" className="admin-card">
-                <div className="admin-icon">🎪</div>
+                <div className="admin-icon">🛍️</div>
                 <h3>Manage Bazaars</h3>
                 <p>Create bazaars and review vendor applications</p>
               </Link>

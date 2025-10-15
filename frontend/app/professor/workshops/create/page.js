@@ -78,9 +78,8 @@ export default function CreateWorkshopPage() {
         <aside className="sidebar">
           <ul className="sidebar-menu">
             <li><Link href="/professor">🏠 Dashboard</Link></li>
-            <li><Link href="/professor/workshops">🎨 My Workshops</Link></li>
-            <li><Link href="/professor/workshops/create" className="active">➕ Create Workshop</Link></li>
-            <li><Link href="/professor/conferences">🎓 Conferences</Link></li>
+            <li><Link href="/professor/workshops" className="active">🎨 My Workshops</Link></li>
+            <li><Link href="/professor/workshops/create">➕ Create Workshop</Link></li>
             <li><Link href="/professor/profile">👤 Profile</Link></li>
           </ul>
         </aside>
@@ -242,14 +241,16 @@ export default function CreateWorkshopPage() {
                 </div>
                 <div className="form-group">
                   <label htmlFor="funding_source">Funding Source *</label>
-                  <input
-                    type="text"
+                  <select
                     id="funding_source"
                     required
-                    placeholder="e.g., University Budget, Grant"
                     value={formData.funding_source}
                     onChange={(e) => setFormData({...formData, funding_source: e.target.value})}
-                  />
+                  >
+                    <option value="">Select Funding Source</option>
+                    <option value="GUC">GUC</option>
+                    <option value="EXTERNAL">External</option>
+                  </select>
                 </div>
               </div>
 

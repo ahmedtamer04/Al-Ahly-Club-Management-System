@@ -22,8 +22,6 @@ export default function ProfessorDashboard() {
             <li><Link href="/professor">🏠 Dashboard</Link></li>
             <li><Link href="/professor/workshops">🎨 My Workshops</Link></li>
             <li><Link href="/professor/workshops/create">➕ Create Workshop</Link></li>
-            <li><Link href="/professor/conferences">🎓 Conferences</Link></li>
-            <li><Link href="/professor/create">➕ Create Conference</Link></li>
             <li><Link href="/professor/profile">👤 Profile</Link></li>
           </ul>
         </aside>
@@ -33,24 +31,24 @@ export default function ProfessorDashboard() {
           
           <div className="stats-grid">
             <div className="stat-card">
-              <div className="stat-icon">�</div>
+              <div className="stat-icon">🎨</div>
               <div className="stat-info">
                 <h3>0</h3>
                 <p>My Workshops</p>
               </div>
             </div>
             <div className="stat-card">
-              <div className="stat-icon">🎓</div>
-              <div className="stat-info">
-                <h3>0</h3>
-                <p>My Conferences</p>
-              </div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-icon">�</div>
+              <div className="stat-icon">📊</div>
               <div className="stat-info">
                 <h3>0</h3>
                 <p>Total Attendees</p>
+              </div>
+            </div>
+            <div className="stat-card">
+              <div className="stat-icon">📅</div>
+              <div className="stat-info">
+                <h3>0</h3>
+                <p>Upcoming Events</p>
               </div>
             </div>
           </div>
@@ -65,16 +63,6 @@ export default function ProfessorDashboard() {
               <Link href="/professor/workshops/create" className="btn-primary" style={{ marginTop: '1rem' }}>
                 Create Your First Workshop
               </Link>
-            </div>
-          </section>
-
-          <section className="section">
-            <div className="section-header">
-              <h2>My Conferences</h2>
-              <Link href="/professor/create" className="btn-primary">➕ Create Conference</Link>
-            </div>
-            <div className="empty-state">
-              <p>🎓 You haven't created any conferences yet</p>
             </div>
           </section>
         </main>

@@ -3,7 +3,7 @@
 // ================================
 // Base configuration and helper functions for all API calls
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 
 // Get token from localStorage
 export const getToken = () => {
@@ -199,6 +199,14 @@ export const tripAPI = {
     const queryString = new URLSearchParams(params).toString();
     return api.get(`/trip/listTrips${queryString ? `?${queryString}` : ''}`);
   },
+
+  // GET /api/events/filter/type/Trip - Get all trips for EventsOffice
+  // Auth: requireStudentOrAbove
+  // Returns array of trips
+  getMyTrips: () => api.get('/events/filter/type/Trip'),
+  
+  // Alias
+  getAll: () => api.get('/events/filter/type/Trip'),
 };
 
 // ================================
@@ -239,6 +247,13 @@ export const conferenceAPI = {
   // PUT /api/conference/:id
   // Auth: requireEventsOffice
   edit: (id, updates) => api.put(`/conference/${id}`, updates),
+
+  // GET /api/events/filter/type/Conference (get all conferences)
+  // Auth: requireStudentOrAbove
+  getMyConferences: () => api.get('/events/filter/type/Conference'),
+
+  // GET all conferences (alias)
+  getAll: () => api.get('/events/filter/type/Conference'),
 };
 
 // ================================
