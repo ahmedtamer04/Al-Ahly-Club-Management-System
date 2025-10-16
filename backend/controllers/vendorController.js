@@ -161,15 +161,15 @@ export const applyToBazaar = async (req, res) => {
   }
 };
 
-// Apply to booth event (1-4 weeks setup)
+// Apply to booth event (1-4 weeks setup, independent of bazaars)
 export const applyToBoothEvent = async (req, res) => {
   try {
-    const { bazaar_id, booth_staff, booth_size, setup_duration_weeks, booth_location } = req.body;
+    const { booth_staff, booth_size, setup_duration_weeks, booth_location, preferred_start_date, notes } = req.body;
 
     // Validate required fields
-    if (!bazaar_id || !booth_staff || !booth_size || !setup_duration_weeks || !booth_location) {
+    if (!booth_staff || !booth_size || !setup_duration_weeks || !booth_location) {
       return res.status(400).json({
-        message: "Bazaar ID, staff details, booth size, duration, and location are required"
+        message: "Staff details, booth size, duration, and location are required"
       });
     }
 
@@ -217,55 +217,33 @@ export const applyToBoothEvent = async (req, res) => {
       });
     }
 
-    // Check if bazaar exists and registration is open
-    const bazaar = await Event.findById(bazaar_id);
-    if (!bazaar) {
-      return res.status(404).json({ message: "Bazaar not found" });
-    }
-
-    // Check registration deadline
-    if (bazaar.bazaar?.registration_deadline && bazaar.bazaar.registration_deadline <= new Date()) {
-      return res.status(400).json({ message: "Registration deadline has passed" });
-    }
-
-    // Check if bazaar is in the past
-    if (bazaar.start_date <= new Date()) {
-      return res.status(400).json({ message: "Cannot apply to past bazaars" });
-    }
-
-    // Check if vendor already applied for booth event to this bazaar
-    const existingApplication = await VendorApplication.findOne({
-      vendor_user_id: req.user._id,
-      bazaar_id: bazaar_id,
-      kind: "booth_event"
-    });
-
-    if (existingApplication) {
-      return res.status(400).json({ 
-        message: "You have already applied for booth event to this bazaar",
-        application_status: existingApplication.status
-      });
+    // Validate preferred start date if provided
+    if (preferred_start_date) {
+      const startDate = new Date(preferred_start_date);
+      if (startDate <= new Date()) {
+        return res.status(400).json({ 
+          message: "Preferred start date must be in the future" 
+        });
+      }
     }
 
     // Create booth event application
     const application = new VendorApplication({
       vendor_user_id: req.user._id,
-      bazaar_id: bazaar_id,
       kind: "booth_event",
       application: {
         booth_staff: booth_staff,
         booth_size: booth_size,
         setup_duration_weeks: setup_duration_weeks,
-        booth_location: booth_location
+        booth_location: booth_location,
+        preferred_start_date: preferred_start_date,
+        notes: notes
       }
     });
 
     await application.save();
 
-    await application.populate([
-      { path: 'vendor_user_id', select: 'first_name last_name email vendor_info' },
-      { path: 'bazaar_id', select: 'name start_date end_date location' }
-    ]);
+    await application.populate('vendor_user_id', 'first_name last_name email vendor_info');
 
     res.status(201).json({
       message: "Booth event application submitted successfully",
@@ -277,7 +255,14 @@ export const applyToBoothEvent = async (req, res) => {
         setup_duration: `${application.application.setup_duration_weeks} week(s)`,
         location_zone: application.application.booth_location.zone,
         staff_count: application.application.booth_staff.length,
-        bazaar: application.bazaar_id,
+        preferred_start_date: application.application.preferred_start_date,
+        notes: application.application.notes,
+        vendor: {
+          _id: application.vendor_user_id._id,
+          name: `${application.vendor_user_id.first_name} ${application.vendor_user_id.last_name}`,
+          email: application.vendor_user_id.email,
+          vendor_info: application.vendor_user_id.vendor_info
+        },
         created_at: application.createdAt
       }
     });
