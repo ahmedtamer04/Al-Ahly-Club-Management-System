@@ -1,16 +1,28 @@
 'use client';
 
 import Link from 'next/link';
+import { useState, useEffect } from 'react';
 import '@/app/dashboard.css';
 
 export default function MyBoothsPage() {
+  // Load user immediately to avoid transition flicker
+  const getUserData = () => {
+    if (typeof window !== 'undefined') {
+      const userData = localStorage.getItem('user');
+      return userData ? JSON.parse(userData) : null;
+    }
+    return null;
+  };
+  
+  const [user] = useState(getUserData);
+
   return (
     <div className="dashboard">
       <nav className="dashboard-nav">
         <div className="nav-container">
           <h1 className="nav-brand">Al-Ahly Events</h1>
           <div className="nav-links">
-            <span className="nav-user">🏪 Vendor Dashboard</span>
+            <span className="nav-user">🏪 {user?.vendor_info?.company_name || 'Vendor'}</span>
             <Link href="/">Logout</Link>
           </div>
         </div>

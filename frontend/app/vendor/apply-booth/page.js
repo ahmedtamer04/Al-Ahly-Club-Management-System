@@ -1,10 +1,20 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import '@/app/dashboard.css';
 
 export default function ApplyBoothPage() {
+  // Load user immediately to avoid transition flicker
+  const getUserData = () => {
+    if (typeof window !== 'undefined') {
+      const userData = localStorage.getItem('user');
+      return userData ? JSON.parse(userData) : null;
+    }
+    return null;
+  };
+  
+  const [user] = useState(getUserData);
   const [booths, setBooths] = useState([]);
   const [selectedBooth, setSelectedBooth] = useState('');
   const [formData, setFormData] = useState({
@@ -30,7 +40,7 @@ export default function ApplyBoothPage() {
         <div className="nav-container">
           <h1 className="nav-brand">Al-Ahly Events</h1>
           <div className="nav-links">
-            <span className="nav-user">🏪 Vendor Dashboard</span>
+            <span className="nav-user">🏪 {user?.vendor_info?.company_name || 'Vendor'}</span>
             <Link href="/">Logout</Link>
           </div>
         </div>
@@ -40,10 +50,9 @@ export default function ApplyBoothPage() {
         <aside className="sidebar">
           <ul className="sidebar-menu">
             <li><Link href="/vendor">🏠 Dashboard</Link></li>
-            <li><Link href="/vendor/bazaars">🏪 Available Bazaars</Link></li>
-            <li><Link href="/vendor/apply-bazaar">📝 Apply to Bazaar</Link></li>
-            <li><Link href="/vendor/apply-booth">🎪 Apply for Booth</Link></li>
             <li><Link href="/vendor/applications">📋 My Applications</Link></li>
+            <li><Link href="/vendor/bazaars">🎪 Browse Bazaars</Link></li>
+            <li><Link href="/vendor/booths">� My Booths</Link></li>
             <li><Link href="/vendor/profile">👤 Profile</Link></li>
           </ul>
         </aside>
