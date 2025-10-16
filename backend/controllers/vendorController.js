@@ -518,13 +518,26 @@ export const cancelApplication = async (req, res) => {
   try {
     const application = await VendorApplication.findOne({
       _id: req.params.applicationId,
-      vendor_user_id: req.user._id,
-      status: "pending"
+      vendor_user_id: req.user._id
     });
 
     if (!application) {
       return res.status(404).json({ 
-        message: "Pending application not found" 
+        message: "Application not found" 
+      });
+    }
+
+    // Check if application is pending
+    if (application.status !== "pending") {
+      return res.status(400).json({ 
+        message: `Cannot cancel ${application.status} application. Only pending applications can be cancelled.` 
+      });
+    }
+
+    // Check if payment has been made
+    if (application.payment_status === "paid") {
+      return res.status(400).json({ 
+        message: "Cannot cancel application after payment has been made. Please contact support for refund requests." 
       });
     }
 
@@ -532,9 +545,16 @@ export const cancelApplication = async (req, res) => {
     await application.save();
 
     res.json({
-      message: "Application cancelled successfully"
+      message: "Application cancelled successfully",
+      application: {
+        _id: application._id,
+        status: application.status,
+        kind: application.kind,
+        cancelled_at: new Date()
+      }
     });
   } catch (error) {
+    console.error('Error cancelling application:', error);
     res.status(500).json({ message: error.message });
   }
 };

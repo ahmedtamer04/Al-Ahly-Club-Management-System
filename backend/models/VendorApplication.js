@@ -149,9 +149,15 @@ const vendorAppSchema = new mongoose.Schema({
   },
   status: { 
     type: String, 
-    enum: ["pending", "accepted", "rejected"], 
+    enum: ["pending", "accepted", "rejected", "cancelled"], 
     default: "pending" 
   },
+  payment_status: {
+    type: String,
+    enum: ["not_paid", "paid", "refunded"],
+    default: "not_paid"
+  },
+  payment_date: Date,
   rejection_reason: {
     type: String,
     trim: true
