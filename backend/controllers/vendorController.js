@@ -304,12 +304,12 @@ export const getAcceptedApplications = async (req, res) => {
       vendor_user_id: req.user._id,
       status: "accepted"
     })
-    .populate('event_id', 'name start_date end_date time location status type')
-    .sort({ 'event_id.start_date': 1 });
+    .populate('bazaar_id', 'name start_date end_date time location status type')
+    .sort({ 'bazaar_id.start_date': 1 });
 
     // Filter for upcoming events only
     const upcomingAccepted = acceptedApplications.filter(app => 
-      app.event_id && app.event_id.start_date >= new Date()
+      app.bazaar_id && app.bazaar_id.start_date >= new Date()
     );
 
     const formattedApplications = upcomingAccepted.map(app => ({
@@ -319,19 +319,20 @@ export const getAcceptedApplications = async (req, res) => {
       booth_size: app.application?.booth_size,
       setup_duration_weeks: app.application?.setup_duration_weeks,
       booth_location: app.application?.booth_location,
-      staff: app.application?.staff,
+      bazaar_staff: app.application?.bazaar_staff,
+      booth_staff: app.application?.booth_staff,
       approved_at: app.approved_at,
       approved_by: app.approved_by,
-      event: {
-        _id: app.event_id._id,
-        name: app.event_id.name,
-        type: app.event_id.type,
-        start_date: app.event_id.start_date,
-        end_date: app.event_id.end_date,
-        time: app.event_id.time,
-        location: app.event_id.location,
-        status: app.event_id.status,
-        days_until_start: Math.ceil((app.event_id.start_date - new Date()) / (1000 * 60 * 60 * 24))
+      bazaar: {
+        _id: app.bazaar_id._id,
+        name: app.bazaar_id.name,
+        type: app.bazaar_id.type,
+        start_date: app.bazaar_id.start_date,
+        end_date: app.bazaar_id.end_date,
+        time: app.bazaar_id.time,
+        location: app.bazaar_id.location,
+        status: app.bazaar_id.status,
+        days_until_start: Math.ceil((app.bazaar_id.start_date - new Date()) / (1000 * 60 * 60 * 24))
       }
     }));
 
@@ -360,7 +361,7 @@ export const getPendingAndRejectedApplications = async (req, res) => {
       vendor_user_id: req.user._id,
       status: statusFilter
     })
-    .populate('event_id', 'name start_date end_date time location status type bazaar')
+    .populate('bazaar_id', 'name start_date end_date time location status type bazaar')
     .sort({ createdAt: -1 });
 
     const formattedApplications = applications.map(app => {
@@ -368,17 +369,17 @@ export const getPendingAndRejectedApplications = async (req, res) => {
       let registrationStillOpen = false;
       let daysUntilStart = null;
 
-      if (app.event_id) {
-        daysUntilStart = Math.ceil((app.event_id.start_date - new Date()) / (1000 * 60 * 60 * 24));
+      if (app.bazaar_id) {
+        daysUntilStart = Math.ceil((app.bazaar_id.start_date - new Date()) / (1000 * 60 * 60 * 24));
         
         // Check if application can be edited (pending and event hasn't started)
-        if (app.status === "pending" && app.event_id.start_date > new Date()) {
+        if (app.status === "pending" && app.bazaar_id.start_date > new Date()) {
           canEdit = true;
         }
 
         // Check if registration is still open (for bazaars)
-        if (app.event_id.type === "Bazaar" && app.event_id.bazaar?.registration_deadline) {
-          registrationStillOpen = app.event_id.bazaar.registration_deadline > new Date();
+        if (app.bazaar_id.type === "Bazaar" && app.bazaar_id.bazaar?.registration_deadline) {
+          registrationStillOpen = app.bazaar_id.bazaar.registration_deadline > new Date();
         }
       }
 
@@ -389,20 +390,21 @@ export const getPendingAndRejectedApplications = async (req, res) => {
         booth_size: app.application?.booth_size,
         setup_duration_weeks: app.application?.setup_duration_weeks,
         booth_location: app.application?.booth_location,
-        staff: app.application?.staff,
+        bazaar_staff: app.application?.bazaar_staff,
+        booth_staff: app.application?.booth_staff,
         rejection_reason: app.rejection_reason,
         applied_at: app.createdAt,
         can_edit: canEdit,
-        event: app.event_id ? {
-          _id: app.event_id._id,
-          name: app.event_id.name,
-          type: app.event_id.type,
-          start_date: app.event_id.start_date,
-          end_date: app.event_id.end_date,
-          time: app.event_id.time,
-          location: app.event_id.location,
-          status: app.event_id.status,
-          registration_deadline: app.event_id.bazaar?.registration_deadline,
+        bazaar: app.bazaar_id ? {
+          _id: app.bazaar_id._id,
+          name: app.bazaar_id.name,
+          type: app.bazaar_id.type,
+          start_date: app.bazaar_id.start_date,
+          end_date: app.bazaar_id.end_date,
+          time: app.bazaar_id.time,
+          location: app.bazaar_id.location,
+          status: app.bazaar_id.status,
+          registration_deadline: app.bazaar_id.bazaar?.registration_deadline,
           registration_still_open: registrationStillOpen,
           days_until_start: daysUntilStart
         } : null
@@ -432,14 +434,72 @@ export const getPendingAndRejectedApplications = async (req, res) => {
 // Get all my applications
 export const getMyApplications = async (req, res) => {
   try {
-    const applications = await VendorApplication.findByVendor(req.user._id);
+    const applications = await VendorApplication.find({
+      vendor_user_id: req.user._id
+    })
+    .populate('bazaar_id', 'name start_date end_date location status type bazaar')
+    .sort({ createdAt: -1 });
+
+    const formattedApplications = applications.map(app => {
+      let daysUntilStart = null;
+      let registrationStillOpen = false;
+
+      if (app.bazaar_id) {
+        daysUntilStart = Math.ceil((app.bazaar_id.start_date - new Date()) / (1000 * 60 * 60 * 24));
+        
+        // Check if registration is still open (for bazaars)
+        if (app.bazaar_id.type === "Bazaar" && app.bazaar_id.bazaar?.registration_deadline) {
+          registrationStillOpen = app.bazaar_id.bazaar.registration_deadline > new Date();
+        }
+      }
+
+      return {
+        _id: app._id,
+        kind: app.kind,
+        status: app.status,
+        booth_size: app.application?.booth_size,
+        setup_duration_weeks: app.application?.setup_duration_weeks,
+        booth_location: app.application?.booth_location,
+        bazaar_staff: app.application?.bazaar_staff,
+        booth_staff: app.application?.booth_staff,
+        rejection_reason: app.rejection_reason,
+        applied_at: app.createdAt,
+        approved_at: app.approved_at,
+        bazaar: app.bazaar_id ? {
+          _id: app.bazaar_id._id,
+          name: app.bazaar_id.name,
+          type: app.bazaar_id.type,
+          start_date: app.bazaar_id.start_date,
+          end_date: app.bazaar_id.end_date,
+          location: app.bazaar_id.location,
+          status: app.bazaar_id.status,
+          registration_deadline: app.bazaar_id.bazaar?.registration_deadline,
+          registration_still_open: registrationStillOpen,
+          days_until_start: daysUntilStart
+        } : null
+      };
+    });
+
+    // Group by status
+    const byStatus = {
+      pending: formattedApplications.filter(app => app.status === "pending"),
+      accepted: formattedApplications.filter(app => app.status === "accepted"),
+      rejected: formattedApplications.filter(app => app.status === "rejected")
+    };
 
     res.json({
       message: "All applications retrieved successfully",
-      applications,
-      total: applications.length
+      applications: formattedApplications,
+      by_status: byStatus,
+      totals: {
+        total: formattedApplications.length,
+        pending: byStatus.pending.length,
+        accepted: byStatus.accepted.length,
+        rejected: byStatus.rejected.length
+      }
     });
   } catch (error) {
+    console.error('Error fetching my applications:', error);
     res.status(500).json({ message: error.message });
   }
 };
@@ -451,7 +511,7 @@ export const getApplicationById = async (req, res) => {
       _id: req.params.applicationId,
       vendor_user_id: req.user._id
     })
-    .populate('event_id')
+    .populate('bazaar_id')
     .populate('approved_by', 'first_name last_name email role');
 
     if (!application) {
