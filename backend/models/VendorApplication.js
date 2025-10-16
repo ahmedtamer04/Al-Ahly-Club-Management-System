@@ -8,8 +8,10 @@ const vendorAppSchema = new mongoose.Schema({
   },
   bazaar_id: { 
     type: mongoose.Schema.Types.ObjectId, 
-    ref: "Event", // Changed from "Bazaar" to "Event"
-    required: true 
+    ref: "Event", // Only required for bazaar applications
+    required: function() {
+      return this.kind === 'bazaar';
+    }
   },
   kind: { 
     type: String, 
@@ -133,6 +135,16 @@ const vendorAppSchema = new mongoose.Schema({
         },
         message: 'Booth location is required for booth event applications'
       }
+    },
+    // For booth_event applications - preferred start date
+    preferred_start_date: {
+      type: Date
+    },
+    // For booth_event applications - additional notes
+    notes: {
+      type: String,
+      trim: true,
+      maxlength: [500, 'Notes cannot exceed 500 characters']
     }
   },
   status: { 
