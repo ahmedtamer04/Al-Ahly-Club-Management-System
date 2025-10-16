@@ -8,25 +8,32 @@ const vendorAppSchema = new mongoose.Schema({
   },
   bazaar_id: { 
     type: mongoose.Schema.Types.ObjectId, 
-    ref: "Event", // Changed from "Bazaar" to "Event"
-    required: true 
+    ref: "Event", // Only required for bazaar applications
+    required: function() {
+      return this.kind === 'bazaar';
+    }
   },
   kind: { 
     type: String, 
-    enum: ["bazaar", "booth_platform"], 
+    enum: ["bazaar", "booth_event"], 
     required: true 
   },
   application: {
-    staff: {
+    // For bazaar applications - names and emails with booth size selection
+    bazaar_staff: {
       type: [{
         name: { 
           type: String, 
-          required: [true, 'Staff member name is required'],
+          required: function() {
+            return this.parent().parent().kind === 'bazaar';
+          },
           trim: true 
         },
         email: { 
           type: String, 
-          required: [true, 'Staff member email is required'],
+          required: function() {
+            return this.parent().parent().kind === 'bazaar';
+          },
           trim: true,
           lowercase: true,
           match: [/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/, 'Please enter a valid email']
@@ -34,36 +41,71 @@ const vendorAppSchema = new mongoose.Schema({
       }],
       validate: {
         validator: function(arr) {
-          return arr.length >= 1 && arr.length <= 5;
+          if (this.parent().kind === 'bazaar') {
+            return arr && arr.length >= 1 && arr.length <= 5;
+          }
+          return true;
         },
-        message: 'Staff must have between 1 and 5 members'
+        message: 'Bazaar staff must have between 1 and 5 members'
+      }
+    },
+    // For booth event applications - names and emails
+    booth_staff: {
+      type: [{
+        name: { 
+          type: String, 
+          required: function() {
+            return this.parent().parent().kind === 'booth_event';
+          },
+          trim: true 
+        },
+        email: { 
+          type: String, 
+          required: function() {
+            return this.parent().parent().kind === 'booth_event';
+          },
+          trim: true,
+          lowercase: true,
+          match: [/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/, 'Please enter a valid email']
+        }
+      }],
+      validate: {
+        validator: function(arr) {
+          if (this.parent().kind === 'booth_event') {
+            return arr && arr.length >= 1 && arr.length <= 5;
+          }
+          return true;
+        },
+        message: 'Booth event staff must have between 1 and 5 members'
       }
     },
     booth_size: {
       type: String,
       enum: {
-        values: ["2X2", "4X4"],
-        message: 'Booth size must be either 2X2 or 4X4'
+        values: ["2x2", "4x4"],
+        message: 'Booth size must be either 2x2 or 4x4'
       },
-      required: [true, 'Booth size is required']
+      required: function() {
+        return this.parent().kind === 'bazaar' || this.parent().kind === 'booth_event';
+      }
     },
-    // For booth_platform applications only
+    // For booth_event applications only
     setup_duration_weeks: {
       type: Number,
       min: [1, 'Setup duration must be at least 1 week'],
       max: [4, 'Setup duration cannot exceed 4 weeks'],
       validate: {
         validator: function(value) {
-          // Only required for booth_platform applications
-          if (this.kind === 'booth_platform') {
+          // Only required for booth_event applications
+          if (this.kind === 'booth_event') {
             return value != null && Number.isInteger(value);
           }
           return true;
         },
-        message: 'Setup duration in weeks is required for booth platform applications'
+        message: 'Setup duration in weeks is required for booth event applications'
       }
     },
-    // For booth_platform applications only
+    // For booth_event applications only
     booth_location: {
       type: {
         x_coordinate: {
@@ -85,21 +127,37 @@ const vendorAppSchema = new mongoose.Schema({
       },
       validate: {
         validator: function(value) {
-          // Only required for booth_platform applications
-          if (this.kind === 'booth_platform') {
+          // Only required for booth_event applications
+          if (this.kind === 'booth_event') {
             return value != null && value.zone != null;
           }
           return true;
         },
-        message: 'Booth location is required for booth platform applications'
+        message: 'Booth location is required for booth event applications'
       }
+    },
+    // For booth_event applications - preferred start date
+    preferred_start_date: {
+      type: Date
+    },
+    // For booth_event applications - additional notes
+    notes: {
+      type: String,
+      trim: true,
+      maxlength: [500, 'Notes cannot exceed 500 characters']
     }
   },
   status: { 
     type: String, 
-    enum: ["pending", "accepted", "rejected"], 
+    enum: ["pending", "accepted", "rejected", "cancelled"], 
     default: "pending" 
   },
+  payment_status: {
+    type: String,
+    enum: ["not_paid", "paid", "refunded"],
+    default: "not_paid"
+  },
+  payment_date: Date,
   rejection_reason: {
     type: String,
     trim: true
@@ -118,15 +176,29 @@ vendorAppSchema.index({ bazaar_id: 1, status: 1 });
 
 // Validation middleware
 vendorAppSchema.pre('save', function(next) {
-  // Validate booth_platform specific fields
-  if (this.kind === 'booth_platform') {
+  // Validate booth_event specific fields
+  if (this.kind === 'booth_event') {
     if (!this.application.setup_duration_weeks) {
-      return next(new Error('Setup duration in weeks is required for booth platform applications'));
+      return next(new Error('Setup duration in weeks is required for booth event applications'));
     }
     if (!this.application.booth_location || !this.application.booth_location.zone) {
-      return next(new Error('Booth location is required for booth platform applications'));
+      return next(new Error('Booth location is required for booth event applications'));
+    }
+    if (!this.application.booth_staff || this.application.booth_staff.length === 0) {
+      return next(new Error('Booth staff with names and emails is required for booth event applications'));
     }
   }
+  
+  // Validate bazaar specific fields
+  if (this.kind === 'bazaar') {
+    if (!this.application.bazaar_staff || this.application.bazaar_staff.length === 0) {
+      return next(new Error('Bazaar staff with names and emails is required for bazaar applications'));
+    }
+    if (!this.application.booth_size) {
+      return next(new Error('Booth size is required for bazaar applications'));
+    }
+  }
+  
   next();
 });
 

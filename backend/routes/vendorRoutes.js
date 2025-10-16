@@ -2,9 +2,8 @@ import express from "express";
 import { auth, requireVendor } from "../middleware/auth.js";
 import {
   getUpcomingBazaars,
-  getUpcomingBooths,
   applyToBazaar,
-  applyForBooth,
+  applyToBoothEvent,
   getAcceptedApplications,
   getPendingAndRejectedApplications,
   getApplicationById,
@@ -21,28 +20,25 @@ const router = express.Router();
 // 1. View upcoming bazaars available for application
 router.get("/upcoming/bazaars", auth, requireVendor, getUpcomingBazaars);
 
-// 2. View upcoming booths available for application
-router.get("/upcoming/booths", auth, requireVendor, getUpcomingBooths);
-
-// 3. Apply to a bazaar event
+// 2. Apply to bazaar (names/emails of max 5 individuals, booth size)
 router.post("/apply/bazaar", auth, requireVendor, applyToBazaar);
 
-// 4. Apply for a booth event
-router.post("/apply/booth", auth, requireVendor, applyForBooth);
+// 3. Apply to booth event (names/emails of max 5 individuals, duration 1-4 weeks, location, booth size)
+router.post("/apply/booth-event", auth, requireVendor, applyToBoothEvent);
 
-// 5. View my accepted applications
+// 4. View my accepted applications
 router.get("/applications/accepted", auth, requireVendor, getAcceptedApplications);
 
-// 6. View my pending and rejected applications
+// 5. View my pending and rejected applications
 router.get("/applications/pending-rejected", auth, requireVendor, getPendingAndRejectedApplications);
 
-// 7. View all my applications (any status)
+// 6. View all my applications (any status)
 router.get("/applications/my-applications", auth, requireVendor, getMyApplications);
 
-// 8. Get specific application details
+// 7. Get specific application details
 router.get("/applications/:applicationId", auth, requireVendor, getApplicationById);
 
-// 9. Cancel pending application
+// 8. Cancel pending application
 router.patch("/applications/:applicationId/cancel", auth, requireVendor, cancelApplication);
 
 export default router;
