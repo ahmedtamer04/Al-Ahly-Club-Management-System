@@ -13,7 +13,7 @@ export const getUpcomingBazaars = async (req, res) => {
     })
     .populate('created_by', 'first_name last_name email')
     .sort({ start_date: 1 })
-    .select('-bazaar.vendors_participating'); // Exclude sensitive vendor data
+    .select('-workshop -booth -conference -trip -bazaar.vendors_participating'); // Exclude irrelevant subdocuments and sensitive data
 
     const bazaarsWithRegistrationStatus = upcomingBazaars.map(bazaar => ({
       ...bazaar.toObject(),
