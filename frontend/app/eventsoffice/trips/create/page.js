@@ -9,7 +9,7 @@ import '@/app/dashboard.css';
 export default function CreateTripPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [message, setMessage] = useState({ text: '', type: '' });
   const [formData, setFormData] = useState({
     name: '',
     location: '',
@@ -24,15 +24,30 @@ export default function CreateTripPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
+    setMessage({ text: '', type: '' });
     setLoading(true);
 
     try {
       await tripAPI.create(formData);
-      alert('Trip created successfully!');
-      router.push('/eventsoffice/trips');
+      setMessage({ text: 'Trip created successfully!', type: 'success' });
+      // Reset form
+      setFormData({
+        name: '',
+        location: '',
+        price: '',
+        start_date: '',
+        end_date: '',
+        time: '',
+        short_description: '',
+        capacity: '',
+        registration_deadline: '',
+      });
+      // Redirect after 2 seconds
+      setTimeout(() => {
+        router.push('/eventsoffice/trips');
+      }, 2000);
     } catch (err) {
-      setError(err.message || 'Failed to create trip');
+      setMessage({ text: err.message || 'Failed to create trip', type: 'error' });
     } finally {
       setLoading(false);
     }
@@ -69,9 +84,9 @@ export default function CreateTripPage() {
         <main className="main-content">
           <h1>Create New Trip 🚌</h1>
 
-          {error && (
-            <div className="alert alert-error">
-              {error}
+          {message.text && (
+            <div className={`alert alert-${message.type}`}>
+              {message.text}
             </div>
           )}
 

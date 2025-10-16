@@ -1,3 +1,39 @@
 {
-  "pages": {}
+  "pages": {
+    "/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/css/app/page.css",
+      "static/chunks/app/page.js"
+    ],
+    "/layout": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/layout.js"
+    ],
+    "/auth/login/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/css/app/auth/login/page.css",
+      "static/chunks/app/auth/login/page.js"
+    ],
+    "/eventsoffice/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/css/app/eventsoffice/page.css",
+      "static/chunks/app/eventsoffice/page.js"
+    ],
+    "/eventsoffice/vendors/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/css/app/eventsoffice/vendors/page.css",
+      "static/chunks/app/eventsoffice/vendors/page.js"
+    ],
+    "/eventsoffice/bazaars/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/css/app/eventsoffice/bazaars/page.css",
+      "static/chunks/app/eventsoffice/bazaars/page.js"
+    ]
+  }
 }

@@ -27,6 +27,14 @@ router.use("/verify-email", (req, res, next) => next()); // Allow email verifica
 // All routes require authentication
 router.use(auth);
 
+// Vendor application management (Admin and EventsOffice) - Must come BEFORE requireAdmin middleware
+router.get("/vendor-requests", requireAdminOrEventsOffice, getAllVendorRequests);
+router.get("/vendor-requests/stats", requireAdminOrEventsOffice, getVendorRequestsStats);
+router.get("/vendor-requests/:applicationId", requireAdminOrEventsOffice, getVendorRequestById);
+router.post("/vendor-requests/:applicationId/accept", requireAdminOrEventsOffice, acceptVendorRequest);
+router.post("/vendor-requests/:applicationId/reject", requireAdminOrEventsOffice, rejectVendorRequest);
+
+// All remaining routes require Admin role only
 router.use(requireAdmin);
 
 // Admin user management
@@ -39,20 +47,11 @@ router.get("/users", getAllUsers);
 // User management and moderation
 router.post("/user/:userId/block", toggleUserBlock);
 router.delete("/comment/:commentId", deleteComment);
-router.get("/admin-users", requireAdmin, getAdminUsers);
-router.get("/user/:userId", requireAdmin, getUserById);
 
 // User approval system
 router.get("/pending-users", getPendingUsers);
 router.post("/approve/:userId", approveUser);
 router.post("/resend-verification/:userId", resendVerificationEmail);
-
-// Vendor application management (Admin and EventsOffice)
-router.get("/vendor-requests", requireAdminOrEventsOffice, getAllVendorRequests);
-router.get("/vendor-requests/stats", requireAdminOrEventsOffice, getVendorRequestsStats);
-router.get("/vendor-requests/:applicationId", requireAdminOrEventsOffice, getVendorRequestById);
-router.post("/vendor-requests/:applicationId/accept", requireAdminOrEventsOffice, acceptVendorRequest);
-router.post("/vendor-requests/:applicationId/reject", requireAdminOrEventsOffice, rejectVendorRequest);
 
 
 export default router;

@@ -176,28 +176,28 @@ export const workshopAPI = {
 // ================================
 
 export const tripAPI = {
-  // POST /api/trip/createTrip
+  // POST /api/trips/createTrip
   // Auth: requireEventsOffice
   // Required: { name, location, price, start_date, end_date, time, short_description, 
   //             capacity, registration_deadline }
-  create: (tripData) => api.post('/trip/createTrip', tripData),
+  create: (tripData) => api.post('/trips/createTrip', tripData),
 
-  // PUT /api/trip/updateTrip/:id
+  // PUT /api/trips/updateTrip/:id
   // Auth: requireEventsOffice
   // Updates trip fields
-  edit: (id, updates) => api.put(`/trip/updateTrip/${id}`, updates),
+  edit: (id, updates) => api.put(`/trips/updateTrip/${id}`, updates),
 
-  // GET /api/trip/getTrip/:id
+  // GET /api/trips/getTrip/:id
   // Auth: requireStudentOrAbove
   // Returns single trip by ID
-  getById: (id) => api.get(`/trip/getTrip/${id}`),
+  getById: (id) => api.get(`/trips/getTrip/${id}`),
 
-  // GET /api/trip/listTrips
+  // GET /api/trips/listTrips
   // Auth: requireStudentOrAbove
   // Query params: page, limit, status, location
   list: (params = {}) => {
     const queryString = new URLSearchParams(params).toString();
-    return api.get(`/trip/listTrips${queryString ? `?${queryString}` : ''}`);
+    return api.get(`/trips/listTrips${queryString ? `?${queryString}` : ''}`);
   },
 
   // GET /api/events/filter/type/Trip - Get all trips for EventsOffice
@@ -261,26 +261,26 @@ export const conferenceAPI = {
 // ================================
 
 export const gymAPI = {
-  // GET /api/gymSession/schedule
+  // GET /api/gym-sessions/schedule
   // Auth: requireStudentOrAbove
   // Query params: month, year, type
   getSchedule: (params = {}) => {
     const queryString = new URLSearchParams(params).toString();
-    return api.get(`/gymSession/schedule${queryString ? `?${queryString}` : ''}`);
+    return api.get(`/gym-sessions/schedule${queryString ? `?${queryString}` : ''}`);
   },
 
-  // POST /api/gymSession/create
+  // POST /api/gym-sessions/create
   // Auth: requireAdminOrEventsOffice
   // Required: { date, time, duration, type, maxParticipants }
-  create: (sessionData) => api.post('/gymSession/create', sessionData),
+  create: (sessionData) => api.post('/gym-sessions/create', sessionData),
 
-  // PUT /api/gymSession/edit/:id
+  // PUT /api/gym-sessions/edit/:id
   // Auth: requireAdminOrEventsOffice
-  edit: (id, updates) => api.put(`/gymSession/edit/${id}`, updates),
+  edit: (id, updates) => api.put(`/gym-sessions/edit/${id}`, updates),
 
-  // PATCH /api/gymSession/cancel/:id
+  // PATCH /api/gym-sessions/cancel/:id
   // Auth: requireAdminOrEventsOffice
-  cancel: (id) => api.patch(`/gymSession/cancel/${id}`, {}),
+  cancel: (id) => api.patch(`/gym-sessions/cancel/${id}`, {}),
 };
 
 // ================================
@@ -318,6 +318,11 @@ export const eventAPI = {
   // Auth: requireStudentOrAbove
   // order: "asc" | "desc"
   sortByDate: (order) => api.get(`/events/sort/date/${order}`),
+
+  // DELETE /api/events/delete/:eventId
+  // Auth: requireAdminOrEventsOffice
+  // Can only delete if no registrations exist
+  delete: (eventId) => api.delete(`/events/delete/${eventId}`),
 };
 
 // ================================
@@ -407,8 +412,8 @@ export const adminAPI = {
 
   // POST /api/admin/vendor-requests/:applicationId/reject
   // Auth: requireAdminOrEventsOffice
-  // Optional: { reason: "rejection reason" }
-  rejectVendorRequest: (id, reason) => api.post(`/admin/vendor-requests/${id}/reject`, { reason }),
+  // Required: { rejection_reason: "rejection reason" }
+  rejectVendorRequest: (id, rejection_reason) => api.post(`/admin/vendor-requests/${id}/reject`, { rejection_reason }),
 
   // GET /api/admin/pending-users
   // Auth: requireAdmin
