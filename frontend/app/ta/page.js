@@ -1,9 +1,59 @@
 'use client';
 
 import Link from 'next/link';
+import { useState, useEffect } from 'react';
 import '@/app/dashboard.css';
 
 export default function TADashboard() {
+  const [upcomingEventsCount, setUpcomingEventsCount] = useState(0);
+  const [managingEventsCount, setManagingEventsCount] = useState(0);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        
+        if (!token) {
+          console.error('No token found');
+          setLoading(false);
+          return;
+        }
+
+        // Fetch upcoming events count
+        const eventsResponse = await fetch('http://localhost:5000/api/events/upcoming', {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (eventsResponse.ok) {
+          const eventsData = await eventsResponse.json();
+          setUpcomingEventsCount(eventsData.length);
+        }
+
+        // TODO: Fetch events the TA is managing (if you have an endpoint for this)
+        // Example:
+        // const managingResponse = await fetch('http://localhost:5001/events/my-events', {
+        //   headers: { 'Authorization': `Bearer ${token}` }
+        // });
+        // if (managingResponse.ok) {
+        //   const managingData = await managingResponse.json();
+        //   setManagingEventsCount(managingData.length);
+        // }
+
+      } catch (error) {
+        console.error('Error fetching stats:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchStats();
+  }, []);
+
   return (
     <div className="dashboard">
       <nav className="dashboard-nav">
@@ -33,14 +83,14 @@ export default function TADashboard() {
             <div className="stat-card">
               <div className="stat-icon">📅</div>
               <div className="stat-info">
-                <h3>0</h3>
+                <h3>{loading ? '...' : upcomingEventsCount}</h3>
                 <p>Upcoming Events</p>
               </div>
             </div>
             <div className="stat-card">
               <div className="stat-icon">✏️</div>
               <div className="stat-info">
-                <h3>0</h3>
+                <h3>{loading ? '...' : managingEventsCount}</h3>
                 <p>Events I'm Managing</p>
               </div>
             </div>
