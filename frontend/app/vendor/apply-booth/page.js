@@ -2,9 +2,12 @@
 
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { vendorAPI } from '@/utils/api';
 import '@/app/dashboard.css';
 
 export default function ApplyBoothPage() {
+  const router = useRouter();
   // Load user immediately to avoid transition flicker
   const getUserData = () => {
     if (typeof window !== 'undefined') {
@@ -15,23 +18,66 @@ export default function ApplyBoothPage() {
   };
   
   const [user] = useState(getUserData);
-  const [booths, setBooths] = useState([]);
-  const [selectedBooth, setSelectedBooth] = useState('');
   const [formData, setFormData] = useState({
-    businessName: '',
-    businessType: '',
-    description: '',
-    boothSize: 'small',
-    equipmentNeeded: '',
-    setupRequirements: '',
-    contactPhone: '',
-    contactEmail: ''
+    business_name: '',
+    business_type: '',
+    business_description: '',
+    booth_size: 'small',
+    products_offered: '',
+    contact_phone: '',
+    contact_email: '',
+    preferred_start_date: '',
+    notes: ''
   });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState(false);
 
-  const handleSubmit = (e) => {
+  useEffect(() => {
+    // Pre-fill form with user data if available
+    if (user) {
+      setFormData(prev => ({
+        ...prev,
+        business_name: user.vendor_info?.company_name || '',
+        business_type: user.vendor_info?.business_type || '',
+        business_description: user.vendor_info?.business_description || '',
+        contact_phone: user.vendor_info?.phone || user.phone || '',
+        contact_email: user.email || ''
+      }));
+    }
+  }, [user]);
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // TODO: POST /api/vendors/apply-booth
-    console.log('Apply for booth:', { boothId: selectedBooth, ...formData });
+    setLoading(true);
+    setError('');
+    
+    try {
+      await vendorAPI.applyToBoothEvent(formData);
+      setSuccess(true);
+      alert('Booth application submitted successfully! Check My Applications to track your request.');
+      router.push('/vendor/applications');
+    } catch (err) {
+      console.error('Error submitting booth application:', err);
+      setError(err.response?.data?.message || err.message || 'Failed to submit application');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleReset = () => {
+    setFormData({
+      business_name: user?.vendor_info?.company_name || '',
+      business_type: user?.vendor_info?.business_type || '',
+      business_description: user?.vendor_info?.business_description || '',
+      booth_size: 'small',
+      products_offered: '',
+      contact_phone: user?.vendor_info?.phone || user?.phone || '',
+      contact_email: user?.email || '',
+      preferred_start_date: '',
+      notes: ''
+    });
+    setError('');
   };
 
   return (
@@ -58,27 +104,31 @@ export default function ApplyBoothPage() {
         </aside>
 
         <main className="main-content">
-          <h1>Apply for Booth 🎪</h1>
+          <h1>Apply for Booth Event 🎪</h1>
+
+          {error && (
+            <div style={{
+              padding: '1rem',
+              marginBottom: '1rem',
+              background: '#fee',
+              color: '#dc3545',
+              borderRadius: '8px',
+              border: '1px solid #dc3545'
+            }}>
+              {error}
+            </div>
+          )}
 
           <section className="section">
-            <form onSubmit={handleSubmit} className="form">
-              <div className="form-group">
-                <label htmlFor="boothId">Select Available Booth *</label>
-                <select
-                  id="boothId"
-                  required
-                  value={selectedBooth}
-                  onChange={(e) => setSelectedBooth(e.target.value)}
-                >
-                  <option value="">-- Choose a booth --</option>
-                  <option value="1">Booth A1 - Main Hall</option>
-                  <option value="2">Booth B3 - Corner Spot</option>
-                </select>
-                <small style={{color: '#999', marginTop: '0.5rem', display: 'block'}}>
-                  API: GET /api/vendors/available-booths (to load available booths)
-                </small>
-              </div>
+            <div style={{ marginBottom: '1.5rem', padding: '1rem', background: '#e3f2fd', borderRadius: '8px' }}>
+              <h3 style={{ margin: '0 0 0.5rem 0', color: '#1976d2' }}>ℹ️ Booth Event Application</h3>
+              <p style={{ margin: 0, color: '#555' }}>
+                Apply for a booth at an upcoming event. This is independent of bazaar applications. 
+                Admin will review your request and assign you to an appropriate event.
+              </p>
+            </div>
 
+            <form onSubmit={handleSubmit} className="form">
               <div className="form-row">
                 <div className="form-group">
                   <label htmlFor="businessName">Business Name *</label>
@@ -87,8 +137,8 @@ export default function ApplyBoothPage() {
                     id="businessName"
                     required
                     placeholder="Your business name"
-                    value={formData.businessName}
-                    onChange={(e) => setFormData({...formData, businessName: e.target.value})}
+                    value={formData.business_name}
+                    onChange={(e) => setFormData({...formData, business_name: e.target.value})}
                   />
                 </div>
                 <div className="form-group">
@@ -96,8 +146,8 @@ export default function ApplyBoothPage() {
                   <select
                     id="businessType"
                     required
-                    value={formData.businessType}
-                    onChange={(e) => setFormData({...formData, businessType: e.target.value})}
+                    value={formData.business_type}
+                    onChange={(e) => setFormData({...formData, business_type: e.target.value})}
                   >
                     <option value="">-- Select type --</option>
                     <option value="food">Food & Beverages</option>
@@ -117,45 +167,61 @@ export default function ApplyBoothPage() {
                   rows="4"
                   required
                   placeholder="Describe your business and what you'll showcase..."
-                  value={formData.description}
-                  onChange={(e) => setFormData({...formData, description: e.target.value})}
+                  value={formData.business_description}
+                  onChange={(e) => setFormData({...formData, business_description: e.target.value})}
                 />
               </div>
 
               <div className="form-group">
-                <label htmlFor="boothSize">Preferred Booth Size *</label>
-                <select
-                  id="boothSize"
+                <label htmlFor="productsOffered">Products/Services Offered *</label>
+                <textarea
+                  id="productsOffered"
+                  rows="3"
                   required
-                  value={formData.boothSize}
-                  onChange={(e) => setFormData({...formData, boothSize: e.target.value})}
-                >
-                  <option value="small">Small (3m x 3m)</option>
-                  <option value="medium">Medium (6m x 3m)</option>
-                  <option value="large">Large (6m x 6m)</option>
-                  <option value="xl">Extra Large (9m x 6m)</option>
-                </select>
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="equipmentNeeded">Equipment Needed</label>
-                <textarea
-                  id="equipmentNeeded"
-                  rows="3"
-                  placeholder="List any equipment you'll need (tables, chairs, power outlets, etc.)"
-                  value={formData.equipmentNeeded}
-                  onChange={(e) => setFormData({...formData, equipmentNeeded: e.target.value})}
+                  placeholder="List the products or services you will offer at your booth..."
+                  value={formData.products_offered}
+                  onChange={(e) => setFormData({...formData, products_offered: e.target.value})}
                 />
               </div>
 
+              <div className="form-row">
+                <div className="form-group">
+                  <label htmlFor="boothSize">Preferred Booth Size *</label>
+                  <select
+                    id="boothSize"
+                    required
+                    value={formData.booth_size}
+                    onChange={(e) => setFormData({...formData, booth_size: e.target.value})}
+                  >
+                    <option value="small">Small (3m x 3m) - $200</option>
+                    <option value="medium">Medium (6m x 3m) - $400</option>
+                    <option value="large">Large (6m x 6m) - $600</option>
+                    <option value="xl">Extra Large (9m x 6m) - $900</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label htmlFor="preferredDate">Preferred Start Date</label>
+                  <input
+                    type="date"
+                    id="preferredDate"
+                    min={new Date().toISOString().split('T')[0]}
+                    value={formData.preferred_start_date}
+                    onChange={(e) => setFormData({...formData, preferred_start_date: e.target.value})}
+                  />
+                  <small style={{color: '#999', marginTop: '0.3rem', display: 'block'}}>
+                    Optional - When would you like to start?
+                  </small>
+                </div>
+              </div>
+
               <div className="form-group">
-                <label htmlFor="setupRequirements">Setup Requirements</label>
+                <label htmlFor="notes">Additional Notes</label>
                 <textarea
-                  id="setupRequirements"
+                  id="notes"
                   rows="3"
-                  placeholder="Special setup requirements, early access needs, etc."
-                  value={formData.setupRequirements}
-                  onChange={(e) => setFormData({...formData, setupRequirements: e.target.value})}
+                  placeholder="Any special requirements, equipment needs, setup requirements, etc."
+                  value={formData.notes}
+                  onChange={(e) => setFormData({...formData, notes: e.target.value})}
                 />
               </div>
 
@@ -167,8 +233,8 @@ export default function ApplyBoothPage() {
                     id="contactPhone"
                     required
                     placeholder="+20 xxx xxx xxxx"
-                    value={formData.contactPhone}
-                    onChange={(e) => setFormData({...formData, contactPhone: e.target.value})}
+                    value={formData.contact_phone}
+                    onChange={(e) => setFormData({...formData, contact_phone: e.target.value})}
                   />
                 </div>
                 <div className="form-group">
@@ -178,29 +244,32 @@ export default function ApplyBoothPage() {
                     id="contactEmail"
                     required
                     placeholder="vendor@example.com"
-                    value={formData.contactEmail}
-                    onChange={(e) => setFormData({...formData, contactEmail: e.target.value})}
+                    value={formData.contact_email}
+                    onChange={(e) => setFormData({...formData, contact_email: e.target.value})}
                   />
                 </div>
               </div>
 
               <div className="form-actions">
-                <button type="submit" className="btn btn-primary">Submit Application</button>
+                <button 
+                  type="submit" 
+                  className="btn btn-primary"
+                  disabled={loading}
+                >
+                  {loading ? 'Submitting...' : 'Submit Application'}
+                </button>
                 <button 
                   type="button" 
                   className="btn btn-secondary"
-                  onClick={() => setFormData({
-                    businessName: '', businessType: '', description: '', boothSize: 'small',
-                    equipmentNeeded: '', setupRequirements: '', contactPhone: '', contactEmail: ''
-                  })}
+                  onClick={handleReset}
+                  disabled={loading}
                 >
                   Reset Form
                 </button>
+                <Link href="/vendor/applications" className="btn btn-secondary">
+                  View My Applications
+                </Link>
               </div>
-
-              <small style={{color: '#999', marginTop: '1rem', display: 'block'}}>
-                API Endpoint: POST /api/vendors/apply-booth
-              </small>
             </form>
           </section>
 

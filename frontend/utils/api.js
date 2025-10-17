@@ -383,6 +383,14 @@ export const vendorAPI = {
   // Auth: requireVendor
   // Cancels pending unpaid application
   cancelApplication: (id) => api.patch(`/vendor/applications/${id}/cancel`, {}),
+
+  // GET /api/vendor/booth-availability
+  // Auth: requireVendor
+  // Query params: start_date (YYYY-MM-DD), duration_weeks (1-4)
+  // Returns occupied booth positions
+  getBoothAvailability: (startDate, durationWeeks) => {
+    return api.get(`/vendor/booth-availability?start_date=${startDate}&duration_weeks=${durationWeeks}`);
+  },
 };
 
 // ================================

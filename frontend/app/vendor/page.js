@@ -25,6 +25,8 @@ export default function VendorDashboard() {
   });
   const [bazaars, setBazaars] = useState([]);
   const [recentApplications, setRecentApplications] = useState([]);
+  const [acceptedApplications, setAcceptedApplications] = useState([]);
+  const [pendingRejectedApplications, setPendingRejectedApplications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -65,6 +67,19 @@ export default function VendorDashboard() {
       // Get 3 most recent applications
       setRecentApplications(applications.slice(0, 3));
       console.log('Recent applications set:', applications.slice(0, 3));
+      
+      // Filter accepted applications (upcoming events only)
+      const accepted = applications.filter(app => 
+        app.status === 'accepted' && 
+        (app.bazaar_id?.start_date ? new Date(app.bazaar_id.start_date) >= new Date() : true)
+      );
+      setAcceptedApplications(accepted);
+      
+      // Filter pending and rejected applications
+      const pendingRejected = applications.filter(app => 
+        app.status === 'pending' || app.status === 'rejected'
+      );
+      setPendingRejectedApplications(pendingRejected);
       
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
@@ -188,6 +203,99 @@ export default function VendorDashboard() {
 
               <section className="section">
                 <div className="section-header">
+                  <h2>My Upcoming Events (Accepted)</h2>
+                  <Link href="/vendor/applications" className="btn-primary">View All Applications</Link>
+                </div>
+                
+                {acceptedApplications.length === 0 ? (
+                  <div className="empty-state">
+                    <p>✅ No accepted applications yet</p>
+                    <Link href="/vendor/bazaars" className="btn-primary" style={{marginTop: '1rem', display: 'inline-block'}}>
+                      Browse Bazaars
+                    </Link>
+                  </div>
+                ) : (
+                  <div className="applications-preview">
+                    {acceptedApplications.map((app) => (
+                      <div key={app._id} className="preview-card accepted-card">
+                        <div className="preview-header">
+                          <h3>{app.bazaar_id?.name || 'Booth Event Application'}</h3>
+                          <span 
+                            className="status-badge"
+                            style={{ backgroundColor: '#28a745' }}
+                          >
+                            ✅ Accepted
+                          </span>
+                        </div>
+                        <div className="preview-details">
+                          <p>🏢 {app.business_name}</p>
+                          <p>📦 Booth Size: {app.booth_size}</p>
+                          <p>🏷️ Type: {app.kind === 'bazaar' ? 'Bazaar' : 'Booth Event'}</p>
+                          {app.bazaar_id?.start_date && (
+                            <p>🗓️ Event Date: {formatDate(app.bazaar_id.start_date)}</p>
+                          )}
+                          {app.bazaar_id?.location && (
+                            <p>📍 Location: {app.bazaar_id.location}</p>
+                          )}
+                        </div>
+                        <button 
+                          className="btn-secondary"
+                          onClick={() => router.push('/vendor/applications')}
+                        >
+                          View Details
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </section>
+
+              <section className="section">
+                <div className="section-header">
+                  <h2>Pending & Rejected Requests</h2>
+                  <Link href="/vendor/applications" className="btn-primary">View All</Link>
+                </div>
+                
+                {pendingRejectedApplications.length === 0 ? (
+                  <div className="empty-state">
+                    <p>📋 No pending or rejected applications</p>
+                  </div>
+                ) : (
+                  <div className="applications-preview">
+                    {pendingRejectedApplications.map((app) => (
+                      <div key={app._id} className="preview-card">
+                        <div className="preview-header">
+                          <h3>{app.bazaar_id?.name || 'Booth Event Application'}</h3>
+                          <span 
+                            className="status-badge"
+                            style={{ backgroundColor: getStatusColor(app.status) }}
+                          >
+                            {app.status === 'pending' ? '⏳ Pending' : '❌ Rejected'}
+                          </span>
+                        </div>
+                        <div className="preview-details">
+                          <p>🏢 {app.business_name}</p>
+                          <p>📦 Booth Size: {app.booth_size}</p>
+                          <p>🏷️ Type: {app.kind === 'bazaar' ? 'Bazaar' : 'Booth Event'}</p>
+                          <p>📅 Applied: {formatDate(app.applied_at)}</p>
+                          {app.bazaar_id?.start_date && (
+                            <p>🗓️ Event: {formatDate(app.bazaar_id.start_date)}</p>
+                          )}
+                        </div>
+                        <button 
+                          className="btn-secondary"
+                          onClick={() => router.push('/vendor/applications')}
+                        >
+                          View Details
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </section>
+
+              <section className="section">
+                <div className="section-header">
                   <h2>My Recent Applications</h2>
                   <Link href="/vendor/applications" className="btn-primary">View All</Link>
                 </div>
@@ -204,7 +312,7 @@ export default function VendorDashboard() {
                     {recentApplications.map((app) => (
                       <div key={app._id} className="preview-card">
                         <div className="preview-header">
-                          <h3>{app.bazaar?.name || 'Booth Event Application'}</h3>
+                          <h3>{app.bazaar_id?.name || 'Booth Event Application'}</h3>
                           <span 
                             className="status-badge"
                             style={{ backgroundColor: getStatusColor(app.status) }}
@@ -216,8 +324,8 @@ export default function VendorDashboard() {
                           <p>📦 Booth Size: {app.booth_size}</p>
                           <p>🏷️ Type: {app.kind === 'bazaar' ? 'Bazaar' : 'Booth Event'}</p>
                           <p>📅 Applied: {formatDate(app.applied_at)}</p>
-                          {app.bazaar?.start_date && (
-                            <p>🗓️ Event: {formatDate(app.bazaar.start_date)}</p>
+                          {app.bazaar_id?.start_date && (
+                            <p>🗓️ Event: {formatDate(app.bazaar_id.start_date)}</p>
                           )}
                         </div>
                         <button 
@@ -319,6 +427,15 @@ export default function VendorDashboard() {
 
         .preview-card:hover {
           border-color: #c41e3a;
+        }
+
+        .accepted-card {
+          border-left: 4px solid #28a745;
+          background: linear-gradient(to right, #f0fff4 0%, white 100%);
+        }
+
+        .accepted-card:hover {
+          border-color: #28a745;
         }
 
         .preview-header {

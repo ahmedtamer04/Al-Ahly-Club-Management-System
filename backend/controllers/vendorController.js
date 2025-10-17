@@ -164,12 +164,25 @@ export const applyToBazaar = async (req, res) => {
 // Apply to booth event (1-4 weeks setup, independent of bazaars)
 export const applyToBoothEvent = async (req, res) => {
   try {
-    const { booth_staff, booth_size, setup_duration_weeks, booth_location, preferred_start_date, notes } = req.body;
+    const { 
+      attendees, 
+      booth_size, 
+      duration_weeks, 
+      platform_position, 
+      preferred_start_date, 
+      notes,
+      business_name,
+      business_type,
+      business_description,
+      products_offered,
+      contact_phone,
+      contact_email
+    } = req.body;
 
     // Validate required fields
-    if (!booth_staff || !booth_size || !setup_duration_weeks || !booth_location) {
+    if (!attendees || !booth_size || !duration_weeks || !platform_position || !preferred_start_date) {
       return res.status(400).json({
-        message: "Staff details, booth size, duration, and location are required"
+        message: "Attendees, booth size, duration, platform position, and start date are required"
       });
     }
 
@@ -180,65 +193,111 @@ export const applyToBoothEvent = async (req, res) => {
       });
     }
 
-    // Validate setup duration
-    if (!Number.isInteger(setup_duration_weeks) || setup_duration_weeks < 1 || setup_duration_weeks > 4) {
+    // Validate duration
+    if (!Number.isInteger(duration_weeks) || duration_weeks < 1 || duration_weeks > 4) {
       return res.status(400).json({ 
-        message: "Setup duration must be between 1 and 4 weeks" 
+        message: "Duration must be between 1 and 4 weeks" 
       });
     }
 
-    // Validate staff array
-    if (!Array.isArray(booth_staff) || booth_staff.length === 0 || booth_staff.length > 5) {
+    // Validate attendees array
+    if (!Array.isArray(attendees) || attendees.length === 0 || attendees.length > 5) {
       return res.status(400).json({ 
-        message: "Staff must be an array with 1 to 5 members" 
+        message: "Attendees must be an array with 1 to 5 members" 
       });
     }
 
-    // Validate each staff member has name and email
-    for (const staff of booth_staff) {
-      if (!staff.name || !staff.email) {
+    // Validate each attendee has name and email
+    for (const attendee of attendees) {
+      if (!attendee.name || !attendee.email) {
         return res.status(400).json({ 
-          message: "Each staff member must have both name and email" 
+          message: "Each attendee must have both name and email" 
         });
       }
       // Basic email validation
       const emailRegex = /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/;
-      if (!emailRegex.test(staff.email)) {
+      if (!emailRegex.test(attendee.email)) {
         return res.status(400).json({ 
-          message: `Invalid email format for staff member: ${staff.name}` 
+          message: `Invalid email format for attendee: ${attendee.name}` 
         });
       }
     }
 
-    // Validate booth location
-    if (!booth_location.zone || !["A", "B", "C", "D"].includes(booth_location.zone)) {
+    // Validate platform position
+    if (!platform_position.wall || !platform_position.slot) {
       return res.status(400).json({ 
-        message: "Booth location must include a valid zone (A, B, C, or D)" 
+        message: "Platform position must include wall and slot" 
       });
     }
 
-    // Validate preferred start date if provided
-    if (preferred_start_date) {
-      const startDate = new Date(preferred_start_date);
-      if (startDate <= new Date()) {
-        return res.status(400).json({ 
-          message: "Preferred start date must be in the future" 
-        });
+    if (!["north", "south", "east", "west"].includes(platform_position.wall)) {
+      return res.status(400).json({ 
+        message: "Platform wall must be one of: north, south, east, west" 
+      });
+    }
+
+    if (!Number.isInteger(platform_position.slot) || platform_position.slot < 1 || platform_position.slot > 6) {
+      return res.status(400).json({ 
+        message: "Platform slot must be between 1 and 6" 
+      });
+    }
+
+    // Validate preferred start date
+    const startDate = new Date(preferred_start_date);
+    if (startDate <= new Date()) {
+      return res.status(400).json({ 
+        message: "Preferred start date must be in the future" 
+      });
+    }
+
+    // Check if position is already taken for the requested period
+    const endDate = new Date(startDate);
+    endDate.setDate(endDate.getDate() + (duration_weeks * 7));
+
+    const conflictingBooking = await VendorApplication.findOne({
+      kind: "booth_event",
+      status: "accepted",
+      'platform_position.wall': platform_position.wall,
+      'platform_position.slot': platform_position.slot,
+      preferred_start_date: { $lte: endDate },
+      $expr: {
+        $gte: [
+          {
+            $add: [
+              "$preferred_start_date",
+              { $multiply: ["$duration_weeks", 7 * 24 * 60 * 60 * 1000] }
+            ]
+          },
+          startDate
+        ]
       }
+    });
+
+    if (conflictingBooking) {
+      return res.status(400).json({ 
+        message: "This booth position is already booked for the selected period" 
+      });
     }
 
     // Create booth event application
     const application = new VendorApplication({
       vendor_user_id: req.user._id,
       kind: "booth_event",
+      business_name: business_name,
+      business_type: business_type,
+      business_description: business_description,
+      products_offered: products_offered,
+      contact_phone: contact_phone,
+      contact_email: contact_email,
       application: {
-        booth_staff: booth_staff,
+        booth_staff: attendees,
         booth_size: booth_size,
-        setup_duration_weeks: setup_duration_weeks,
-        booth_location: booth_location,
-        preferred_start_date: preferred_start_date,
+        setup_duration_weeks: duration_weeks,
         notes: notes
-      }
+      },
+      platform_position: platform_position,
+      duration_weeks: duration_weeks,
+      preferred_start_date: startDate
     });
 
     await application.save();
@@ -252,10 +311,10 @@ export const applyToBoothEvent = async (req, res) => {
         status: application.status,
         kind: application.kind,
         booth_size: application.application.booth_size,
-        setup_duration: `${application.application.setup_duration_weeks} week(s)`,
-        location_zone: application.application.booth_location.zone,
+        duration_weeks: application.duration_weeks,
+        platform_position: application.platform_position,
         staff_count: application.application.booth_staff.length,
-        preferred_start_date: application.application.preferred_start_date,
+        preferred_start_date: application.preferred_start_date,
         notes: application.application.notes,
         vendor: {
           _id: application.vendor_user_id._id,
@@ -442,11 +501,27 @@ export const getMyApplications = async (req, res) => {
         _id: app._id,
         kind: app.kind,
         status: app.status,
+        payment_status: app.payment_status,
+        // Business information (for booth events)
+        business_name: app.business_name,
+        business_type: app.business_type,
+        business_description: app.business_description,
+        products_offered: app.products_offered,
+        contact_phone: app.contact_phone,
+        contact_email: app.contact_email,
+        // Booth details
         booth_size: app.application?.booth_size,
         setup_duration_weeks: app.application?.setup_duration_weeks,
         booth_location: app.application?.booth_location,
+        // Platform position (for booth events)
+        platform_position: app.platform_position,
+        duration_weeks: app.duration_weeks,
+        preferred_start_date: app.preferred_start_date,
+        // Staff/attendees
         bazaar_staff: app.application?.bazaar_staff,
         booth_staff: app.application?.booth_staff,
+        notes: app.application?.notes,
+        // Status info
         rejection_reason: app.rejection_reason,
         applied_at: app.createdAt,
         approved_at: app.approved_at,
@@ -555,6 +630,61 @@ export const cancelApplication = async (req, res) => {
     });
   } catch (error) {
     console.error('Error cancelling application:', error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Get booth availability for platform map
+export const getBoothAvailability = async (req, res) => {
+  try {
+    const { start_date, duration_weeks } = req.query;
+
+    if (!start_date || !duration_weeks) {
+      return res.status(400).json({ 
+        message: "Start date and duration are required" 
+      });
+    }
+
+    const startDate = new Date(start_date);
+    const durationWeeks = parseInt(duration_weeks);
+    const endDate = new Date(startDate);
+    endDate.setDate(endDate.getDate() + (durationWeeks * 7));
+
+    // Find all accepted booth applications that overlap with the requested period
+    const occupiedBooths = await VendorApplication.find({
+      kind: "booth_event",
+      status: "accepted",
+      // Check for date overlap
+      preferred_start_date: { $lte: endDate },
+      // Calculate end date from start date + duration
+      $expr: {
+        $gte: [
+          {
+            $add: [
+              "$preferred_start_date",
+              { $multiply: ["$duration_weeks", 7 * 24 * 60 * 60 * 1000] }
+            ]
+          },
+          startDate
+        ]
+      }
+    }).select('platform_position');
+
+    // Extract occupied positions
+    const occupied = occupiedBooths
+      .filter(booth => booth.platform_position && booth.platform_position.side && booth.platform_position.slot)
+      .map(booth => ({
+        side: booth.platform_position.side,
+        slot: booth.platform_position.slot
+      }));
+
+    res.json({
+      message: "Booth availability retrieved successfully",
+      occupied_positions: occupied,
+      total_occupied: occupied.length
+    });
+  } catch (error) {
+    console.error('Error fetching booth availability:', error);
     res.status(500).json({ message: error.message });
   }
 };

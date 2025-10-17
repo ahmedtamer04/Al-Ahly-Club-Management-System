@@ -1,8 +1,6 @@
 {
-  "/vendor/page": "app/vendor/page.js",
-  "/page": "app/page.js",
-  "/auth/login/page": "app/auth/login/page.js",
   "/vendor/applications/page": "app/vendor/applications/page.js",
-  "/vendor/apply-bazaar/page": "app/vendor/apply-bazaar/page.js",
-  "/vendor/bazaars/page": "app/vendor/bazaars/page.js"
+  "/vendor/profile/page": "app/vendor/profile/page.js",
+  "/vendor/page": "app/vendor/page.js",
+  "/vendor/booths/page": "app/vendor/booths/page.js"
 }

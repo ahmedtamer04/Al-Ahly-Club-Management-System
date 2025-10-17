@@ -8,7 +8,8 @@ import {
   getPendingAndRejectedApplications,
   getApplicationById,
   getMyApplications,
-  cancelApplication
+  cancelApplication,
+  getBoothAvailability
 } from "../controllers/vendorController.js";
 
 const router = express.Router();
@@ -40,5 +41,8 @@ router.get("/applications/:applicationId", auth, requireVendor, getApplicationBy
 
 // 8. Cancel pending application
 router.patch("/applications/:applicationId/cancel", auth, requireVendor, cancelApplication);
+
+// 9. Get booth availability for platform map
+router.get("/booth-availability", auth, requireVendor, getBoothAvailability);
 
 export default router;
