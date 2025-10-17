@@ -1,3 +1,87 @@
 {
-  "pages": {}
+  "pages": {
+    "/vendor/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/css/app/vendor/page.css",
+      "static/chunks/app/vendor/page.js"
+    ],
+    "/layout": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/layout.js"
+    ],
+    "/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/css/app/page.css",
+      "static/chunks/app/page.js"
+    ],
+    "/auth/login/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/css/app/auth/login/page.css",
+      "static/chunks/app/auth/login/page.js"
+    ],
+    "/vendor/booths/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/css/app/vendor/booths/page.css",
+      "static/chunks/app/vendor/booths/page.js"
+    ],
+    "/vendor/bazaars/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/css/app/vendor/bazaars/page.css",
+      "static/chunks/app/vendor/bazaars/page.js"
+    ],
+    "/vendor/applications/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/css/app/vendor/applications/page.css",
+      "static/chunks/app/vendor/applications/page.js"
+    ],
+    "/vendor/profile/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/css/app/vendor/profile/page.css",
+      "static/chunks/app/vendor/profile/page.js"
+    ],
+    "/professor/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/css/app/professor/page.css",
+      "static/chunks/app/professor/page.js"
+    ],
+    "/professor/profile/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/css/app/professor/profile/page.css",
+      "static/chunks/app/professor/profile/page.js"
+    ],
+    "/professor/workshops/create/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/css/app/professor/workshops/create/page.css",
+      "static/chunks/app/professor/workshops/create/page.js"
+    ],
+    "/professor/workshops/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/css/app/professor/workshops/page.css",
+      "static/chunks/app/professor/workshops/page.js"
+    ],
+    "/auth/register/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/css/app/auth/register/page.css",
+      "static/chunks/app/auth/register/page.js"
+    ],
+    "/professor/events/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/css/app/professor/events/page.css",
+      "static/chunks/app/professor/events/page.js"
+    ]
+  }
 }

@@ -72,14 +72,6 @@ export default function MyWorkshopsPage() {
     });
   };
 
-  if (loading) {
-    return (
-      <div className="dashboard">
-        <div className="loading">Loading workshops...</div>
-      </div>
-    );
-  }
-
   return (
     <div className="dashboard">
       <nav className="dashboard-nav">
@@ -96,8 +88,8 @@ export default function MyWorkshopsPage() {
         <aside className="sidebar">
           <ul className="sidebar-menu">
             <li><Link href="/professor">🏠 Dashboard</Link></li>
+            <li><Link href="/professor/events">📅 Events</Link></li>
             <li><Link href="/professor/workshops" className="active">🎨 My Workshops</Link></li>
-            <li><Link href="/professor/workshops/create">➕ Create Workshop</Link></li>
             <li><Link href="/professor/profile">👤 Profile</Link></li>
           </ul>
         </aside>
@@ -123,7 +115,12 @@ export default function MyWorkshopsPage() {
           )}
 
           <section className="section">
-            {workshops.length === 0 ? (
+            {loading ? (
+              <div className="loading-container">
+                <div className="loading-spinner"></div>
+                <p>Loading workshops...</p>
+              </div>
+            ) : workshops.length === 0 ? (
               <div className="empty-state">
                 <p>🎨 You haven't created any workshops yet</p>
                 <Link href="/professor/workshops/create" className="btn-primary">

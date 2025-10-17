@@ -1,0 +1,20 @@
+/* Form Styles */
+.form select {
+  width: 100%;
+  padding: 0.75rem;
+  border-radius: 8px;
+  border: 2px solid #E5E5E5;
+  background-color: white;
+  font-size: 1rem;
+  transition: border-color 0.3s;
+}
+
+.form select:focus {
+  outline: none;
+  border-color: var(--color-yellow, #FFCE00);
+}
+
+.form select:disabled {
+  background-color: #F5F5F5;
+  cursor: not-allowed;
+}
