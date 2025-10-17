@@ -427,4 +427,20 @@ export const adminAPI = {
   getAllUsers: () => api.get('/admin/users'),
 };
 
+// ================================
+// FACILITIES APIs (Student access)
+// ================================
+
+export const facilitiesAPI = {
+  // GET /api/facilities/getAll
+  // Auth: requireStudent
+  // Returns array of facility objects
+  getAll: () => api.get('/facilities/getAll'),
+
+  // POST /api/facilities/add (Admin/EventsOffice only)
+  // Auth: requireAdminOrEventsOffice
+  // Required: { name, type, location, attributes: { sport, indoor }, status }
+  add: (facilityData) => api.post('/facilities/add', facilityData),
+};
+
 export default api;
