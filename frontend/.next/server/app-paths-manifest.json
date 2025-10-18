@@ -1,5 +1,7 @@
 {
-  "/auth/login/page": "app/auth/login/page.js",
-  "/eventsoffice/page": "app/eventsoffice/page.js",
-  "/eventsoffice/vendors/page": "app/eventsoffice/vendors/page.js"
+  "/eventsoffice/conferences/page": "app/eventsoffice/conferences/page.js",
+  "/eventsoffice/conferences/create/page": "app/eventsoffice/conferences/create/page.js",
+  "/eventsoffice/vendors/page": "app/eventsoffice/vendors/page.js",
+  "/eventsoffice/gym/schedule/page": "app/eventsoffice/gym/schedule/page.js",
+  "/eventsoffice/gym/page": "app/eventsoffice/gym/page.js"
 }

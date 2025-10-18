@@ -455,42 +455,52 @@ export const getAllVendorRequests = async (req, res) => {
     const totalCount = await VendorApplication.countDocuments(filter);
 
     // Format the response
-    const formattedApplications = applications.map(app => ({
-      _id: app._id,
-      vendor: {
+    const formattedApplications = applications.map(app => {
+      // Safely handle vendor_user_id population
+      const vendor = app.vendor_user_id ? {
         _id: app.vendor_user_id._id,
-        name: `${app.vendor_user_id.first_name} ${app.vendor_user_id.last_name}`,
-        email: app.vendor_user_id.email,
+        name: `${app.vendor_user_id.first_name || 'Unknown'} ${app.vendor_user_id.last_name || 'Vendor'}`,
+        email: app.vendor_user_id.email || 'N/A',
         company_name: app.vendor_user_id.vendor_info?.company_name || 'N/A'
-      },
-      bazaar: app.bazaar_id ? {
-        _id: app.bazaar_id._id,
-        name: app.bazaar_id.name,
-        start_date: app.bazaar_id.start_date,
-        end_date: app.bazaar_id.end_date,
-        location: app.bazaar_id.location,
-        time: app.bazaar_id.time,
-        status: app.bazaar_id.status,
-        registration_deadline: app.bazaar_id.registration_deadline
-      } : null,
-      application: {
-        kind: app.kind,
-        staff: app.application.staff,
-        booth_size: app.application.booth_size,
-        setup_duration_weeks: app.application.setup_duration_weeks,
-        booth_location: app.application.booth_location
-      },
-      status: app.status,
-      rejection_reason: app.rejection_reason,
-      approved_by: app.approved_by ? {
-        name: `${app.approved_by.first_name} ${app.approved_by.last_name}`,
-        email: app.approved_by.email,
-        role: app.approved_by.role
-      } : null,
-      approved_at: app.approved_at,
-      submitted_at: app.createdAt,
-      updated_at: app.updatedAt
-    }));
+      } : {
+        _id: null,
+        name: 'Unknown Vendor',
+        email: 'N/A',
+        company_name: 'N/A'
+      };
+
+      return {
+        _id: app._id,
+        vendor: vendor,
+        bazaar: app.bazaar_id ? {
+          _id: app.bazaar_id._id,
+          name: app.bazaar_id.name,
+          start_date: app.bazaar_id.start_date,
+          end_date: app.bazaar_id.end_date,
+          location: app.bazaar_id.location,
+          time: app.bazaar_id.time,
+          status: app.bazaar_id.status,
+          registration_deadline: app.bazaar_id.registration_deadline
+        } : null,
+        application: {
+          kind: app.kind,
+          staff: app.application.staff,
+          booth_size: app.application.booth_size,
+          setup_duration_weeks: app.application.setup_duration_weeks,
+          booth_location: app.application.booth_location
+        },
+        status: app.status,
+        rejection_reason: app.rejection_reason,
+        approved_by: app.approved_by ? {
+          name: `${app.approved_by.first_name} ${app.approved_by.last_name}`,
+          email: app.approved_by.email,
+          role: app.approved_by.role
+        } : null,
+        approved_at: app.approved_at,
+        submitted_at: app.createdAt,
+        updated_at: app.updatedAt
+      };
+    });
 
     res.json({
       message: "Vendor applications retrieved successfully",
@@ -536,16 +546,26 @@ export const getVendorRequestById = async (req, res) => {
       return res.status(404).json({ message: "Vendor application not found" });
     }
 
+    // Safely handle vendor_user_id population
+    const vendor = application.vendor_user_id ? {
+      _id: application.vendor_user_id._id,
+      name: `${application.vendor_user_id.first_name || 'Unknown'} ${application.vendor_user_id.last_name || 'Vendor'}`,
+      email: application.vendor_user_id.email || 'N/A',
+      id_number: application.vendor_user_id.id_number || 'N/A',
+      company_name: application.vendor_user_id.vendor_info?.company_name || 'N/A',
+      role: application.vendor_user_id.role || 'Vendor'
+    } : {
+      _id: null,
+      name: 'Unknown Vendor',
+      email: 'N/A',
+      id_number: 'N/A',
+      company_name: 'N/A',
+      role: 'Vendor'
+    };
+
     const formattedApplication = {
       _id: application._id,
-      vendor: {
-        _id: application.vendor_user_id._id,
-        name: `${application.vendor_user_id.first_name} ${application.vendor_user_id.last_name}`,
-        email: application.vendor_user_id.email,
-        id_number: application.vendor_user_id.id_number,
-        company_name: application.vendor_user_id.vendor_info?.company_name || 'N/A',
-        role: application.vendor_user_id.role
-      },
+      vendor: vendor,
       bazaar: application.bazaar_id,
       application: {
         kind: application.kind,

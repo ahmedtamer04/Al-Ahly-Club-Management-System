@@ -304,6 +304,11 @@ export const facilityAPI = {
 // ================================
 
 export const eventAPI = {
+  // GET /api/events/all
+  // Auth: requireAdminOrEventsOffice
+  // Returns all events (including past events)
+  getAll: () => api.get('/events/all'),
+
   // GET /api/events/upcoming
   // Auth: requireStudentOrAbove
   // Returns all upcoming events

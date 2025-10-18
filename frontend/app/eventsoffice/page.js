@@ -95,12 +95,13 @@ export default function EventsOfficeDashboard() {
         <aside className="sidebar">
           <ul className="sidebar-menu">
             <li><Link href="/eventsoffice">🏠 Dashboard</Link></li>
+            <li><Link href="/eventsoffice/events">📅 View All Events</Link></li>
             <li><Link href="/eventsoffice/conferences">🎓 Conferences</Link></li>
             <li><Link href="/eventsoffice/conferences/create">➕ Create Conference</Link></li>
             <li><Link href="/eventsoffice/trips">✈️ Trips</Link></li>
             <li><Link href="/eventsoffice/bazaars">🛍️ Bazaars</Link></li>
             <li><Link href="/eventsoffice/gym">💪 Gym Sessions</Link></li>
-            <li><Link href="/eventsoffice/facilities">�️ Facilities</Link></li>
+            <li><Link href="/eventsoffice/facilities">🏢 Facilities</Link></li>
             <li><Link href="/eventsoffice/vendors">👥 Vendor Requests</Link></li>
             <li><Link href="/eventsoffice/registrations">📋 Registrations</Link></li>
             <li><Link href="/eventsoffice/profile">👤 Profile</Link></li>
@@ -147,8 +148,13 @@ export default function EventsOfficeDashboard() {
               <Link href="/eventsoffice/conferences/create" className="btn-primary">➕ Create New Conference</Link>
             </div>
             <div className="admin-grid">
+              <Link href="/eventsoffice/events" className="admin-card">
+                <div className="admin-icon">📅</div>
+                <h3>View All Events</h3>
+                <p>Browse, search, and filter all events with vendor details</p>
+              </Link>
               <Link href="/eventsoffice/conferences" className="admin-card">
-                <div className="admin-icon">�</div>
+                <div className="admin-icon">🎓</div>
                 <h3>Manage Conferences</h3>
                 <p>Create and manage conference events</p>
               </Link>

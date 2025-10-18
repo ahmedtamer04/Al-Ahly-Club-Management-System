@@ -7,7 +7,10 @@ export const getUpcomingEvents = async (req, res) => {
     const events = await Event.find({
       status: "upcoming",
       start_date: { $gt: new Date() },
-    }).sort({ start_date: 1 });
+    })
+    .populate('bazaar.vendors_participating.vendor_id', 'company_name email')
+    .populate('booth.vendors.vendor_id', 'company_name email')
+    .sort({ start_date: 1 });
     res.status(200).send(JSON.stringify(events, null, 2));
   } catch (err) {
     console.error(err);
@@ -44,7 +47,10 @@ export const filterEvents = async (req, res) => {
         return res.status(400).json({ error: "Invalid filter field" });
     }
 
-    const events = await Event.find(filter).sort({ start_date: 1 });
+    const events = await Event.find(filter)
+      .populate('bazaar.vendors_participating.vendor_id', 'company_name email')
+      .populate('booth.vendors.vendor_id', 'company_name email')
+      .sort({ start_date: 1 });
     res.status(200).send(JSON.stringify(events, null, 2));
   } catch (err) {
     console.error(err);
@@ -58,7 +64,24 @@ export const sortEventsByDate = async (req, res) => {
     const { order } = req.params;
     const sortOrder = order === "desc" ? -1 : 1;
 
-    const events = await Event.find().sort({ start_date: sortOrder });
+    const events = await Event.find()
+      .populate('bazaar.vendors_participating.vendor_id', 'company_name email')
+      .populate('booth.vendors.vendor_id', 'company_name email')
+      .sort({ start_date: sortOrder });
+    res.status(200).send(JSON.stringify(events, null, 2));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Server error" });
+  }
+};
+
+/* -------------------------- GET /events/all -------------------------- */
+export const getAllEvents = async (req, res) => {
+  try {
+    const events = await Event.find()
+      .populate('bazaar.vendors_participating.vendor_id', 'company_name email')
+      .populate('booth.vendors.vendor_id', 'company_name email')
+      .sort({ start_date: -1 }); // Most recent first
     res.status(200).send(JSON.stringify(events, null, 2));
   } catch (err) {
     console.error(err);

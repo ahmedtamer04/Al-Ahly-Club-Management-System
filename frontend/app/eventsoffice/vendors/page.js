@@ -236,9 +236,9 @@ export default function VendorRequestsPage() {
                     applications.map((app) => (
                       <tr key={app._id}>
                         <td>
-                          <strong>{app.vendor?.name || 'N/A'}</strong>
+                          <strong>{app.vendor?.name || 'Unknown Vendor'}</strong>
                           <br />
-                          <small style={{ color: '#666' }}>{app.vendor?.email}</small>
+                          <small style={{ color: '#666' }}>{app.vendor?.email || 'N/A'}</small>
                         </td>
                         <td>{app.vendor?.company_name || 'N/A'}</td>
                         <td>
@@ -341,34 +341,34 @@ export default function VendorRequestsPage() {
                 <div className="form" style={{ padding: '20px' }}>
                   <div style={{ marginBottom: '20px' }}>
                     <h3 style={{ marginBottom: '10px', borderBottom: '2px solid #007bff', paddingBottom: '5px' }}>Vendor Information</h3>
-                    <p><strong>Name:</strong> {selectedApp.vendor?.name}</p>
-                    <p><strong>Email:</strong> {selectedApp.vendor?.email}</p>
-                    <p><strong>Company:</strong> {selectedApp.vendor?.company_name}</p>
+                    <p><strong>Name:</strong> {selectedApp.vendor?.name || 'Unknown Vendor'}</p>
+                    <p><strong>Email:</strong> {selectedApp.vendor?.email || 'N/A'}</p>
+                    <p><strong>Company:</strong> {selectedApp.vendor?.company_name || 'N/A'}</p>
                   </div>
 
                   <div style={{ marginBottom: '20px' }}>
                     <h3 style={{ marginBottom: '10px', borderBottom: '2px solid #007bff', paddingBottom: '5px' }}>Bazaar Information</h3>
-                    <p><strong>Event:</strong> {selectedApp.bazaar?.name}</p>
-                    <p><strong>Location:</strong> {selectedApp.bazaar?.location}</p>
+                    <p><strong>Event:</strong> {selectedApp.bazaar?.name || 'N/A'}</p>
+                    <p><strong>Location:</strong> {selectedApp.bazaar?.location || 'N/A'}</p>
                     <p><strong>Date:</strong> {formatDate(selectedApp.bazaar?.start_date)} - {formatDate(selectedApp.bazaar?.end_date)}</p>
-                    <p><strong>Time:</strong> {selectedApp.bazaar?.time}</p>
+                    <p><strong>Time:</strong> {selectedApp.bazaar?.time || 'N/A'}</p>
                   </div>
 
                   <div style={{ marginBottom: '20px' }}>
                     <h3 style={{ marginBottom: '10px', borderBottom: '2px solid #007bff', paddingBottom: '5px' }}>Application Details</h3>
                     <p><strong>Type:</strong> {selectedApp.application?.kind === 'bazaar' ? 'Bazaar' : 'Booth Platform'}</p>
-                    <p><strong>Booth Size:</strong> {selectedApp.application?.booth_size}</p>
+                    <p><strong>Booth Size:</strong> {selectedApp.application?.booth_size || 'N/A'}</p>
                     {selectedApp.application?.kind === 'booth_platform' && (
                       <>
-                        <p><strong>Setup Duration:</strong> {selectedApp.application?.setup_duration_weeks} weeks</p>
-                        <p><strong>Booth Location Zone:</strong> {selectedApp.application?.booth_location?.zone}</p>
+                        <p><strong>Setup Duration:</strong> {selectedApp.application?.setup_duration_weeks || 'N/A'} weeks</p>
+                        <p><strong>Booth Location Zone:</strong> {selectedApp.application?.booth_location?.zone || 'N/A'}</p>
                       </>
                     )}
                     <p><strong>Staff Members:</strong></p>
                     <ul style={{ marginLeft: '20px' }}>
                       {selectedApp.application?.staff?.map((member, idx) => (
                         <li key={idx}>{member.name} - {member.email}</li>
-                      ))}
+                      )) || <li>No staff information available</li>}
                     </ul>
                   </div>
 
@@ -376,12 +376,12 @@ export default function VendorRequestsPage() {
                     <h3 style={{ marginBottom: '10px', borderBottom: '2px solid #007bff', paddingBottom: '5px' }}>Status Information</h3>
                     <p><strong>Status:</strong> <span className={`status-badge status-${selectedApp.status}`}>{selectedApp.status}</span></p>
                     <p><strong>Submitted:</strong> {formatDate(selectedApp.submitted_at)}</p>
-                    {selectedApp.status === 'rejected' && (
+                    {selectedApp.status === 'rejected' && selectedApp.rejection_reason && (
                       <p><strong>Rejection Reason:</strong> {selectedApp.rejection_reason}</p>
                     )}
                     {selectedApp.approved_by && (
                       <>
-                        <p><strong>Reviewed By:</strong> {selectedApp.approved_by.name}</p>
+                        <p><strong>Reviewed By:</strong> {selectedApp.approved_by.name || 'N/A'}</p>
                         <p><strong>Reviewed At:</strong> {formatDate(selectedApp.approved_at)}</p>
                       </>
                     )}
@@ -409,8 +409,8 @@ export default function VendorRequestsPage() {
                 </div>
                 <form onSubmit={(e) => { e.preventDefault(); handleReject(selectedApp._id); }} className="form">
                   <div className="form-group">
-                    <label>Vendor: {selectedApp.vendor?.name}</label>
-                    <label>Event: {selectedApp.bazaar?.name}</label>
+                    <label>Vendor: {selectedApp.vendor?.name || 'Unknown Vendor'}</label>
+                    <label>Event: {selectedApp.bazaar?.name || 'N/A'}</label>
                   </div>
 
                   <div className="form-group">
