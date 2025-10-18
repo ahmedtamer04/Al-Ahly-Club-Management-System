@@ -6,6 +6,7 @@ import '@/app/dashboard.css';
 
 export default function TADashboard() {
   const [upcomingEventsCount, setUpcomingEventsCount] = useState(0);
+  const [gymSessionsCount, setGymSessionsCount] = useState(0);
   const [myEventsCount, setMyEventsCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
@@ -53,6 +54,23 @@ export default function TADashboard() {
           setMyEventsCount(registrationsData.upcoming?.length || 0);
         }
 
+        // Fetch gym sessions count
+        const gymResponse = await fetch('http://localhost:5000/api/gym-sessions/schedule', {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (gymResponse.ok) {
+          const gymData = await gymResponse.json();
+          const sessionsData = gymData.sessions || gymData || [];
+          // Count only scheduled sessions (not cancelled)
+          const scheduledSessions = sessionsData.filter(session => session.status === 'scheduled');
+          setGymSessionsCount(scheduledSessions.length);
+        }
+
       } catch (error) {
         console.error('Error fetching stats:', error);
       } finally {
@@ -82,6 +100,7 @@ export default function TADashboard() {
             <li><Link href="/ta/events">📅 Browse Events</Link></li>
             <li><Link href="/ta/favorites">⭐ My Favorites</Link></li>
             <li><Link href="/ta/my-events">✏️ My Events</Link></li>
+            <li><Link href="/ta/gym">💪 Gym Schedule</Link></li>
             <li><Link href="/ta/profile">👤 Profile</Link></li>
           </ul>
         </aside>
@@ -107,67 +126,17 @@ export default function TADashboard() {
             </div>
           </div>
 
-          <section className="section">
-            <h2>Quick Actions</h2>
-            <div className="quick-actions" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1rem', marginTop: '1rem' }}>
-              <Link href="/ta/events" style={{ textDecoration: 'none' }}>
-                <div className="action-card" style={{ 
-                  padding: '1.5rem', 
-                  backgroundColor: '#fff', 
-                  borderRadius: '8px', 
-                  boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-                  cursor: 'pointer',
-                  transition: 'transform 0.2s',
-                  color: '#333'
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-5px)'}
-                onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
-                >
-                  <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>📅</div>
-                  <h3>Browse Events</h3>
-                  <p style={{ color: '#666', fontSize: '0.9rem' }}>View all available events</p>
-                </div>
-              </Link>
-
-              <Link href="/ta/my-events" style={{ textDecoration: 'none' }}>
-                <div className="action-card" style={{ 
-                  padding: '1.5rem', 
-                  backgroundColor: '#fff', 
-                  borderRadius: '8px', 
-                  boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-                  cursor: 'pointer',
-                  transition: 'transform 0.2s',
-                  color: '#333'
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-5px)'}
-                onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
-                >
-                  <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>✏️</div>
-                  <h3>My Registered Events</h3>
-                  <p style={{ color: '#666', fontSize: '0.9rem' }}>View your registrations</p>
-                </div>
-              </Link>
-
-              <Link href="/ta/favorites" style={{ textDecoration: 'none' }}>
-                <div className="action-card" style={{ 
-                  padding: '1.5rem', 
-                  backgroundColor: '#fff', 
-                  borderRadius: '8px', 
-                  boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-                  cursor: 'pointer',
-                  transition: 'transform 0.2s',
-                  color: '#333'
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-5px)'}
-                onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
-                >
-                  <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>⭐</div>
-                  <h3>My Favorites</h3>
-                  <p style={{ color: '#666', fontSize: '0.9rem' }}>View saved events</p>
-                </div>
-              </Link>
+          {/* Gym Sessions Card - Half width, under upcoming events */}
+          <div style={{ marginTop: '1.5rem', maxWidth: 'calc(50% - 0.75rem)' }}>
+            <div className="stat-card">
+              <div className="stat-icon">💪</div>
+              <div className="stat-info">
+                <h3>{loading ? '...' : gymSessionsCount}</h3>
+                <p>Available Gym Sessions</p>
             </div>
-          </section>
+          </div>
+        </div>
+          
         </main>
       </div>
     </div>

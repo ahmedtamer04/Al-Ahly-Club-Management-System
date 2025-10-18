@@ -113,6 +113,7 @@ export default function TAMyEventsPage() {
             <li><Link href="/ta/events">📅 Browse Events</Link></li>
             <li><Link href="/ta/favorites">⭐ My Favorites</Link></li>
             <li><Link href="/ta/my-events">✏️ My Events</Link></li>
+            <li><Link href="/ta/gym">💪 Gym Schedule</Link></li>
             <li><Link href="/ta/profile">👤 Profile</Link></li>
           </ul>
         </aside>
