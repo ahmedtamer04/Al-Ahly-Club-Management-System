@@ -4,49 +4,358 @@ import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import '@/app/dashboard.css';
 
+// Add styles
+const deleteButtonStyles = `
+  .btn-danger {
+    background-color: #dc3545;
+    color: white;
+  }
+
+  .btn-danger:hover {
+    background-color: #c82333;
+  }
+
+  .btn-sm {
+    padding: 4px 8px;
+    font-size: 0.85em;
+    margin: 0 2px;
+  }
+
+  .ml-2 {
+    margin-left: 0.5rem;
+  }
+
+  .modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.4);
+  }
+
+  .modal.show {
+    display: block;
+  }
+
+  .modal-content {
+    background-color: #fefefe;
+    margin: 15% auto;
+    padding: 20px;
+    border: 1px solid #888;
+    width: 80%;
+    max-width: 500px;
+    border-radius: 5px;
+  }
+
+  .modal-header {
+    margin-bottom: 15px;
+  }
+
+  .modal-title {
+    margin: 0;
+    color: #dc3545;
+  }
+
+  .modal-body {
+    margin-bottom: 15px;
+  }
+
+  .modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+  }
+
+  .btn-secondary {
+    background-color: #6c757d;
+    color: white;
+  }
+
+  .btn-secondary:hover {
+    background-color: #5a6268;
+  }
+`;
+
+// Add styles to head
+if (typeof document !== 'undefined') {
+  const styleSheet = document.createElement('style');
+  styleSheet.innerText = deleteButtonStyles;
+  document.head.appendChild(styleSheet);
+}
+
+// Add styles
+const styles = `
+  .role-badge {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.85em;
+    font-weight: 500;
+    background-color: #e3f2fd;
+    color: #1976d2;
+  }
+
+  .text-muted {
+    color: #666;
+    font-size: 0.85em;
+  }
+
+  .btn-sm {
+    padding: 4px 8px;
+    font-size: 0.85em;
+    margin: 0 2px;
+  }
+
+  .btn-success {
+    background-color: #4caf50;
+    color: white;
+  }
+
+  .btn-info {
+    background-color: #2196f3;
+    color: white;
+  }
+
+  .ml-2 {
+    margin-left: 0.5rem;
+  }
+
+  td div {
+    line-height: 1.4;
+  }
+
+  .role-select select {
+    padding: 6px 12px;
+    border-radius: 4px;
+    border: 1px solid #ddd;
+    background-color: #fff;
+    width: 100%;
+    font-size: 0.9em;
+    cursor: pointer;
+  }
+
+  .role-select select:hover {
+    border-color: #2196f3;
+  }
+
+  .role-select select:focus {
+    outline: none;
+    border-color: #2196f3;
+    box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.2);
+  }
+`;
+
+// Add styles to head
+if (typeof document !== 'undefined') {
+  const styleSheet = document.createElement('style');
+  styleSheet.innerText = styles;
+  document.head.appendChild(styleSheet);
+}
+import api from '@/utils/api';
+
+const ConfirmationModal = ({ isOpen, onClose, onConfirm, userName }) => {
+  return (
+    <div className={`modal ${isOpen ? 'show' : ''}`} onClick={onClose}>
+      <div className="modal-content" onClick={e => e.stopPropagation()}>
+        <div className="modal-header">
+          <h4 className="modal-title">Confirm Delete Admin</h4>
+        </div>
+        <div className="modal-body">
+          <p>Are you sure you want to delete the admin user {userName}?</p>
+          <p>This action cannot be undone.</p>
+        </div>
+        <div className="modal-footer">
+          <button className="btn btn-secondary" onClick={onClose}>Cancel</button>
+          <button className="btn btn-danger" onClick={onConfirm}>Delete</button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export default function ManageUsersPage() {
   const [users, setUsers] = useState([]);
   const [pendingUsers, setPendingUsers] = useState([]);
   const [filter, setFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [showCreateAdmin, setShowCreateAdmin] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState(null);
   const [adminFormData, setAdminFormData] = useState({
     name: '',
     email: '',
     password: ''
   });
 
-  // TODO: Fetch all users - GET /api/admin/users
-  // TODO: Fetch pending users - GET /api/admin/pending-users
-  // TODO: Fetch admin users - GET /api/admin/admin-users
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        const { users: allUsers } = await api.get('/admin/users');
+        setUsers(allUsers);
+        
+        const { users: pendingUsersData } = await api.get('/admin/pending-users');
+        setPendingUsers(pendingUsersData);
+      } catch (error) {
+        console.error('Error fetching users:', error);
+      }
+    };
 
-  const handleCreateAdmin = (e) => {
+    fetchUsers();
+  }, []);
+
+  const [adminRole, setAdminRole] = useState('Admin');
+
+  const handleCreateAdmin = async (e) => {
     e.preventDefault();
-    // TODO: POST /api/admin/create-admin
-    console.log('Create admin:', adminFormData);
-    setShowCreateAdmin(false);
-  };
+    try {
+      const [firstName, ...lastNameArr] = adminFormData.name.trim().split(' ');
+      const lastName = lastNameArr.join(' ');
 
-  const handleDeleteAdmin = (userId) => {
-    if (confirm('Are you sure you want to delete this admin?')) {
-      // TODO: DELETE /api/admin/delete-admin/:userId
-      console.log('Delete admin:', userId);
+      if (!firstName || !lastName) {
+        throw new Error('Please enter both first and last name');
+      }
+
+      const adminData = {
+        first_name: firstName,
+        last_name: lastName,
+        email: adminFormData.email,
+        password: adminFormData.password,
+        role: adminRole
+      };
+
+      // Create the admin user
+      await api.post('/admin/create-admin', adminData);
+      
+      // Refresh the users list
+      const { users: updatedUsers } = await api.get('/admin/users');
+      setUsers(updatedUsers);
+
+      // Reset form and close
+      setAdminFormData({ name: '', email: '', password: '' });
+      setShowCreateAdmin(false);
+      setAdminRole('Admin');
+
+      alert(`${adminRole} account created successfully!`);
+    } catch (error) {
+      console.error('Error creating admin:', error);
+      alert('Failed to create admin: ' + error.message);
     }
   };
 
-  const handleBlockUser = (userId) => {
-    // TODO: POST /api/admin/user/:userId/block
-    console.log('Toggle block user:', userId);
+  const [currentUser, setCurrentUser] = useState(null);
+
+  // Get current user from localStorage
+  useEffect(() => {
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      setCurrentUser(JSON.parse(storedUser));
+    }
+  }, []);
+
+  const handleDeleteAdmin = (userId) => {
+    try {
+      const adminToDelete = users.find(u => u._id === userId || u.id === userId);
+      if (!adminToDelete) {
+        throw new Error('Admin user not found');
+      }
+
+      // Prevent self-deletion
+      if (currentUser && currentUser._id === userId) {
+        throw new Error('You cannot delete your own admin account');
+      }
+
+      setSelectedUser(adminToDelete);
+      setModalOpen(true);
+    } catch (error) {
+      console.error('Error preparing to delete admin:', error);
+      alert('Error: ' + error.message);
+    }
   };
 
-  const handleApproveUser = (userId) => {
-    // TODO: POST /api/admin/approve/:userId
-    console.log('Approve user:', userId);
+  const confirmDelete = async () => {
+    try {
+      await api.delete(`/admin/delete-admin/${selectedUser._id}`);
+      
+      // Refresh users list
+      const { users: updatedUsers } = await api.get('/admin/users');
+      setUsers(updatedUsers);
+
+      setModalOpen(false);
+      setSelectedUser(null);
+      alert('Admin account deleted successfully!');
+    } catch (error) {
+      console.error('Error deleting admin:', error);
+      alert('Failed to delete admin: ' + error.message);
+    }
   };
 
-  const handleResendVerification = (userId) => {
-    // TODO: POST /api/admin/resend-verification/:userId
-    console.log('Resend verification:', userId);
+  const handleBlockUser = async (userId) => {
+    try {
+      const userToBlock = users.find(u => u.id === userId);
+      if (!userToBlock) {
+        throw new Error('User not found');
+      }
+      
+      const action = userToBlock.status === 'blocked' ? 'unblock' : 'block';
+      
+      await api.post(`/admin/user/${userId}/block`, { action });
+
+      // Refresh the users list
+      const { users: updatedUsers } = await api.get('/admin/users');
+      setUsers(updatedUsers);
+
+      alert(`User ${action}ed successfully!`);
+    } catch (error) {
+      console.error('Error toggling user block status:', error);
+      alert('Failed to update user status: ' + error.message);
+    }
+  };
+
+  const handleApproveUser = async (userId) => {
+    try {
+      // Find the user in pendingUsers array
+      const userToApprove = pendingUsers.find(u => u._id === userId);
+      if (!userToApprove) {
+        throw new Error('User not found');
+      }
+
+      // Confirm role assignment
+      if (!confirm(`Are you sure you want to approve this user as ${userToApprove.role}?`)) {
+        return;
+      }
+
+      // Call API to approve user with the selected role
+      await api.post(`/admin/approve/${userToApprove._id}`, {
+        role: userToApprove.role
+      });
+      
+      // Refresh both pending users and all users lists
+      const [pendingResponse, allUsersResponse] = await Promise.all([
+        api.get('/admin/pending-users'),
+        api.get('/admin/users')
+      ]);
+
+      setPendingUsers(pendingResponse.users);
+      setUsers(allUsersResponse.users);
+
+      alert(`User approved successfully as ${userToApprove.role}! A verification email will be sent.`);
+    } catch (error) {
+      console.error('Error approving user:', error);
+      alert('Failed to approve user: ' + error.message);
+    }
+  };
+
+  const handleResendVerification = async (userId) => {
+    try {
+      await api.post(`/admin/resend-verification/${userId}`);
+      alert('Verification email sent successfully!');
+    } catch (error) {
+      console.error('Error sending verification email:', error);
+      alert('Failed to send verification email: ' + error.message);
+    }
   };
 
   const handleViewUser = (userId) => {
@@ -67,6 +376,17 @@ export default function ManageUsersPage() {
       </nav>
 
       <div className="dashboard-content">
+        {modalOpen && selectedUser && (
+          <ConfirmationModal
+            isOpen={modalOpen}
+            onClose={() => {
+              setModalOpen(false);
+              setSelectedUser(null);
+            }}
+            onConfirm={confirmDelete}
+            userName={`${selectedUser.first_name} ${selectedUser.last_name}`}
+          />
+        )}
         <aside className="sidebar">
           <ul className="sidebar-menu">
             <li><Link href="/admin">🏠 Dashboard</Link></li>
@@ -97,12 +417,12 @@ export default function ManageUsersPage() {
               <h2>Create New Admin</h2>
               <form onSubmit={handleCreateAdmin} className="form">
                 <div className="form-group">
-                  <label htmlFor="adminName">Admin Name *</label>
+                  <label htmlFor="adminName">Full Name *</label>
                   <input
                     type="text"
                     id="adminName"
                     required
-                    placeholder="Enter admin name"
+                    placeholder="Enter full name (e.g., John Smith)"
                     value={adminFormData.name}
                     onChange={(e) => setAdminFormData({...adminFormData, name: e.target.value})}
                   />
@@ -113,7 +433,7 @@ export default function ManageUsersPage() {
                     type="email"
                     id="adminEmail"
                     required
-                    placeholder="admin@example.com"
+                    placeholder="email@guc.edu.eg"
                     value={adminFormData.email}
                     onChange={(e) => setAdminFormData({...adminFormData, email: e.target.value})}
                   />
@@ -129,21 +449,37 @@ export default function ManageUsersPage() {
                     onChange={(e) => setAdminFormData({...adminFormData, password: e.target.value})}
                   />
                 </div>
+                <div className="form-group">
+                  <label htmlFor="adminRole">Role *</label>
+                  <select
+                    id="adminRole"
+                    className="form-select"
+                    value={adminRole}
+                    onChange={(e) => setAdminRole(e.target.value)}
+                    required
+                  >
+                    <option value="Admin">Admin</option>
+                    <option value="EventsOffice">Events Office</option>
+                  </select>
+                </div>
                 <div className="form-actions">
-                  <button type="submit" className="btn btn-primary">Create Admin</button>
+                  <button type="submit" className="btn btn-primary">
+                    Create {adminRole}
+                  </button>
                   <button 
                     type="button" 
                     className="btn btn-secondary"
                     onClick={() => {
                       setShowCreateAdmin(false);
                       setAdminFormData({ name: '', email: '', password: '' });
+                      setAdminRole('Admin');
                     }}
                   >
                     Cancel
                   </button>
                 </div>
-                <small style={{color: '#999', marginTop: '1rem', display: 'block'}}>
-                  API: POST /api/admin/create-admin
+                <small style={{color: '#666', marginTop: '1rem', display: 'block'}}>
+                  Note: Email must be a valid GUC email address
                 </small>
               </form>
             </section>
@@ -152,30 +488,30 @@ export default function ManageUsersPage() {
           {/* Stats */}
           <div className="stats-grid">
             <div className="stat-card">
-              <div className="stat-icon">�</div>
+              <div className="stat-icon">👥</div>
               <div className="stat-info">
-                <h3>0</h3>
+                <h3>{users.length}</h3>
                 <p>Total Users</p>
               </div>
             </div>
             <div className="stat-card">
               <div className="stat-icon">⏳</div>
               <div className="stat-info">
-                <h3>0</h3>
+                <h3>{pendingUsers.length}</h3>
                 <p>Pending Approval</p>
               </div>
             </div>
             <div className="stat-card">
-              <div className="stat-icon">�</div>
+              <div className="stat-icon">👑</div>
               <div className="stat-info">
-                <h3>0</h3>
+                <h3>{users.filter(user => user.role === 'Admin').length}</h3>
                 <p>Admins</p>
               </div>
             </div>
             <div className="stat-card">
               <div className="stat-icon">🚫</div>
               <div className="stat-info">
-                <h3>0</h3>
+                <h3>{users.filter(user => user.status === 'blocked').length}</h3>
                 <p>Blocked Users</p>
               </div>
             </div>
@@ -196,18 +532,81 @@ export default function ManageUsersPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  <tr>
-                    <td colSpan="5" className="empty-row">
-                      <div className="empty-state">
-                        <p>⏳ No pending user approvals</p>
-                        <p style={{fontSize: '0.9rem', color: '#999'}}>
-                          API: GET /api/admin/pending-users<br/>
-                          POST /api/admin/approve/:userId<br/>
-                          POST /api/admin/resend-verification/:userId
-                        </p>
-                      </div>
-                    </td>
-                  </tr>
+                  {pendingUsers.length === 0 ? (
+                    <tr>
+                      <td colSpan="5" className="empty-row">
+                        <div className="empty-state">
+                          <p>⏳ No pending user approvals</p>
+                        </div>
+                      </td>
+                    </tr>
+                  ) : (
+                    pendingUsers.map((user) => (
+                      <tr key={user._id}>
+                        <td>
+                          <div>
+                            <strong>{user.first_name} {user.last_name}</strong>
+                            <br/>
+                            <small className="text-muted">{user.id_number || 'No ID'}</small>
+                          </div>
+                        </td>
+                        <td>
+                          <div>
+                            {user.email}
+                            <br/>
+                            <small className="text-muted">
+                              {user.is_verified ? '✅ Email Verified' : '⏳ Email Not Verified'}
+                            </small>
+                          </div>
+                        </td>
+                        <td>
+                          <div className="role-select">
+                            <select 
+                              className="form-select"
+                              value={user.role}
+                              onChange={(e) => {
+                                const updatedUsers = pendingUsers.map(u => 
+                                  u.id === user.id ? {...u, role: e.target.value} : u
+                                );
+                                setPendingUsers(updatedUsers);
+                              }}
+                            >
+                              <option value="Staff">👨‍💼 Staff</option>
+                              <option value="TA">👨‍� TA</option>
+                              <option value="Professor">👨‍🏫 Professor</option>
+                            </select>
+                          </div>
+                        </td>
+                        <td>
+                          <div>
+                            {new Date(user.created_at).toLocaleDateString()}
+                            <br/>
+                            <small className="text-muted">
+                              {new Date(user.created_at).toLocaleTimeString()}
+                            </small>
+                          </div>
+                        </td>
+                        <td>
+                          <button
+                            className="btn btn-success btn-sm"
+                            onClick={() => handleApproveUser(user._id)}
+                            title="Approve Registration"
+                          >
+                            ✅ Approve as {user.role}
+                          </button>
+                          {!user.is_verified && (
+                            <button
+                              className="btn btn-info btn-sm ml-2"
+                              onClick={() => handleResendVerification(user._id)}
+                              title="Resend Verification Email"
+                            >
+                              📧 Resend Email
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
@@ -279,20 +678,65 @@ export default function ManageUsersPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  <tr>
-                    <td colSpan="6" className="empty-row">
-                      <div className="empty-state">
-                        <p>👥 No users found</p>
-                        <p style={{fontSize: '0.9rem', color: '#999'}}>
-                          API: GET /api/admin/users (all users)<br/>
-                          GET /api/admin/admin-users (admin users only)<br/>
-                          GET /api/admin/user/:userId (specific user)<br/>
-                          POST /api/admin/user/:userId/block (block/unblock)<br/>
-                          DELETE /api/admin/delete-admin/:userId (delete admin)
-                        </p>
-                      </div>
-                    </td>
-                  </tr>
+                  {users.length === 0 ? (
+                    <tr>
+                      <td colSpan="6" className="empty-row">
+                        <div className="empty-state">
+                          <p>👥 No users found</p>
+                        </div>
+                      </td>
+                    </tr>
+                  ) : (
+                    users
+                      .filter(user => {
+                        if (filter === 'all') return true;
+                        return user.role === filter;
+                      })
+                      .filter(user => {
+                        if (!searchTerm) return true;
+                        const searchLower = searchTerm.toLowerCase();
+                        const fullName = `${user.first_name} ${user.last_name}`.toLowerCase();
+                        return (
+                          fullName.includes(searchLower) ||
+                          user.email.toLowerCase().includes(searchLower)
+                        );
+                      })
+                      .map((user) => (
+                        <tr key={user._id}>
+                          <td>{user.first_name} {user.last_name}</td>
+                          <td>{user.email}</td>
+                          <td>{user.role}</td>
+                          <td>{user.status}</td>
+                          <td>{new Date(user.created_at).toLocaleDateString()}</td>
+                          <td>
+                            <button 
+                              className="btn btn-secondary btn-sm"
+                              onClick={() => handleViewUser(user._id)}
+                            >
+                              View
+                            </button>
+                            {user.role !== 'Admin' && (
+                              <button 
+                                className={`btn ${user.status === 'blocked' ? 'btn-success' : 'btn-warning'} btn-sm`}
+                                onClick={() => handleBlockUser(user._id)}
+                                title={user.status === 'blocked' ? 'Unblock User' : 'Block User'}
+                              >
+                                {user.status === 'blocked' ? '🔓 Unblock' : '🔒 Block'}
+                              </button>
+                            )}
+                            {(user.role === 'Admin' || user.role === 'EventsOffice') && user._id !== currentUser?._id && (
+                              <button
+                                className="btn btn-danger btn-sm ml-2"
+                                onClick={() => handleDeleteAdmin(user._id)}
+                                title={`Delete ${user.role} Account`}
+                              >
+                                ❌ Delete
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      ))
+                  )}
                 </tbody>
               </table>
             </div>
