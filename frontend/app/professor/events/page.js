@@ -5,7 +5,7 @@ import Link from 'next/link';
 import '@/app/dashboard.css';
 import { eventAPI, bazaarAPI } from '@/utils/api';
 
-function EventCard({ event }) {
+function EventCard({ event, onViewDetails }) {
   // Helper function to format dates nicely
   const formatDate = (dateStr) => {
     const date = new Date(dateStr);
@@ -59,6 +59,28 @@ function EventCard({ event }) {
           </ul>
         </div>
       )}
+
+      <div style={{ marginTop: '15px' }}>
+        <button
+          onClick={() => onViewDetails(event)}
+          style={{
+            padding: '8px 20px',
+            fontSize: '14px',
+            fontWeight: '600',
+            border: 'none',
+            borderRadius: '6px',
+            cursor: 'pointer',
+            background: '#0066cc',
+            color: 'white',
+            transition: 'all 0.3s',
+            width: '100%'
+          }}
+          onMouseOver={(e) => e.target.style.background = '#0052a3'}
+          onMouseOut={(e) => e.target.style.background = '#0066cc'}
+        >
+          📋 View Details
+        </button>
+      </div>
     </div>
   );
 }
@@ -80,6 +102,8 @@ export default function ProfessorEvents() {
   
   const [sortOrder, setSortOrder] = useState('desc'); // 'desc' for newest first, 'asc' for oldest first
   const [showFilters, setShowFilters] = useState(false);
+  const [selectedEvent, setSelectedEvent] = useState(null);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
 
   // Function to sort events by date
   const sortEvents = (events, order) => {
@@ -236,6 +260,24 @@ export default function ProfessorEvents() {
     setFilterProfessor('');
     setFilterLocation('');
     setFilterDate('');
+  };
+
+  // Handle view details
+  const handleViewDetails = (event) => {
+    setSelectedEvent(event);
+    setShowDetailsModal(true);
+  };
+
+  // Helper function to format dates nicely in modal
+  const formatDate = (dateStr) => {
+    if (!dateStr) return 'N/A';
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('en-US', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
+    });
   };
 
   // Update filtered events when any search/filter criteria changes
@@ -602,13 +644,363 @@ export default function ProfessorEvents() {
                 ) : (
                   <div className="events-list">
                     {(filteredEvents.length > 0 ? filteredEvents : events).map((ev) => (
-                      <EventCard key={ev._id || ev.id || ev.event_id} event={ev} />
+                      <EventCard 
+                        key={ev._id || ev.id || ev.event_id} 
+                        event={ev}
+                        onViewDetails={handleViewDetails}
+                      />
                     ))}
                   </div>
                 )}
               </>
             )}
           </section>
+
+          {/* Event Details Modal */}
+          {showDetailsModal && selectedEvent && (
+            <div 
+              className="modal-overlay" 
+              onClick={() => setShowDetailsModal(false)}
+              style={{
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                background: 'rgba(0, 0, 0, 0.6)',
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                zIndex: 1000,
+                padding: '20px'
+              }}
+            >
+              <div 
+                className="modal-content" 
+                onClick={(e) => e.stopPropagation()}
+                style={{
+                  background: 'white',
+                  borderRadius: '12px',
+                  maxWidth: '700px',
+                  width: '100%',
+                  maxHeight: '90vh',
+                  overflow: 'auto',
+                  boxShadow: '0 10px 40px rgba(0,0,0,0.3)'
+                }}
+              >
+                {/* Modal Header */}
+                <div style={{
+                  padding: '24px',
+                  borderBottom: '2px solid #e9ecef',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'flex-start',
+                  position: 'sticky',
+                  top: 0,
+                  background: 'white',
+                  borderRadius: '12px 12px 0 0',
+                  zIndex: 1
+                }}>
+                  <div style={{ flex: 1 }}>
+                    <h2 style={{ margin: '0 0 8px 0', fontSize: '24px', color: '#333' }}>
+                      {selectedEvent.name}
+                    </h2>
+                    <span style={{
+                      display: 'inline-block',
+                      padding: '4px 12px',
+                      background: '#0066cc',
+                      color: 'white',
+                      borderRadius: '20px',
+                      fontSize: '12px',
+                      fontWeight: '600'
+                    }}>
+                      {selectedEvent.type}
+                    </span>
+                  </div>
+                  <button 
+                    onClick={() => setShowDetailsModal(false)}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      fontSize: '24px',
+                      cursor: 'pointer',
+                      color: '#666',
+                      padding: '0',
+                      marginLeft: '20px',
+                      lineHeight: '1'
+                    }}
+                    title="Close"
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                {/* Modal Body */}
+                <div style={{ padding: '24px' }}>
+                  {/* Description */}
+                  <div style={{ marginBottom: '24px' }}>
+                    <h3 style={{ 
+                      fontSize: '16px', 
+                      fontWeight: '700', 
+                      color: '#495057',
+                      marginBottom: '8px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px'
+                    }}>
+                      📝 Description
+                    </h3>
+                    <p style={{ margin: 0, lineHeight: '1.6', color: '#666' }}>
+                      {selectedEvent.short_description || selectedEvent.description || 'No description available.'}
+                    </p>
+                  </div>
+
+                  {/* Date & Time */}
+                  <div style={{ 
+                    display: 'grid', 
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                    gap: '16px',
+                    marginBottom: '24px'
+                  }}>
+                    <div style={{
+                      padding: '16px',
+                      background: '#f8f9fa',
+                      borderRadius: '8px',
+                      border: '1px solid #e9ecef'
+                    }}>
+                      <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px', fontWeight: '600' }}>
+                        📅 START DATE
+                      </div>
+                      <div style={{ fontSize: '14px', fontWeight: '600', color: '#333' }}>
+                        {formatDate(selectedEvent.start_date)}
+                      </div>
+                    </div>
+                    
+                    {selectedEvent.end_date && selectedEvent.end_date !== selectedEvent.start_date && (
+                      <div style={{
+                        padding: '16px',
+                        background: '#f8f9fa',
+                        borderRadius: '8px',
+                        border: '1px solid #e9ecef'
+                      }}>
+                        <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px', fontWeight: '600' }}>
+                          📅 END DATE
+                        </div>
+                        <div style={{ fontSize: '14px', fontWeight: '600', color: '#333' }}>
+                          {formatDate(selectedEvent.end_date)}
+                        </div>
+                      </div>
+                    )}
+
+                    {selectedEvent.time && (
+                      <div style={{
+                        padding: '16px',
+                        background: '#f8f9fa',
+                        borderRadius: '8px',
+                        border: '1px solid #e9ecef'
+                      }}>
+                        <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px', fontWeight: '600' }}>
+                          🕒 TIME
+                        </div>
+                        <div style={{ fontSize: '14px', fontWeight: '600', color: '#333' }}>
+                          {selectedEvent.time}
+                        </div>
+                      </div>
+                    )}
+
+                    <div style={{
+                      padding: '16px',
+                      background: '#f8f9fa',
+                      borderRadius: '8px',
+                      border: '1px solid #e9ecef'
+                    }}>
+                      <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px', fontWeight: '600' }}>
+                        📍 LOCATION
+                      </div>
+                      <div style={{ fontSize: '14px', fontWeight: '600', color: '#333' }}>
+                        {selectedEvent.location || 'TBD'}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Workshop/Conference Specific Details */}
+                  {(selectedEvent.workshop || selectedEvent.conference) && (
+                    <div style={{ marginBottom: '24px' }}>
+                      <h3 style={{ 
+                        fontSize: '16px', 
+                        fontWeight: '700', 
+                        color: '#495057',
+                        marginBottom: '12px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px'
+                      }}>
+                        🎓 Academic Details
+                      </h3>
+                      
+                      <div style={{ 
+                        background: '#f8f9fa',
+                        padding: '16px',
+                        borderRadius: '8px',
+                        border: '1px solid #e9ecef'
+                      }}>
+                        {selectedEvent.faculty_responsible && (
+                          <div style={{ marginBottom: '12px' }}>
+                            <strong style={{ color: '#495057' }}>👨‍🏫 Faculty Responsible:</strong>
+                            <div style={{ marginTop: '4px', color: '#666' }}>{selectedEvent.faculty_responsible}</div>
+                          </div>
+                        )}
+                        
+                        {selectedEvent.professors_participating && (
+                          <div style={{ marginBottom: '12px' }}>
+                            <strong style={{ color: '#495057' }}>👥 Professors Participating:</strong>
+                            <div style={{ marginTop: '4px', color: '#666' }}>{selectedEvent.professors_participating}</div>
+                          </div>
+                        )}
+
+                        {(selectedEvent.workshop?.capacity || selectedEvent.conference?.capacity) && (
+                          <div style={{ marginBottom: '12px' }}>
+                            <strong style={{ color: '#495057' }}>👥 Capacity:</strong>
+                            <div style={{ marginTop: '4px', color: '#666' }}>
+                              {selectedEvent.workshop?.capacity || selectedEvent.conference?.capacity} participants
+                            </div>
+                          </div>
+                        )}
+
+                        {(selectedEvent.workshop?.registration_deadline || selectedEvent.conference?.registration_deadline) && (
+                          <div style={{ marginBottom: '12px' }}>
+                            <strong style={{ color: '#495057' }}>⏰ Registration Deadline:</strong>
+                            <div style={{ marginTop: '4px', color: '#666' }}>
+                              {formatDate(selectedEvent.workshop?.registration_deadline || selectedEvent.conference?.registration_deadline)}
+                            </div>
+                          </div>
+                        )}
+
+                        {(selectedEvent.workshop?.full_agenda || selectedEvent.conference?.full_agenda) && (
+                          <div style={{ marginBottom: '12px' }}>
+                            <strong style={{ color: '#495057' }}>📋 Full Agenda:</strong>
+                            <div style={{ marginTop: '4px', color: '#666', whiteSpace: 'pre-wrap' }}>
+                              {selectedEvent.workshop?.full_agenda || selectedEvent.conference?.full_agenda}
+                            </div>
+                          </div>
+                        )}
+
+                        {(selectedEvent.workshop?.required_budget || selectedEvent.conference?.required_budget) && (
+                          <div style={{ marginBottom: '12px' }}>
+                            <strong style={{ color: '#495057' }}>💰 Required Budget:</strong>
+                            <div style={{ marginTop: '4px', color: '#666' }}>
+                              ${selectedEvent.workshop?.required_budget || selectedEvent.conference?.required_budget}
+                            </div>
+                          </div>
+                        )}
+
+                        {(selectedEvent.workshop?.funding_source || selectedEvent.conference?.funding_source) && (
+                          <div style={{ marginBottom: '12px' }}>
+                            <strong style={{ color: '#495057' }}>🏦 Funding Source:</strong>
+                            <div style={{ marginTop: '4px', color: '#666' }}>
+                              {selectedEvent.workshop?.funding_source || selectedEvent.conference?.funding_source}
+                            </div>
+                          </div>
+                        )}
+
+                        {(selectedEvent.workshop?.extra_resources || selectedEvent.conference?.extra_resources) && (
+                          <div>
+                            <strong style={{ color: '#495057' }}>📦 Extra Resources:</strong>
+                            <div style={{ marginTop: '4px', color: '#666', whiteSpace: 'pre-wrap' }}>
+                              {selectedEvent.workshop?.extra_resources || selectedEvent.conference?.extra_resources}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Vendors (for Bazaars/Booths) */}
+                  {selectedEvent.vendors && selectedEvent.vendors.length > 0 && (
+                    <div style={{ marginBottom: '24px' }}>
+                      <h3 style={{ 
+                        fontSize: '16px', 
+                        fontWeight: '700', 
+                        color: '#495057',
+                        marginBottom: '12px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px'
+                      }}>
+                        🏪 Participating Vendors
+                      </h3>
+                      <div style={{
+                        background: '#f8f9fa',
+                        padding: '16px',
+                        borderRadius: '8px',
+                        border: '1px solid #e9ecef'
+                      }}>
+                        <ul style={{ margin: 0, paddingLeft: '20px' }}>
+                          {selectedEvent.vendors.map((v, idx) => (
+                            <li key={v._id || v.id || idx} style={{ marginBottom: '8px', color: '#666' }}>
+                              {v.business_name || v.name || v.company_name || v.company}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Status */}
+                  {selectedEvent.status && (
+                    <div style={{
+                      padding: '16px',
+                      background: selectedEvent.status === 'approved' ? '#d4edda' : '#fff3cd',
+                      borderRadius: '8px',
+                      border: `1px solid ${selectedEvent.status === 'approved' ? '#c3e6cb' : '#ffeeba'}`,
+                      marginTop: '16px'
+                    }}>
+                      <strong style={{ color: '#495057' }}>📊 Status:</strong>
+                      <span style={{ 
+                        marginLeft: '8px',
+                        textTransform: 'uppercase',
+                        fontWeight: '600',
+                        color: selectedEvent.status === 'approved' ? '#155724' : '#856404'
+                      }}>
+                        {selectedEvent.status}
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Modal Footer */}
+                <div style={{
+                  padding: '16px 24px',
+                  borderTop: '1px solid #e9ecef',
+                  display: 'flex',
+                  justifyContent: 'flex-end',
+                  position: 'sticky',
+                  bottom: 0,
+                  background: 'white',
+                  borderRadius: '0 0 12px 12px'
+                }}>
+                  <button
+                    onClick={() => setShowDetailsModal(false)}
+                    style={{
+                      padding: '10px 24px',
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      border: 'none',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      background: '#6c757d',
+                      color: 'white',
+                      transition: 'all 0.3s'
+                    }}
+                    onMouseOver={(e) => e.target.style.background = '#5a6268'}
+                    onMouseOut={(e) => e.target.style.background = '#6c757d'}
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </main>
       </div>
     </div>
