@@ -33,6 +33,7 @@ export default function ProfessorDashboard() {
             <li><Link href="/professor">🏠 Dashboard</Link></li>
             <li><Link href="/professor/events">📅 Events</Link></li>
             <li><Link href="/professor/workshops">🎨 My Workshops</Link></li>
+            <li><Link href="/professor/gym">💪 Gym Schedule</Link></li>
             <li><Link href="/professor/profile">👤 Profile</Link></li>
           </ul>
         </aside>
@@ -91,7 +92,16 @@ export default function ProfessorDashboard() {
               </div>
 
               <div className="feature-card">
-                <div className="feature-icon">👤</div>
+                <div className="feature-icon">�</div>
+                <div className="feature-info">
+                  <h3>Gym Schedule</h3>
+                  <p>View monthly gym sessions including Yoga, Pilates, Zumba, Cardio, and more.</p>
+                  <Link href="/professor/gym" className="btn-primary">View Schedule</Link>
+                </div>
+              </div>
+
+              <div className="feature-card">
+                <div className="feature-icon">�👤</div>
                 <div className="feature-info">
                   <h3>Profile Settings</h3>
                   <p>Update your profile information and preferences.</p>

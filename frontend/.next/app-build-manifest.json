@@ -52,6 +52,12 @@
       "static/chunks/main-app.js",
       "static/css/app/professor/workshops/create/page.css",
       "static/chunks/app/professor/workshops/create/page.js"
+    ],
+    "/professor/gym/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/css/app/professor/gym/page.css",
+      "static/chunks/app/professor/gym/page.js"
     ]
   }
 }
