@@ -144,6 +144,11 @@ export default function ProfessorEvents() {
   const [registrationLoading, setRegistrationLoading] = useState(false);
   const [registrationMessage, setRegistrationMessage] = useState({ text: '', type: '' });
   const [registeredEventIds, setRegisteredEventIds] = useState(new Set());
+  
+  // My Registrations view states
+  const [viewMode, setViewMode] = useState('all'); // 'all' or 'registrations'
+  const [registeredEvents, setRegisteredEvents] = useState([]);
+  const [registeredEventsLoading, setRegisteredEventsLoading] = useState(false);
 
   // Function to sort events by date
   const sortEvents = (events, order) => {
@@ -152,6 +157,51 @@ export default function ProfessorEvents() {
       const dateB = new Date(b.start_date);
       return order === 'asc' ? dateA - dateB : dateB - dateA;
     });
+  };
+
+  // Function to fetch full details of registered events
+  const fetchRegisteredEvents = async (eventIds) => {
+    if (!eventIds || eventIds.size === 0) {
+      setRegisteredEvents([]);
+      return;
+    }
+    
+    setRegisteredEventsLoading(true);
+    try {
+      // Fetch all events and filter to registered ones
+      const allEvents = await eventAPI.getUpcoming();
+      const registered = allEvents.filter(event => 
+        eventIds.has(event._id || event.id)
+      );
+      
+      // Enrich with vendor data if needed
+      const enriched = await Promise.all(registered.map(async (ev) => {
+        if (ev.vendors && ev.vendors.length) return ev;
+        
+        if ((ev.type && ev.type.toLowerCase().includes('bazaar')) || 
+            (ev.type && ev.type.toLowerCase().includes('booth'))) {
+          try {
+            if (ev.bazaar_id || ev.id) {
+              const bazaarId = ev.bazaar_id || ev.id;
+              const baz = await bazaarAPI.getById(bazaarId);
+              if (baz && baz.vendors) {
+                ev.vendors = baz.vendors;
+              }
+            }
+          } catch (e) {
+            // ignore and fallback
+          }
+        }
+        return ev;
+      }));
+      
+      setRegisteredEvents(enriched);
+    } catch (error) {
+      console.error('Error fetching registered events:', error);
+      setRegisteredEvents([]);
+    } finally {
+      setRegisteredEventsLoading(false);
+    }
   };
 
   // Load user data and auto-fill form + load registered events from localStorage
@@ -170,7 +220,11 @@ export default function ProfessorEvents() {
       if (storedRegistrations) {
         try {
           const registeredArray = JSON.parse(storedRegistrations);
-          setRegisteredEventIds(new Set(registeredArray));
+          const registeredSet = new Set(registeredArray);
+          setRegisteredEventIds(registeredSet);
+          
+          // Fetch full details of registered events
+          fetchRegisteredEvents(registeredSet);
         } catch (error) {
           console.error('Error loading registered events:', error);
         }
@@ -360,6 +414,23 @@ export default function ProfessorEvents() {
     return registeredEventIds.has(eventId);
   };
 
+  // Helper functions to separate upcoming and past events
+  const getUpcomingEvents = (events) => {
+    const now = new Date();
+    return events.filter(event => {
+      const eventDate = new Date(event.start_date);
+      return eventDate >= now;
+    }).sort((a, b) => new Date(a.start_date) - new Date(b.start_date));
+  };
+
+  const getPastEvents = (events) => {
+    const now = new Date();
+    return events.filter(event => {
+      const eventDate = new Date(event.start_date);
+      return eventDate < now;
+    }).sort((a, b) => new Date(b.start_date) - new Date(a.start_date));
+  };
+
   // Handle registration form submit
   const handleRegistration = async (e) => {
     e.preventDefault();
@@ -398,6 +469,9 @@ export default function ProfessorEvents() {
           JSON.stringify([...updatedRegistrations])
         );
       }
+      
+      // Refresh registered events list
+      fetchRegisteredEvents(updatedRegistrations);
       
       setRegistrationMessage({ text: 'Successfully registered for the event!', type: 'success' });
       
@@ -446,10 +520,67 @@ export default function ProfessorEvents() {
 
         <main className="main-content">
           <div style={{ marginBottom: '30px' }}>
-            <h1 style={{ marginBottom: '10px' }}>All Events</h1>
-            <h2 style={{ fontSize: '18px', color: '#666', fontWeight: 'normal' }}>Upcoming Events</h2>
+            <h1 style={{ marginBottom: '20px' }}>Events</h1>
+            
+            {/* View Mode Toggle Tabs */}
+            <div style={{
+              display: 'flex',
+              gap: '10px',
+              marginBottom: '20px',
+              borderBottom: '2px solid #e0e0e0'
+            }}>
+              <button
+                onClick={() => setViewMode('all')}
+                style={{
+                  padding: '12px 24px',
+                  fontSize: '15px',
+                  fontWeight: '600',
+                  border: 'none',
+                  borderBottom: viewMode === 'all' ? '3px solid #0066cc' : '3px solid transparent',
+                  background: 'transparent',
+                  cursor: 'pointer',
+                  color: viewMode === 'all' ? '#0066cc' : '#666',
+                  transition: 'all 0.3s',
+                  marginBottom: '-2px'
+                }}
+                onMouseOver={(e) => {
+                  if (viewMode !== 'all') e.target.style.color = '#333';
+                }}
+                onMouseOut={(e) => {
+                  if (viewMode !== 'all') e.target.style.color = '#666';
+                }}
+              >
+                📅 All Events
+              </button>
+              <button
+                onClick={() => setViewMode('registrations')}
+                style={{
+                  padding: '12px 24px',
+                  fontSize: '15px',
+                  fontWeight: '600',
+                  border: 'none',
+                  borderBottom: viewMode === 'registrations' ? '3px solid #0066cc' : '3px solid transparent',
+                  background: 'transparent',
+                  cursor: 'pointer',
+                  color: viewMode === 'registrations' ? '#0066cc' : '#666',
+                  transition: 'all 0.3s',
+                  marginBottom: '-2px'
+                }}
+                onMouseOver={(e) => {
+                  if (viewMode !== 'registrations') e.target.style.color = '#333';
+                }}
+                onMouseOut={(e) => {
+                  if (viewMode !== 'registrations') e.target.style.color = '#666';
+                }}
+              >
+                ✓ My Registrations {registeredEventIds.size > 0 && `(${registeredEventIds.size})`}
+              </button>
+            </div>
           </div>
 
+          {/* All Events View */}
+          {viewMode === 'all' && (
+            <>
           {/* Search and Action Buttons Bar */}
           <div style={{
             display: 'flex',
@@ -793,6 +924,98 @@ export default function ProfessorEvents() {
               </>
             )}
           </section>
+            </>
+          )}
+
+          {/* My Registrations View */}
+          {viewMode === 'registrations' && (
+            <div>
+              {registeredEventsLoading ? (
+                <div className="loading-container">
+                  <div className="loading-spinner"></div>
+                  <p>Loading your registrations...</p>
+                </div>
+              ) : registeredEvents.length === 0 ? (
+                <div className="empty-state">
+                  <h3>No Registrations Yet</h3>
+                  <p>You haven't registered for any events yet. Browse all events and register for workshops or trips!</p>
+                  <button 
+                    onClick={() => setViewMode('all')}
+                    style={{
+                      padding: '12px 24px',
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      border: 'none',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      background: '#0066cc',
+                      color: 'white',
+                      marginTop: '20px',
+                      transition: 'all 0.3s'
+                    }}
+                    onMouseOver={(e) => e.target.style.background = '#0052a3'}
+                    onMouseOut={(e) => e.target.style.background = '#0066cc'}
+                  >
+                    Browse All Events
+                  </button>
+                </div>
+              ) : (
+                <>
+                  {/* Upcoming Events Section */}
+                  {getUpcomingEvents(registeredEvents).length > 0 && (
+                    <div style={{ marginBottom: '40px' }}>
+                      <h2 style={{ 
+                        fontSize: '20px', 
+                        fontWeight: '600',
+                        marginBottom: '20px',
+                        color: '#333',
+                        paddingBottom: '10px',
+                        borderBottom: '2px solid #e0e0e0'
+                      }}>
+                        🔜 Upcoming Events ({getUpcomingEvents(registeredEvents).length})
+                      </h2>
+                      <div className="events-list">
+                        {getUpcomingEvents(registeredEvents).map((ev) => (
+                          <EventCard 
+                            key={ev._id || ev.id || ev.event_id} 
+                            event={ev}
+                            onViewDetails={handleViewDetails}
+                            isRegistered={true}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Past Events Section */}
+                  {getPastEvents(registeredEvents).length > 0 && (
+                    <div>
+                      <h2 style={{ 
+                        fontSize: '20px', 
+                        fontWeight: '600',
+                        marginBottom: '20px',
+                        color: '#666',
+                        paddingBottom: '10px',
+                        borderBottom: '2px solid #e0e0e0'
+                      }}>
+                        📅 Past Events ({getPastEvents(registeredEvents).length})
+                      </h2>
+                      <div className="events-list">
+                        {getPastEvents(registeredEvents).map((ev) => (
+                          <EventCard 
+                            key={ev._id || ev.id || ev.event_id} 
+                            event={ev}
+                            onViewDetails={handleViewDetails}
+                            isRegistered={true}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          )}
 
           {/* Event Details Modal */}
           {showDetailsModal && selectedEvent && (
