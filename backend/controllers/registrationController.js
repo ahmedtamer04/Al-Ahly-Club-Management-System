@@ -9,11 +9,14 @@ export const registerForEvent = async (req, res) => {
     const { event_id, name, email, personalId, role } = req.body;
     const user_id = req.user._id; // Get from auth middleware
     
+    console.log('Registration attempt - Role received:', role, 'User ID:', user_id);
+    
     if (!event_id || !name || !email || !personalId || !role) {
       return res.status(400).json({ message: "All fields are required." });
     }
     
-    if (!["student", "staff", "TA", "professor"].includes(role)) {
+    if (!["Student", "Staff", "TA", "Professor"].includes(role)) {
+      console.log('Invalid role rejected:', role, 'Valid roles:', ["Student", "Staff", "TA", "Professor"]);
       return res.status(400).json({ message: "Invalid role." });
     }
 

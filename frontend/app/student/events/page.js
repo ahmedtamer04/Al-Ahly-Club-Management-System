@@ -132,8 +132,9 @@ export default function BrowseEventsPage() {
     try {
       setRegistering(event._id);
       const user = JSON.parse(localStorage.getItem('user'));
+      const token = localStorage.getItem('token');
       
-      if (!user) {
+      if (!user || !token) {
         throw new Error('You must be logged in to register for events');
       }
 
@@ -148,7 +149,7 @@ export default function BrowseEventsPage() {
         email: user.email,
         personalId: user.id_number,
         role: user.role
-      });
+      }, token);
 
       // Refresh events after registration
       const updatedEvents = await eventAPI.getUpcoming();
