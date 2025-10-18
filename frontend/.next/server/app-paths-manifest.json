@@ -1,8 +1,7 @@
 {
-  "/professor/page": "app/professor/page.js",
-  "/auth/login/page": "app/auth/login/page.js",
-  "/admin/page": "app/admin/page.js",
-  "/professor/profile/page": "app/professor/profile/page.js",
   "/professor/events/page": "app/professor/events/page.js",
+  "/professor/page": "app/professor/page.js",
+  "/professor/workshops/create/page": "app/professor/workshops/create/page.js",
+  "/professor/profile/page": "app/professor/profile/page.js",
   "/professor/workshops/page": "app/professor/workshops/page.js"
 }

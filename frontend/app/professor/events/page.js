@@ -3,9 +3,9 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import '@/app/dashboard.css';
-import { eventAPI, bazaarAPI } from '@/utils/api';
+import { eventAPI, bazaarAPI, registrationAPI, getUser } from '@/utils/api';
 
-function EventCard({ event, onViewDetails }) {
+function EventCard({ event, onViewDetails, isRegistered }) {
   // Helper function to format dates nicely
   const formatDate = (dateStr) => {
     const date = new Date(dateStr);
@@ -60,7 +60,7 @@ function EventCard({ event, onViewDetails }) {
         </div>
       )}
 
-      <div style={{ marginTop: '15px' }}>
+      <div style={{ marginTop: '15px', display: 'flex', gap: '10px' }}>
         <button
           onClick={() => onViewDetails(event)}
           style={{
@@ -73,13 +73,42 @@ function EventCard({ event, onViewDetails }) {
             background: '#0066cc',
             color: 'white',
             transition: 'all 0.3s',
-            width: '100%'
+            flex: '1'
           }}
           onMouseOver={(e) => e.target.style.background = '#0052a3'}
           onMouseOut={(e) => e.target.style.background = '#0066cc'}
         >
-          📋 View Details
+          📋 Details
         </button>
+        {/* Show Register button only for Workshops and Trips */}
+        {(event.type?.toLowerCase().includes('workshop') || event.type?.toLowerCase().includes('trip')) && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              if (!isRegistered) {
+                onViewDetails(event, true); // Pass true to open registration form directly
+              }
+            }}
+            disabled={isRegistered}
+            style={{
+              padding: '8px 20px',
+              fontSize: '14px',
+              fontWeight: '600',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: isRegistered ? 'not-allowed' : 'pointer',
+              background: isRegistered ? '#6c757d' : '#28a745',
+              color: 'white',
+              transition: 'all 0.3s',
+              flex: '1',
+              opacity: isRegistered ? 0.7 : 1
+            }}
+            onMouseOver={(e) => !isRegistered && (e.target.style.background = '#218838')}
+            onMouseOut={(e) => !isRegistered && (e.target.style.background = '#28a745')}
+          >
+            {isRegistered ? '✓ Registered' : '✍️ Register'}
+          </button>
+        )}
       </div>
     </div>
   );
@@ -104,6 +133,17 @@ export default function ProfessorEvents() {
   const [showFilters, setShowFilters] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
+  
+  // Registration states
+  const [showRegistrationForm, setShowRegistrationForm] = useState(false);
+  const [registrationData, setRegistrationData] = useState({
+    name: '',
+    email: '',
+    staffId: ''
+  });
+  const [registrationLoading, setRegistrationLoading] = useState(false);
+  const [registrationMessage, setRegistrationMessage] = useState({ text: '', type: '' });
+  const [registeredEventIds, setRegisteredEventIds] = useState(new Set());
 
   // Function to sort events by date
   const sortEvents = (events, order) => {
@@ -113,6 +153,30 @@ export default function ProfessorEvents() {
       return order === 'asc' ? dateA - dateB : dateB - dateA;
     });
   };
+
+  // Load user data and auto-fill form + load registered events from localStorage
+  useEffect(() => {
+    const user = getUser();
+    if (user) {
+      const fullName = `${user.first_name || ''} ${user.last_name || ''}`.trim();
+      setRegistrationData({
+        name: fullName || '',
+        email: user.email || '',
+        staffId: user.id_number || ''
+      });
+
+      // Load registered events from localStorage
+      const storedRegistrations = localStorage.getItem(`registeredEvents_${user.id_number}`);
+      if (storedRegistrations) {
+        try {
+          const registeredArray = JSON.parse(storedRegistrations);
+          setRegisteredEventIds(new Set(registeredArray));
+        } catch (error) {
+          console.error('Error loading registered events:', error);
+        }
+      }
+    }
+  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -263,9 +327,12 @@ export default function ProfessorEvents() {
   };
 
   // Handle view details
-  const handleViewDetails = (event) => {
+  const handleViewDetails = (event, openRegistration = false) => {
     setSelectedEvent(event);
     setShowDetailsModal(true);
+    if (openRegistration && isRegisterableEvent(event)) {
+      setShowRegistrationForm(true);
+    }
   };
 
   // Helper function to format dates nicely in modal
@@ -278,6 +345,76 @@ export default function ProfessorEvents() {
       month: 'long',
       year: 'numeric'
     });
+  };
+
+  // Check if event is registerable (workshop or trip)
+  const isRegisterableEvent = (event) => {
+    if (!event || !event.type) return false;
+    const type = event.type.toLowerCase();
+    return type.includes('workshop') || type.includes('trip');
+  };
+
+  // Check if already registered for this event
+  const isAlreadyRegistered = (event) => {
+    const eventId = event._id || event.id;
+    return registeredEventIds.has(eventId);
+  };
+
+  // Handle registration form submit
+  const handleRegistration = async (e) => {
+    e.preventDefault();
+    setRegistrationLoading(true);
+    setRegistrationMessage({ text: '', type: '' });
+
+    try {
+      // Validate form data
+      if (!registrationData.name || !registrationData.email || !registrationData.staffId) {
+        setRegistrationMessage({ text: 'Please fill in all fields', type: 'error' });
+        setRegistrationLoading(false);
+        return;
+      }
+
+      // Prepare registration payload
+      const payload = {
+        event_id: selectedEvent._id || selectedEvent.id,
+        name: registrationData.name,
+        email: registrationData.email,
+        personalId: registrationData.staffId,
+        role: 'professor' // Backend expects lowercase
+      };
+
+      await registrationAPI.register(payload);
+      
+      // Add event to registered set
+      const eventId = selectedEvent._id || selectedEvent.id;
+      const updatedRegistrations = new Set([...registeredEventIds, eventId]);
+      setRegisteredEventIds(updatedRegistrations);
+      
+      // Save to localStorage for persistence
+      const currentUser = getUser();
+      if (currentUser) {
+        localStorage.setItem(
+          `registeredEvents_${currentUser.id_number}`,
+          JSON.stringify([...updatedRegistrations])
+        );
+      }
+      
+      setRegistrationMessage({ text: 'Successfully registered for the event!', type: 'success' });
+      
+      // Close form and reset message after 2 seconds (keep user data)
+      setTimeout(() => {
+        setShowRegistrationForm(false);
+        setRegistrationMessage({ text: '', type: '' });
+      }, 2000);
+
+    } catch (error) {
+      setRegistrationMessage({ 
+        text: error.message || 'Failed to register. Please try again.', 
+        type: 'error' 
+      });
+    } finally {
+      setRegistrationLoading(false);
+    }
   };
 
   // Update filtered events when any search/filter criteria changes
@@ -648,6 +785,7 @@ export default function ProfessorEvents() {
                         key={ev._id || ev.id || ev.event_id} 
                         event={ev}
                         onViewDetails={handleViewDetails}
+                        isRegistered={isAlreadyRegistered(ev)}
                       />
                     ))}
                   </div>
@@ -966,6 +1104,263 @@ export default function ProfessorEvents() {
                       </span>
                     </div>
                   )}
+
+                  {/* Registration Section */}
+                  {isRegisterableEvent(selectedEvent) && !showRegistrationForm && !isAlreadyRegistered(selectedEvent) && (
+                    <div style={{
+                      marginTop: '24px',
+                      padding: '20px',
+                      background: 'linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%)',
+                      borderRadius: '8px',
+                      border: '2px solid #90caf9',
+                      textAlign: 'center'
+                    }}>
+                      <h3 style={{ 
+                        margin: '0 0 12px 0',
+                        fontSize: '18px',
+                        color: '#1565c0'
+                      }}>
+                        📝 Ready to Register?
+                      </h3>
+                      <p style={{ margin: '0 0 16px 0', color: '#424242' }}>
+                        Click below to register for this {selectedEvent.type?.toLowerCase()}
+                      </p>
+                      <button
+                        onClick={() => setShowRegistrationForm(true)}
+                        style={{
+                          padding: '12px 32px',
+                          fontSize: '16px',
+                          fontWeight: '700',
+                          border: 'none',
+                          borderRadius: '8px',
+                          cursor: 'pointer',
+                          background: '#0066cc',
+                          color: 'white',
+                          transition: 'all 0.3s',
+                          boxShadow: '0 4px 12px rgba(0, 102, 204, 0.3)'
+                        }}
+                        onMouseOver={(e) => {
+                          e.target.style.background = '#0052a3';
+                          e.target.style.transform = 'translateY(-2px)';
+                          e.target.style.boxShadow = '0 6px 16px rgba(0, 102, 204, 0.4)';
+                        }}
+                        onMouseOut={(e) => {
+                          e.target.style.background = '#0066cc';
+                          e.target.style.transform = 'translateY(0)';
+                          e.target.style.boxShadow = '0 4px 12px rgba(0, 102, 204, 0.3)';
+                        }}
+                      >
+                        ✍️ Register Now
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Already Registered Message */}
+                  {isRegisterableEvent(selectedEvent) && isAlreadyRegistered(selectedEvent) && (
+                    <div style={{
+                      marginTop: '24px',
+                      padding: '20px',
+                      background: 'linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%)',
+                      borderRadius: '8px',
+                      border: '2px solid #28a745',
+                      textAlign: 'center'
+                    }}>
+                      <h3 style={{ 
+                        margin: '0 0 12px 0',
+                        fontSize: '18px',
+                        color: '#155724',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '10px'
+                      }}>
+                        ✓ Already Registered
+                      </h3>
+                      <p style={{ margin: '0', color: '#155724', fontWeight: '500' }}>
+                        You have successfully registered for this {selectedEvent.type?.toLowerCase()}!
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Registration Form */}
+                  {isRegisterableEvent(selectedEvent) && showRegistrationForm && !isAlreadyRegistered(selectedEvent) && (
+                    <div style={{
+                      marginTop: '24px',
+                      padding: '24px',
+                      background: '#f8f9fa',
+                      borderRadius: '8px',
+                      border: '2px solid #0066cc'
+                    }}>
+                      <h3 style={{ 
+                        margin: '0 0 20px 0',
+                        fontSize: '18px',
+                        color: '#333',
+                        textAlign: 'center'
+                      }}>
+                        📝 Registration Form
+                      </h3>
+
+                      {registrationMessage.text && (
+                        <div style={{
+                          padding: '12px 16px',
+                          marginBottom: '20px',
+                          borderRadius: '6px',
+                          background: registrationMessage.type === 'success' ? '#d4edda' : '#f8d7da',
+                          border: `1px solid ${registrationMessage.type === 'success' ? '#c3e6cb' : '#f5c6cb'}`,
+                          color: registrationMessage.type === 'success' ? '#155724' : '#721c24',
+                          textAlign: 'center',
+                          fontWeight: '600'
+                        }}>
+                          {registrationMessage.text}
+                        </div>
+                      )}
+
+                      <form onSubmit={handleRegistration}>
+                        <div style={{ marginBottom: '16px' }}>
+                          <label style={{
+                            display: 'block',
+                            marginBottom: '8px',
+                            fontWeight: '600',
+                            color: '#495057'
+                          }}>
+                            Full Name *
+                          </label>
+                          <input
+                            type="text"
+                            value={registrationData.name}
+                            readOnly
+                            required
+                            style={{
+                              width: '100%',
+                              padding: '10px 12px',
+                              fontSize: '14px',
+                              border: '2px solid #e0e0e0',
+                              borderRadius: '6px',
+                              outline: 'none',
+                              boxSizing: 'border-box',
+                              backgroundColor: '#f8f9fa',
+                              cursor: 'not-allowed',
+                              color: '#495057'
+                            }}
+                          />
+                        </div>
+
+                        <div style={{ marginBottom: '16px' }}>
+                          <label style={{
+                            display: 'block',
+                            marginBottom: '8px',
+                            fontWeight: '600',
+                            color: '#495057'
+                          }}>
+                            Email Address *
+                          </label>
+                          <input
+                            type="email"
+                            value={registrationData.email}
+                            readOnly
+                            required
+                            style={{
+                              width: '100%',
+                              padding: '10px 12px',
+                              fontSize: '14px',
+                              border: '2px solid #e0e0e0',
+                              borderRadius: '6px',
+                              outline: 'none',
+                              boxSizing: 'border-box',
+                              backgroundColor: '#f8f9fa',
+                              cursor: 'not-allowed',
+                              color: '#495057'
+                            }}
+                          />
+                        </div>
+
+                        <div style={{ marginBottom: '20px' }}>
+                          <label style={{
+                            display: 'block',
+                            marginBottom: '8px',
+                            fontWeight: '600',
+                            color: '#495057'
+                          }}>
+                            Staff ID *
+                          </label>
+                          <input
+                            type="text"
+                            value={registrationData.staffId}
+                            readOnly
+                            required
+                            style={{
+                              width: '100%',
+                              padding: '10px 12px',
+                              fontSize: '14px',
+                              border: '2px solid #e0e0e0',
+                              borderRadius: '6px',
+                              outline: 'none',
+                              boxSizing: 'border-box',
+                              backgroundColor: '#f8f9fa',
+                              cursor: 'not-allowed',
+                              color: '#495057'
+                            }}
+                          />
+                        </div>
+
+                        <div style={{ 
+                          display: 'flex', 
+                          gap: '12px',
+                          justifyContent: 'flex-end'
+                        }}>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setShowRegistrationForm(false);
+                              setRegistrationMessage({ text: '', type: '' });
+                              setRegistrationData({ name: '', email: '', staffId: '' });
+                            }}
+                            style={{
+                              padding: '10px 24px',
+                              fontSize: '14px',
+                              fontWeight: '600',
+                              border: '2px solid #6c757d',
+                              borderRadius: '6px',
+                              cursor: 'pointer',
+                              background: 'white',
+                              color: '#6c757d',
+                              transition: 'all 0.3s'
+                            }}
+                            onMouseOver={(e) => {
+                              e.target.style.background = '#6c757d';
+                              e.target.style.color = 'white';
+                            }}
+                            onMouseOut={(e) => {
+                              e.target.style.background = 'white';
+                              e.target.style.color = '#6c757d';
+                            }}
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            type="submit"
+                            disabled={registrationLoading}
+                            style={{
+                              padding: '10px 24px',
+                              fontSize: '14px',
+                              fontWeight: '600',
+                              border: 'none',
+                              borderRadius: '6px',
+                              cursor: registrationLoading ? 'not-allowed' : 'pointer',
+                              background: registrationLoading ? '#ccc' : '#28a745',
+                              color: 'white',
+                              transition: 'all 0.3s',
+                              opacity: registrationLoading ? 0.6 : 1
+                            }}
+                            onMouseOver={(e) => !registrationLoading && (e.target.style.background = '#218838')}
+                            onMouseOut={(e) => !registrationLoading && (e.target.style.background = '#28a745')}
+                          >
+                            {registrationLoading ? '⏳ Registering...' : '✓ Submit Registration'}
+                          </button>
+                        </div>
+                      </form>
+                    </div>
+                  )}
                 </div>
 
                 {/* Modal Footer */}
@@ -980,7 +1375,12 @@ export default function ProfessorEvents() {
                   borderRadius: '0 0 12px 12px'
                 }}>
                   <button
-                    onClick={() => setShowDetailsModal(false)}
+                    onClick={() => {
+                      setShowDetailsModal(false);
+                      setShowRegistrationForm(false);
+                      setRegistrationMessage({ text: '', type: '' });
+                      setRegistrationData({ name: '', email: '', staffId: '' });
+                    }}
                     style={{
                       padding: '10px 24px',
                       fontSize: '14px',
