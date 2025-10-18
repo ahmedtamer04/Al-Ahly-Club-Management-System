@@ -170,14 +170,6 @@ export default function EventsOfficeDashboard() {
               </Link>
             </div>
           </section>
-
-          <section className="section">
-            <h2>Recent Events</h2>
-            <div className="empty-state">
-              <p>📅 No events created yet</p>
-              <Link href="/eventsoffice/create" className="btn-primary">Create Your First Event</Link>
-            </div>
-          </section>
         </main>
       </div>
     </div>

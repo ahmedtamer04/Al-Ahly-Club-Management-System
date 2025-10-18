@@ -23,35 +23,11 @@
       "static/css/app/eventsoffice/page.css",
       "static/chunks/app/eventsoffice/page.js"
     ],
-    "/eventsoffice/events/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/css/app/eventsoffice/events/page.css",
-      "static/chunks/app/eventsoffice/events/page.js"
-    ],
-    "/eventsoffice/bazaars/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/css/app/eventsoffice/bazaars/page.css",
-      "static/chunks/app/eventsoffice/bazaars/page.js"
-    ],
-    "/eventsoffice/bazaars/create/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/css/app/eventsoffice/bazaars/create/page.css",
-      "static/chunks/app/eventsoffice/bazaars/create/page.js"
-    ],
     "/eventsoffice/trips/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/css/app/eventsoffice/trips/page.css",
       "static/chunks/app/eventsoffice/trips/page.js"
-    ],
-    "/eventsoffice/trips/create/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/css/app/eventsoffice/trips/create/page.css",
-      "static/chunks/app/eventsoffice/trips/create/page.js"
     ],
     "/eventsoffice/conferences/page": [
       "static/chunks/webpack.js",
@@ -59,11 +35,17 @@
       "static/css/app/eventsoffice/conferences/page.css",
       "static/chunks/app/eventsoffice/conferences/page.js"
     ],
-    "/eventsoffice/conferences/create/page": [
+    "/eventsoffice/bazaars/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/css/app/eventsoffice/conferences/create/page.css",
-      "static/chunks/app/eventsoffice/conferences/create/page.js"
+      "static/css/app/eventsoffice/bazaars/page.css",
+      "static/chunks/app/eventsoffice/bazaars/page.js"
+    ],
+    "/eventsoffice/events/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/css/app/eventsoffice/events/page.css",
+      "static/chunks/app/eventsoffice/events/page.js"
     ],
     "/eventsoffice/vendors/page": [
       "static/chunks/webpack.js",
@@ -71,17 +53,17 @@
       "static/css/app/eventsoffice/vendors/page.css",
       "static/chunks/app/eventsoffice/vendors/page.js"
     ],
-    "/eventsoffice/gym/page": [
+    "/eventsoffice/registrations/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/css/app/eventsoffice/gym/page.css",
-      "static/chunks/app/eventsoffice/gym/page.js"
+      "static/css/app/eventsoffice/registrations/page.css",
+      "static/chunks/app/eventsoffice/registrations/page.js"
     ],
-    "/eventsoffice/gym/schedule/page": [
+    "/eventsoffice/profile/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/css/app/eventsoffice/gym/schedule/page.css",
-      "static/chunks/app/eventsoffice/gym/schedule/page.js"
+      "static/css/app/eventsoffice/profile/page.css",
+      "static/chunks/app/eventsoffice/profile/page.js"
     ]
   }
 }
