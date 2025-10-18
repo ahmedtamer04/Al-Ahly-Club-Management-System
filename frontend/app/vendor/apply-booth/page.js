@@ -8,16 +8,9 @@ import '@/app/dashboard.css';
 
 export default function ApplyBoothPage() {
   const router = useRouter();
-  // Load user immediately to avoid transition flicker
-  const getUserData = () => {
-    if (typeof window !== 'undefined') {
-      const userData = localStorage.getItem('user');
-      return userData ? JSON.parse(userData) : null;
-    }
-    return null;
-  };
-  
-  const [user] = useState(getUserData);
+  // Initialize as null to match server-side rendering
+  const [user, setUser] = useState(null);
+  const [isClient, setIsClient] = useState(false);
   const [formData, setFormData] = useState({
     business_name: '',
     business_type: '',
@@ -32,6 +25,17 @@ export default function ApplyBoothPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+
+  // Load user data on client side only
+  useEffect(() => {
+    setIsClient(true);
+    if (typeof window !== 'undefined') {
+      const userData = localStorage.getItem('user');
+      if (userData) {
+        setUser(JSON.parse(userData));
+      }
+    }
+  }, []);
 
   useEffect(() => {
     // Pre-fill form with user data if available

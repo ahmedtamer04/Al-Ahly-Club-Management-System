@@ -6,16 +6,9 @@ import '@/app/dashboard.css';
 import { vendorAPI } from '@/utils/api';
 
 export default function VendorApplicationsPage() {
-  // Load user immediately to avoid transition flicker
-  const getUserData = () => {
-    if (typeof window !== 'undefined') {
-      const userData = localStorage.getItem('user');
-      return userData ? JSON.parse(userData) : null;
-    }
-    return null;
-  };
-  
-  const [user] = useState(getUserData);
+  // Initialize as null to match server-side rendering
+  const [user, setUser] = useState(null);
+  const [isClient, setIsClient] = useState(false);
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -27,9 +20,22 @@ export default function VendorApplicationsPage() {
   });
   const [cancelling, setCancelling] = useState(null);
 
+  // Load user data on client side only
   useEffect(() => {
-    fetchApplications();
+    setIsClient(true);
+    if (typeof window !== 'undefined') {
+      const userData = localStorage.getItem('user');
+      if (userData) {
+        setUser(JSON.parse(userData));
+      }
+    }
   }, []);
+
+  useEffect(() => {
+    if (isClient) {
+      fetchApplications();
+    }
+  }, [isClient]);
 
   const fetchApplications = async () => {
     try {

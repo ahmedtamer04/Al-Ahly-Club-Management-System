@@ -8,16 +8,9 @@ import '@/app/dashboard.css';
 
 export default function VendorDashboard() {
   const router = useRouter();
-  // Load user immediately to avoid transition flicker
-  const getUserData = () => {
-    if (typeof window !== 'undefined') {
-      const userData = localStorage.getItem('user');
-      return userData ? JSON.parse(userData) : null;
-    }
-    return null;
-  };
-  
-  const [user] = useState(getUserData);
+  // Initialize as null to match server-side rendering
+  const [user, setUser] = useState(null);
+  const [isClient, setIsClient] = useState(false);
   const [stats, setStats] = useState({
     pendingApplications: 0,
     approvedBooths: 0,
@@ -30,9 +23,22 @@ export default function VendorDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
+  // Load user data on client side only
   useEffect(() => {
-    fetchDashboardData();
+    setIsClient(true);
+    if (typeof window !== 'undefined') {
+      const userData = localStorage.getItem('user');
+      if (userData) {
+        setUser(JSON.parse(userData));
+      }
+    }
   }, []);
+
+  useEffect(() => {
+    if (isClient) {
+      fetchDashboardData();
+    }
+  }, [isClient]);
 
   const fetchDashboardData = async () => {
     try {

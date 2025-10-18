@@ -1,4 +1,4 @@
-// File: C:\Users\majed\Documents\Al-Ahly\frontend\app\vendor\bazaars\page.js
+// File: C:\Users\majed\Desktop\Al-Ahly\frontend\app\vendor\bazaars\page.js
 import * as entry from '../../../../../app/vendor/bazaars/page.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 

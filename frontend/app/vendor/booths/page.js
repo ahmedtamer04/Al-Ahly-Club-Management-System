@@ -6,16 +6,9 @@ import { vendorAPI } from '@/utils/api';
 import '@/app/dashboard.css';
 
 export default function MyBoothsPage() {
-  // Load user immediately to avoid transition flicker
-  const getUserData = () => {
-    if (typeof window !== 'undefined') {
-      const userData = localStorage.getItem('user');
-      return userData ? JSON.parse(userData) : null;
-    }
-    return null;
-  };
-  
-  const [user] = useState(getUserData);
+  // Initialize as null to match server-side rendering
+  const [user, setUser] = useState(null);
+  const [isClient, setIsClient] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [myBooths, setMyBooths] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -42,6 +35,17 @@ export default function MyBoothsPage() {
   const [occupiedPositions, setOccupiedPositions] = useState([]);
   const [loadingAvailability, setLoadingAvailability] = useState(false);
 
+  // Load user data on client side only
+  useEffect(() => {
+    setIsClient(true);
+    if (typeof window !== 'undefined') {
+      const userData = localStorage.getItem('user');
+      if (userData) {
+        setUser(JSON.parse(userData));
+      }
+    }
+  }, []);
+
   useEffect(() => {
     // Pre-fill with user data
     if (user) {
@@ -54,8 +58,13 @@ export default function MyBoothsPage() {
         contact_email: user.email || ''
       }));
     }
-    fetchMyBooths();
   }, [user]);
+
+  useEffect(() => {
+    if (isClient) {
+      fetchMyBooths();
+    }
+  }, [isClient]);
 
   // Fetch booth availability when start_date or duration changes
   useEffect(() => {

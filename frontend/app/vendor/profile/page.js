@@ -6,29 +6,39 @@ import { getUser } from '@/utils/api';
 import '@/app/dashboard.css';
 
 export default function VendorProfilePage() {
-  // Load user immediately to avoid transition flicker
-  const getUserData = () => {
-    if (typeof window !== 'undefined') {
-      return getUser();
-    }
-    return null;
-  };
-  
-  const initialUser = getUserData();
-  const [user] = useState(initialUser);
+  // Initialize as null to match server-side rendering
+  const [user, setUser] = useState(null);
+  const [isClient, setIsClient] = useState(false);
   const [profile, setProfile] = useState({
-    name: initialUser ? `${initialUser.first_name || ''} ${initialUser.last_name || ''}`.trim() : '',
-    email: initialUser?.email || '',
-    phone: initialUser?.vendor_info?.phone || initialUser?.phone || '',
-    vendorId: initialUser?._id || '',
-    businessName: initialUser?.vendor_info?.company_name || '',
-    businessType: initialUser?.vendor_info?.business_type || '',
-    businessDescription: initialUser?.vendor_info?.business_description || ''
+    name: '',
+    email: '',
+    phone: '',
+    vendorId: '',
+    businessName: '',
+    businessType: '',
+    businessDescription: ''
   });
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
 
+  // Load user data on client side only
   useEffect(() => {
+    setIsClient(true);
+    if (typeof window !== 'undefined') {
+      const userData = getUser();
+      if (userData) {
+        setUser(userData);
+        setProfile({
+          name: `${userData.first_name || ''} ${userData.last_name || ''}`.trim(),
+          email: userData.email || '',
+          phone: userData.vendor_info?.phone || userData.phone || '',
+          vendorId: userData._id || '',
+          businessName: userData.vendor_info?.company_name || '',
+          businessType: userData.vendor_info?.business_type || '',
+          businessDescription: userData.vendor_info?.business_description || ''
+        });
+      }
+    }
     setLoading(false);
   }, []);
 
