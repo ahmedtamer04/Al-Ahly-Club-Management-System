@@ -48,8 +48,15 @@ export const registerForEvent = async (req, res) => {
     res.status(201).json({ message: "Registration successful.", registration });
     
   } catch (error) {
+    console.error('Registration error:', error);
     if (error.code === 11000) {
       return res.status(409).json({ message: "You are already registered for this event." });
+    }
+    if (error.name === 'ValidationError') {
+      return res.status(400).json({ 
+        message: "Validation error.", 
+        details: error.message 
+      });
     }
     res.status(500).json({ message: "Server error.", error: error.message });
   }

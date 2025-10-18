@@ -1,27 +1,15 @@
 {
   "pages": {
-    "/student/facilities/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/css/app/student/facilities/page.css",
-      "static/chunks/app/student/facilities/page.js"
-    ],
-    "/layout": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/layout.js"
-    ],
     "/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/css/app/page.css",
       "static/chunks/app/page.js"
     ],
-    "/auth/register/page": [
+    "/layout": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/css/app/auth/register/page.css",
-      "static/chunks/app/auth/register/page.js"
+      "static/chunks/app/layout.js"
     ],
     "/auth/login/page": [
       "static/chunks/webpack.js",
@@ -41,23 +29,17 @@
       "static/css/app/student/events/page.css",
       "static/chunks/app/student/events/page.js"
     ],
-    "/student/gym/schedule/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/css/app/student/gym/schedule/page.css",
-      "static/chunks/app/student/gym/schedule/page.js"
-    ],
     "/student/my-registrations/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/css/app/student/my-registrations/page.css",
       "static/chunks/app/student/my-registrations/page.js"
     ],
-    "/student/profile/page": [
+    "/student/gym/schedule/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/css/app/student/profile/page.css",
-      "static/chunks/app/student/profile/page.js"
+      "static/css/app/student/gym/schedule/page.css",
+      "static/chunks/app/student/gym/schedule/page.js"
     ]
   }
 }

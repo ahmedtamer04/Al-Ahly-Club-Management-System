@@ -340,6 +340,11 @@ export const registrationAPI = {
   // Auth: requireRegistering
   // Returns { upcoming: [], past: [] }
   getMyRegistrations: (userId) => api.get(`/registration/${userId}/events`),
+
+  // DELETE /api/registration/cancel/:id
+  // Auth: requireRegistering
+  // Cancel a registration
+  cancel: (registrationId) => api.delete(`/registration/cancel/${registrationId}`),
 };
 
 // ================================
