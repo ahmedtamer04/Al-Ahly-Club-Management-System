@@ -68,9 +68,18 @@ export default function ProfessorEvents() {
   const [filteredEvents, setFilteredEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  
+  // Search state
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchType, setSearchType] = useState('all');
+  
+  // Filter states
+  const [filterType, setFilterType] = useState('all');
+  const [filterProfessor, setFilterProfessor] = useState('');
+  const [filterLocation, setFilterLocation] = useState('');
+  const [filterDate, setFilterDate] = useState('');
+  
   const [sortOrder, setSortOrder] = useState('desc'); // 'desc' for newest first, 'asc' for oldest first
+  const [showFilters, setShowFilters] = useState(false);
 
   // Function to sort events by date
   const sortEvents = (events, order) => {
@@ -134,70 +143,105 @@ export default function ProfessorEvents() {
     return () => { mounted = false; };
   }, []);
 
-  // Filter events based on search query and type
-  const handleSearch = (query, type) => {
-    if (!events.length) return;
+  // Apply search and filters to events
+  const applySearchAndFilters = () => {
+    if (!events.length) {
+      setFilteredEvents([]);
+      return;
+    }
     
-    const searchStr = query.toLowerCase();
-    const filtered = events.filter(event => {
-      // Type filtering
-      if (type !== 'all') {
-        // Ensure we have a valid event type
-        const eventType = event.type?.toLowerCase() || '';
+    let result = [...events];
+    
+    // 1. SEARCH: by event name OR professor name
+    if (searchQuery.trim()) {
+      const searchStr = searchQuery.toLowerCase();
+      result = result.filter(event => {
+        const matchesEventName = event.name?.toLowerCase().includes(searchStr);
+        const matchesProfessor = 
+          event.professors_participating?.toLowerCase().includes(searchStr) ||
+          event.faculty_responsible?.toLowerCase().includes(searchStr);
         
-        switch(type) {
+        return matchesEventName || matchesProfessor;
+      });
+    }
+    
+    // 2. FILTER by Type
+    if (filterType !== 'all') {
+      result = result.filter(event => {
+        const eventType = event.type?.toLowerCase() || '';
+        switch(filterType) {
           case 'Bazaar':
-            // Match both "Bazaar" and any type containing "bazaar"
             return eventType === 'bazaar' || eventType.includes('bazaar');
           case 'Booth':
-            // Match both "Booth" and any type containing "booth"
             return eventType === 'booth' || eventType.includes('booth');
           case 'Workshop':
-            // Match both "Workshop" and any type containing "workshop"
             return eventType === 'workshop' || eventType.includes('workshop');
           case 'Conference':
-            // Match both "Conference" and any type containing "conference"
             return eventType === 'conference' || eventType.includes('conference');
           default:
-            return false;
+            return true;
         }
-      }
-      
-      // Text search filtering
-      return (
-        event.name?.toLowerCase().includes(searchStr) ||
-        event.professors_participating?.toLowerCase().includes(searchStr) ||
-        event.faculty_responsible?.toLowerCase().includes(searchStr)
-      );
-    });
+      });
+    }
     
-    console.log('Filtering events:', { 
-      type, 
-      query: searchStr,
-      totalEvents: events.length, 
-      filteredCount: filtered.length,
-      allTypes: events.map(e => e.type),
-      filteredTypes: filtered.map(e => e.type)
-    });
+    // 3. FILTER by Professor Name (for workshops/conferences)
+    if (filterProfessor.trim()) {
+      const professorStr = filterProfessor.toLowerCase();
+      result = result.filter(event => {
+        return (
+          event.professors_participating?.toLowerCase().includes(professorStr) ||
+          event.faculty_responsible?.toLowerCase().includes(professorStr)
+        );
+      });
+    }
     
-    // Apply sorting to filtered results
-    const sortedFiltered = sortEvents(filtered, sortOrder);
-    setFilteredEvents(sortedFiltered);
+    // 4. FILTER by Location
+    if (filterLocation.trim()) {
+      const locationStr = filterLocation.toLowerCase();
+      result = result.filter(event => {
+        return event.location?.toLowerCase().includes(locationStr);
+      });
+    }
+    
+    // 5. FILTER by Date
+    if (filterDate) {
+      result = result.filter(event => {
+        const eventDate = new Date(event.start_date).toISOString().split('T')[0];
+        return eventDate === filterDate;
+      });
+    }
+    
+    // 6. Apply sorting
+    const sorted = sortEvents(result, sortOrder);
+    setFilteredEvents(sorted);
+    
+    console.log('Applied filters:', {
+      total: events.length,
+      filtered: sorted.length,
+      search: searchQuery,
+      filters: { filterType, filterProfessor, filterLocation, filterDate }
+    });
   };
 
   // Handle sort order change
   const handleSortChange = () => {
     const newOrder = sortOrder === 'desc' ? 'asc' : 'desc';
     setSortOrder(newOrder);
-    // Re-sort the current filtered results
-    const sorted = sortEvents(filteredEvents, newOrder);
-    setFilteredEvents(sorted);
   };
 
-  // Update search when query or type changes
+  // Clear all filters
+  const handleClearFilters = () => {
+    setSearchQuery('');
+    setFilterType('all');
+    setFilterProfessor('');
+    setFilterLocation('');
+    setFilterDate('');
+  };
+
+  // Update filtered events when any search/filter criteria changes
   useEffect(() => {
-    handleSearch(searchQuery, searchType);
-  }, [searchQuery, searchType, events]);
+    applySearchAndFilters();
+  }, [searchQuery, filterType, filterProfessor, filterLocation, filterDate, sortOrder, events]);
 
   return (
     <div className="dashboard">
@@ -222,41 +266,275 @@ export default function ProfessorEvents() {
         </aside>
 
         <main className="main-content">
-          <h1>All Events</h1>
+          <div style={{ marginBottom: '30px' }}>
+            <h1 style={{ marginBottom: '10px' }}>All Events</h1>
+            <h2 style={{ fontSize: '18px', color: '#666', fontWeight: 'normal' }}>Upcoming Events</h2>
+          </div>
+
+          {/* Search and Action Buttons Bar */}
+          <div style={{
+            display: 'flex',
+            gap: '10px',
+            alignItems: 'stretch',
+            marginBottom: '20px',
+            flexWrap: 'wrap',
+            width: '100%'
+          }}>
+            <div style={{ 
+              flex: '1 1 300px',
+              minWidth: '250px'
+            }}>
+              <input
+                type="text"
+                placeholder="🔍 Search by event name or professor name..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '12px 16px',
+                  fontSize: '14px',
+                  border: '2px solid #e0e0e0',
+                  borderRadius: '8px',
+                  outline: 'none',
+                  transition: 'border-color 0.3s',
+                  boxSizing: 'border-box',
+                  height: '44px'
+                }}
+                onFocus={(e) => e.target.style.borderColor = '#0066cc'}
+                onBlur={(e) => e.target.style.borderColor = '#e0e0e0'}
+              />
+            </div>
+            <button 
+              onClick={() => setShowFilters(!showFilters)} 
+              style={{
+                padding: '12px 20px',
+                fontSize: '14px',
+                fontWeight: '600',
+                border: 'none',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                transition: 'all 0.3s',
+                background: showFilters ? '#0066cc' : '#f0f0f0',
+                color: showFilters ? 'white' : '#333',
+                whiteSpace: 'nowrap',
+                height: '44px',
+                flex: '0 0 auto'
+              }}
+            >
+              {showFilters ? '🔼 Hide Filters' : '🔽 Show Filters'}
+            </button>
+            <button 
+              onClick={handleSortChange} 
+              title={sortOrder === 'desc' ? 'Sort by oldest first' : 'Sort by newest first'}
+              style={{
+                padding: '12px 20px',
+                fontSize: '14px',
+                fontWeight: '600',
+                border: 'none',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                transition: 'all 0.3s',
+                background: '#f0f0f0',
+                color: '#333',
+                whiteSpace: 'nowrap',
+                height: '44px',
+                flex: '0 0 auto'
+              }}
+            >
+              📅 {sortOrder === 'desc' ? 'Newest First' : 'Oldest First'}
+            </button>
+          </div>
 
           <section className="section">
-            <div className="section-header">
-              <h2>Upcoming Events</h2>
-              <div className="search-controls">
-                <div className="search-input">
-                  <input
-                    type="text"
-                    placeholder="Search by event name or professor..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="search-box"
-                  />
+
+              {/* Advanced Filters Panel */}
+              {showFilters && (
+                <div style={{
+                  background: 'linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)',
+                  padding: '24px',
+                  borderRadius: '12px',
+                  marginBottom: '20px',
+                  border: '1px solid #dee2e6',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.08)'
+                }}>
+                  <h3 style={{
+                    margin: '0 0 20px 0',
+                    fontSize: '16px',
+                    fontWeight: '700',
+                    color: '#333',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px'
+                  }}>
+                    🎯 Advanced Filters
+                  </h3>
+                  
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+                    gap: '20px'
+                  }}>
+                    {/* Event Type Filter */}
+                    <div>
+                      <label style={{
+                        display: 'block',
+                        marginBottom: '8px',
+                        fontWeight: '600',
+                        fontSize: '13px',
+                        color: '#495057'
+                      }}>
+                        📋 Event Type
+                      </label>
+                      <select
+                        value={filterType}
+                        onChange={(e) => setFilterType(e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '10px 12px',
+                          fontSize: '14px',
+                          border: '2px solid #e0e0e0',
+                          borderRadius: '8px',
+                          outline: 'none',
+                          cursor: 'pointer',
+                          background: 'white',
+                          transition: 'border-color 0.3s'
+                        }}
+                        onFocus={(e) => e.target.style.borderColor = '#0066cc'}
+                        onBlur={(e) => e.target.style.borderColor = '#e0e0e0'}
+                      >
+                        <option value="all">All Types</option>
+                        <option value="Workshop">Workshops</option>
+                        <option value="Bazaar">Bazaars</option>
+                        <option value="Conference">Conferences</option>
+                        <option value="Booth">Booths</option>
+                      </select>
+                    </div>
+
+                    {/* Professor Name Filter */}
+                    <div>
+                      <label style={{
+                        display: 'block',
+                        marginBottom: '8px',
+                        fontWeight: '600',
+                        fontSize: '13px',
+                        color: '#495057'
+                      }}>
+                        👨‍🏫 Professor Name
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g., Dr. Smith"
+                        value={filterProfessor}
+                        onChange={(e) => setFilterProfessor(e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '10px 12px',
+                          fontSize: '14px',
+                          border: '2px solid #e0e0e0',
+                          borderRadius: '8px',
+                          outline: 'none',
+                          transition: 'border-color 0.3s'
+                        }}
+                        onFocus={(e) => e.target.style.borderColor = '#0066cc'}
+                        onBlur={(e) => e.target.style.borderColor = '#e0e0e0'}
+                      />
+                    </div>
+
+                    {/* Location Filter */}
+                    <div>
+                      <label style={{
+                        display: 'block',
+                        marginBottom: '8px',
+                        fontWeight: '600',
+                        fontSize: '13px',
+                        color: '#495057'
+                      }}>
+                        📍 Location
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g., Main Hall"
+                        value={filterLocation}
+                        onChange={(e) => setFilterLocation(e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '10px 12px',
+                          fontSize: '14px',
+                          border: '2px solid #e0e0e0',
+                          borderRadius: '8px',
+                          outline: 'none',
+                          transition: 'border-color 0.3s'
+                        }}
+                        onFocus={(e) => e.target.style.borderColor = '#0066cc'}
+                        onBlur={(e) => e.target.style.borderColor = '#e0e0e0'}
+                      />
+                    </div>
+
+                    {/* Date Filter */}
+                    <div>
+                      <label style={{
+                        display: 'block',
+                        marginBottom: '8px',
+                        fontWeight: '600',
+                        fontSize: '13px',
+                        color: '#495057'
+                      }}>
+                        📅 Date
+                      </label>
+                      <input
+                        type="date"
+                        value={filterDate}
+                        onChange={(e) => setFilterDate(e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '10px 12px',
+                          fontSize: '14px',
+                          border: '2px solid #e0e0e0',
+                          borderRadius: '8px',
+                          outline: 'none',
+                          cursor: 'pointer',
+                          transition: 'border-color 0.3s'
+                        }}
+                        onFocus={(e) => e.target.style.borderColor = '#0066cc'}
+                        onBlur={(e) => e.target.style.borderColor = '#e0e0e0'}
+                      />
+                    </div>
+
+                    {/* Clear Button - Spans full width on small screens */}
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'flex-end',
+                      gridColumn: 'span 1'
+                    }}>
+                      <button 
+                        onClick={handleClearFilters}
+                        style={{
+                          width: '100%',
+                          padding: '10px 12px',
+                          fontSize: '14px',
+                          fontWeight: '600',
+                          border: '2px solid #dc3545',
+                          borderRadius: '8px',
+                          cursor: 'pointer',
+                          background: 'white',
+                          color: '#dc3545',
+                          transition: 'all 0.3s'
+                        }}
+                        onMouseOver={(e) => {
+                          e.target.style.background = '#dc3545';
+                          e.target.style.color = 'white';
+                        }}
+                        onMouseOut={(e) => {
+                          e.target.style.background = 'white';
+                          e.target.style.color = '#dc3545';
+                        }}
+                      >
+                        ✕ Clear All Filters
+                      </button>
+                    </div>
+                  </div>
                 </div>
-                <select
-                  value={searchType}
-                  onChange={(e) => setSearchType(e.target.value)}
-                  className="type-filter"
-                >
-                  <option value="all">All Types</option>
-                  <option value="Workshop">Workshops</option>
-                  <option value="Bazaar">Bazaars</option>
-                  <option value="Conference">Conferences</option>
-                  <option value="Booth">Booths</option>
-                </select>
-                <button 
-                  onClick={handleSortChange} 
-                  className="btn-secondary"
-                  title={sortOrder === 'desc' ? 'Sort by oldest first' : 'Sort by newest first'}
-                >
-                  📅 {sortOrder === 'desc' ? 'Newest First' : 'Oldest First'}
-                </button>
-              </div>
-            </div>
+              )}
 
             {loading && (
               <div className="loading-container">
@@ -274,11 +552,62 @@ export default function ProfessorEvents() {
               </div>
             )}
 
-            <div className="events-list">
-              {(filteredEvents.length > 0 ? filteredEvents : events).map((ev) => (
-                <EventCard key={ev._id || ev.id || ev.event_id} event={ev} />
-              ))}
-            </div>
+            {!loading && !error && events.length > 0 && (
+              <>
+                {/* Results Counter */}
+                <div style={{ 
+                  padding: '12px 20px',
+                  background: '#f8f9fa',
+                  borderRadius: '8px',
+                  marginBottom: '20px',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  flexWrap: 'wrap',
+                  gap: '10px',
+                  border: '1px solid #e9ecef'
+                }}>
+                  <div style={{ 
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    color: '#495057'
+                  }}>
+                    📊 Showing <span style={{ color: '#0066cc', fontSize: '16px' }}>
+                      {filteredEvents.length > 0 ? filteredEvents.length : events.length}
+                    </span> of <span style={{ fontSize: '16px' }}>{events.length}</span> events
+                  </div>
+                  {(searchQuery || filterType !== 'all' || filterProfessor || filterLocation || filterDate) && (
+                    <span style={{ 
+                      background: '#0066cc',
+                      color: 'white',
+                      padding: '4px 12px',
+                      borderRadius: '20px',
+                      fontSize: '12px',
+                      fontWeight: '600'
+                    }}>
+                      ✓ Filters Active
+                    </span>
+                  )}
+                </div>
+
+                {/* Events Display */}
+                {filteredEvents.length === 0 && (searchQuery || filterType !== 'all' || filterProfessor || filterLocation || filterDate) ? (
+                  <div className="empty-state">
+                    <h3>No Events Found</h3>
+                    <p>No events match your search or filter criteria.</p>
+                    <button onClick={handleClearFilters} className="btn-primary">
+                      Clear Filters
+                    </button>
+                  </div>
+                ) : (
+                  <div className="events-list">
+                    {(filteredEvents.length > 0 ? filteredEvents : events).map((ev) => (
+                      <EventCard key={ev._id || ev.id || ev.event_id} event={ev} />
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
           </section>
         </main>
       </div>

@@ -40,6 +40,12 @@
       "static/chunks/main-app.js",
       "static/css/app/professor/events/page.css",
       "static/chunks/app/professor/events/page.js"
+    ],
+    "/professor/profile/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/css/app/professor/profile/page.css",
+      "static/chunks/app/professor/profile/page.js"
     ]
   }
 }
