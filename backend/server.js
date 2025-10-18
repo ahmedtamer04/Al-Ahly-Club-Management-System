@@ -19,6 +19,7 @@ import registrationRoutes from "./routes/registrationRoutes.js";
 import workshopRoutes from "./routes/workshopRoutes.js";
 import vendorRoutes from "./routes/vendorRoutes.js"; // ← Add this
 import eventRoutes from "./routes/eventRoutes.js"; // ← Add this
+import favoriteRoutes from "./routes/favoriteRoutes.js";
 
 
 const app = express();
@@ -55,6 +56,7 @@ app.use("/api/registration", registrationRoutes);
 app.use("/api/vendor", vendorRoutes);
 app.use("/api/workshop", workshopRoutes);
 app.use("/api/events", eventRoutes);
+app.use("/api/favorites", favoriteRoutes);
 
 
 

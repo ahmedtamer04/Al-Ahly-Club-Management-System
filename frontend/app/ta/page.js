@@ -6,19 +6,23 @@ import '@/app/dashboard.css';
 
 export default function TADashboard() {
   const [upcomingEventsCount, setUpcomingEventsCount] = useState(0);
-  const [managingEventsCount, setManagingEventsCount] = useState(0);
+  const [myEventsCount, setMyEventsCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchStats = async () => {
       try {
         const token = localStorage.getItem('token');
+        const userStr = localStorage.getItem('user');
         
-        if (!token) {
-          console.error('No token found');
+        if (!token || !userStr) {
+          console.error('No token or user found');
           setLoading(false);
           return;
         }
+
+        const user = JSON.parse(userStr);
+        const userId = user._id;
 
         // Fetch upcoming events count
         const eventsResponse = await fetch('http://localhost:5000/api/events/upcoming', {
@@ -34,15 +38,20 @@ export default function TADashboard() {
           setUpcomingEventsCount(eventsData.length);
         }
 
-        // TODO: Fetch events the TA is managing (if you have an endpoint for this)
-        // Example:
-        // const managingResponse = await fetch('http://localhost:5001/events/my-events', {
-        //   headers: { 'Authorization': `Bearer ${token}` }
-        // });
-        // if (managingResponse.ok) {
-        //   const managingData = await managingResponse.json();
-        //   setManagingEventsCount(managingData.length);
-        // }
+        // Fetch my registered events count
+        const registrationsResponse = await fetch(`http://localhost:5000/api/registration/${userId}/events`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (registrationsResponse.ok) {
+          const registrationsData = await registrationsResponse.json();
+          // Count only upcoming registered events
+          setMyEventsCount(registrationsData.upcoming?.length || 0);
+        }
 
       } catch (error) {
         console.error('Error fetching stats:', error);
@@ -71,6 +80,7 @@ export default function TADashboard() {
           <ul className="sidebar-menu">
             <li><Link href="/ta">🏠 Dashboard</Link></li>
             <li><Link href="/ta/events">📅 Browse Events</Link></li>
+            <li><Link href="/ta/favorites">⭐ My Favorites</Link></li>
             <li><Link href="/ta/my-events">✏️ My Events</Link></li>
             <li><Link href="/ta/profile">👤 Profile</Link></li>
           </ul>
@@ -87,19 +97,75 @@ export default function TADashboard() {
                 <p>Upcoming Events</p>
               </div>
             </div>
+
             <div className="stat-card">
               <div className="stat-icon">✏️</div>
               <div className="stat-info">
-                <h3>{loading ? '...' : managingEventsCount}</h3>
-                <p>Events I'm Managing</p>
+                <h3>{loading ? '...' : myEventsCount}</h3>
+                <p>My Registered Events</p>
               </div>
             </div>
           </div>
 
           <section className="section">
-            <h2>My Events</h2>
-            <div className="empty-state">
-              <p>📝 You're not managing any events yet</p>
+            <h2>Quick Actions</h2>
+            <div className="quick-actions" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1rem', marginTop: '1rem' }}>
+              <Link href="/ta/events" style={{ textDecoration: 'none' }}>
+                <div className="action-card" style={{ 
+                  padding: '1.5rem', 
+                  backgroundColor: '#fff', 
+                  borderRadius: '8px', 
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                  cursor: 'pointer',
+                  transition: 'transform 0.2s',
+                  color: '#333'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-5px)'}
+                onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+                >
+                  <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>📅</div>
+                  <h3>Browse Events</h3>
+                  <p style={{ color: '#666', fontSize: '0.9rem' }}>View all available events</p>
+                </div>
+              </Link>
+
+              <Link href="/ta/my-events" style={{ textDecoration: 'none' }}>
+                <div className="action-card" style={{ 
+                  padding: '1.5rem', 
+                  backgroundColor: '#fff', 
+                  borderRadius: '8px', 
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                  cursor: 'pointer',
+                  transition: 'transform 0.2s',
+                  color: '#333'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-5px)'}
+                onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+                >
+                  <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>✏️</div>
+                  <h3>My Registered Events</h3>
+                  <p style={{ color: '#666', fontSize: '0.9rem' }}>View your registrations</p>
+                </div>
+              </Link>
+
+              <Link href="/ta/favorites" style={{ textDecoration: 'none' }}>
+                <div className="action-card" style={{ 
+                  padding: '1.5rem', 
+                  backgroundColor: '#fff', 
+                  borderRadius: '8px', 
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                  cursor: 'pointer',
+                  transition: 'transform 0.2s',
+                  color: '#333'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-5px)'}
+                onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+                >
+                  <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>⭐</div>
+                  <h3>My Favorites</h3>
+                  <p style={{ color: '#666', fontSize: '0.9rem' }}>View saved events</p>
+                </div>
+              </Link>
             </div>
           </section>
         </main>

@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
+import '@/app/dashboard.css';
 
 export default function TAEventsPage() {
   const [events, setEvents] = useState([]);
@@ -11,13 +12,24 @@ export default function TAEventsPage() {
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [eventComments, setEventComments] = useState(null);
   const [loadingComments, setLoadingComments] = useState(false);
+  const [favorites, setFavorites] = useState(new Set()); // Changed to Set for faster lookup
+
+  // Registration states
+  const [showRegistrationModal, setShowRegistrationModal] = useState(false);
+  const [registrationEvent, setRegistrationEvent] = useState(null);
+  const [registrationForm, setRegistrationForm] = useState({
+    name: '',
+    email: '',
+    personalId: ''
+  });
+  const [registering, setRegistering] = useState(false);
 
   // Search and filter states
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('all');
   const [filterLocation, setFilterLocation] = useState('');
   const [filterProfessor, setFilterProfessor] = useState('');
-  const [sortOrder, setSortOrder] = useState('asc'); // 'asc' or 'desc'
+  const [sortOrder, setSortOrder] = useState('asc');
 
   // Fetch events on component mount
   useEffect(() => {
@@ -57,7 +69,105 @@ export default function TAEventsPage() {
     };
 
     fetchEvents();
+    loadFavorites();
   }, []);
+
+  // Load favorites from database
+  const loadFavorites = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+
+      const response = await fetch('http://localhost:5001/favorites', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const favoriteEvents = await response.json();
+        const favoriteIds = new Set(favoriteEvents.map(event => event._id));
+        setFavorites(favoriteIds);
+      }
+    } catch (err) {
+      console.error('Error loading favorites:', err);
+    }
+  };
+
+  // Toggle favorite status
+  const toggleFavorite = async (event) => {
+    try {
+      const token = localStorage.getItem('token');
+      const isFav = favorites.has(event._id);
+
+      if (isFav) {
+        // Remove from favorites
+        const response = await fetch(`http://localhost:5000/api/favorites/${event._id}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (response.ok) {
+          const newFavorites = new Set(favorites);
+          newFavorites.delete(event._id);
+          setFavorites(newFavorites);
+          
+          // Show success notification
+          const notification = document.createElement('div');
+          notification.textContent = '⭐ Removed from favorites!';
+          notification.style.cssText = 'position: fixed; top: 20px; right: 20px; background: #dc3545; color: white; padding: 1rem 2rem; border-radius: 8px; z-index: 10000; animation: slideIn 0.3s ease;';
+          document.body.appendChild(notification);
+          setTimeout(() => notification.remove(), 3000);
+        } else {
+          throw new Error('Failed to remove favorite');
+        }
+      } else {
+        // Add to favorites
+        const response = await fetch('http://localhost:5000/api/favorites', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ event_id: event._id })
+        });
+
+        if (response.ok) {
+          const newFavorites = new Set(favorites);
+          newFavorites.add(event._id);
+          setFavorites(newFavorites);
+          
+          // Show success notification
+          const notification = document.createElement('div');
+          notification.textContent = '⭐ Added to favorites!';
+          notification.style.cssText = 'position: fixed; top: 20px; right: 20px; background: #28a745; color: white; padding: 1rem 2rem; border-radius: 8px; z-index: 10000; animation: slideIn 0.3s ease;';
+          document.body.appendChild(notification);
+          setTimeout(() => notification.remove(), 3000);
+        } else {
+          const data = await response.json();
+          throw new Error(data.error || 'Failed to add favorite');
+        }
+      }
+    } catch (err) {
+      console.error('Error toggling favorite:', err);
+      
+      // Show error notification
+      const notification = document.createElement('div');
+      notification.textContent = `❌ ${err.message}`;
+      notification.style.cssText = 'position: fixed; top: 20px; right: 20px; background: #dc3545; color: white; padding: 1rem 2rem; border-radius: 8px; z-index: 10000;';
+      document.body.appendChild(notification);
+      setTimeout(() => notification.remove(), 3000);
+    }
+  };
+
+  const isFavorite = (eventId) => {
+    return favorites.has(eventId);
+  };
 
   // Fetch comments when an event is selected
   const fetchEventComments = async (eventId) => {
@@ -93,20 +203,63 @@ export default function TAEventsPage() {
     fetchEventComments(event._id);
   };
 
+  // Register for an event
+  const handleRegisterClick = (event) => {
+    if (event.type !== 'Workshop' && event.type !== 'Trip') {
+      alert('Registration is only available for Workshops and Trips');
+      return;
+    }
+    setRegistrationEvent(event);
+    setShowRegistrationModal(true);
+  };
+
+  const handleRegistrationSubmit = async (e) => {
+    e.preventDefault();
+    setRegistering(true);
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('http://localhost:5000/api/registration/register', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          event_id: registrationEvent._id,
+          role: 'TA',
+          ...registrationForm
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Registration failed');
+      }
+
+      alert('Registration successful! Check "My Events" to see your registration.');
+      setShowRegistrationModal(false);
+      setRegistrationForm({ name: '', email: '', personalId: '' });
+      
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setRegistering(false);
+    }
+  };
+
   // Apply search, filter, and sort whenever dependencies change
   useEffect(() => {
     let result = [...events];
 
-    // 1. Search by event name or professor name
     if (searchTerm) {
       result = result.filter(event => {
         const eventName = event.name?.toLowerCase() || '';
         const searchLower = searchTerm.toLowerCase();
         
-        // Search in event name
         if (eventName.includes(searchLower)) return true;
 
-        // Search in professor names (for workshops and conferences)
         if (event.workshop?.professors_participating) {
           return event.workshop.professors_participating.some(prof => 
             prof.toLowerCase().includes(searchLower)
@@ -122,37 +275,30 @@ export default function TAEventsPage() {
       });
     }
 
-    // 2. Filter by type
     if (filterType !== 'all') {
       result = result.filter(event => event.type === filterType);
     }
 
-    // 3. Filter by location
     if (filterLocation) {
       result = result.filter(event => 
         event.location?.toLowerCase().includes(filterLocation.toLowerCase())
       );
     }
 
-    // 4. Filter by professor name - FIXED
     if (filterProfessor) {
       result = result.filter(event => {
         const profLower = filterProfessor.toLowerCase();
         
-        // Check workshop professors
         if (event.workshop?.professors_participating && Array.isArray(event.workshop.professors_participating)) {
           const hasMatch = event.workshop.professors_participating.some(prof => {
-            // Handle both string and object formats
             const profName = typeof prof === 'string' ? prof : prof.name || '';
             return profName.toLowerCase().includes(profLower);
           });
           if (hasMatch) return true;
         }
         
-        // Check conference professors
         if (event.conference?.professors_participating && Array.isArray(event.conference.professors_participating)) {
           const hasMatch = event.conference.professors_participating.some(prof => {
-            // Handle both string and object formats
             const profName = typeof prof === 'string' ? prof : prof.name || '';
             return profName.toLowerCase().includes(profLower);
           });
@@ -163,7 +309,6 @@ export default function TAEventsPage() {
       });
     }
 
-    // 5. Sort by date
     result.sort((a, b) => {
       const dateA = new Date(a.start_date);
       const dateB = new Date(b.start_date);
@@ -222,6 +367,7 @@ export default function TAEventsPage() {
           <ul className="sidebar-menu">
             <li><Link href="/ta">🏠 Dashboard</Link></li>
             <li><Link href="/ta/events">📅 Browse Events</Link></li>
+            <li><Link href="/ta/favorites">⭐ My Favorites</Link></li>
             <li><Link href="/ta/my-events">✏️ My Events</Link></li>
             <li><Link href="/ta/profile">👤 Profile</Link></li>
           </ul>
@@ -233,7 +379,6 @@ export default function TAEventsPage() {
           {/* Search and Filter Section */}
           <section className="section" style={{ marginBottom: '2rem' }}>
             <div style={{ display: 'grid', gap: '1rem', marginBottom: '1rem' }}>
-              {/* Search Bar */}
               <div>
                 <input
                   type="text"
@@ -250,9 +395,7 @@ export default function TAEventsPage() {
                 />
               </div>
 
-              {/* Filters Row */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
-                {/* Type Filter */}
                 <select
                   value={filterType}
                   onChange={(e) => setFilterType(e.target.value)}
@@ -270,7 +413,6 @@ export default function TAEventsPage() {
                   <option value="Bazaar">Bazaar</option>
                 </select>
 
-                {/* Location Filter */}
                 <input
                   type="text"
                   placeholder="Filter by location..."
@@ -284,7 +426,6 @@ export default function TAEventsPage() {
                   }}
                 />
 
-                {/* Professor Filter */}
                 <input
                   type="text"
                   placeholder="Filter by professor..."
@@ -298,7 +439,6 @@ export default function TAEventsPage() {
                   }}
                 />
 
-                {/* Sort By Date */}
                 <select
                   value={sortOrder}
                   onChange={(e) => setSortOrder(e.target.value)}
@@ -314,7 +454,6 @@ export default function TAEventsPage() {
                 </select>
               </div>
 
-              {/* Clear Filters Button */}
               <button
                 onClick={clearFilters}
                 style={{
@@ -331,7 +470,6 @@ export default function TAEventsPage() {
               </button>
             </div>
 
-            {/* Results Count */}
             <p style={{ color: '#666', marginTop: '1rem' }}>
               Showing {filteredEvents.length} of {events.length} events
             </p>
@@ -370,12 +508,60 @@ export default function TAEventsPage() {
                     }}>
                       {event.short_description}
                     </p>
-                    <button 
-                      className="btn-primary" 
-                      onClick={() => handleViewDetails(event)}
-                    >
-                      View Details
-                    </button>
+                    <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
+                      <button 
+                        className="btn-primary" 
+                        onClick={() => handleViewDetails(event)}
+                        style={{ flex: 1 }}
+                      >
+                        View Details
+                      </button>
+                      
+                      <button 
+                        onClick={() => toggleFavorite(event)}
+                        style={{
+                          padding: '0.5rem 1rem',
+                          backgroundColor: isFavorite(event._id) ? '#ffd700' : '#fff',
+                          color: isFavorite(event._id) ? '#000' : '#666',
+                          border: '2px solid #ffd700',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          fontSize: '1.2rem',
+                          transition: 'all 0.3s ease',
+                          boxShadow: isFavorite(event._id) ? '0 4px 8px rgba(255, 215, 0, 0.3)' : 'none'
+                        }}
+                        title={isFavorite(event._id) ? 'Remove from favorites' : 'Add to favorites'}
+                        onMouseEnter={(e) => {
+                          e.target.style.transform = 'scale(1.1)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.target.style.transform = 'scale(1)';
+                        }}
+                      >
+                        {isFavorite(event._id) ? '⭐' : '☆'}
+                      </button>
+                    </div>
+
+                    {/* ADD Register button for Workshop and Trip */}
+                    {(event.type === 'Workshop' || event.type === 'Trip') && (
+                      <button 
+                        onClick={() => handleRegisterClick(event)}
+                        style={{
+                          width: '100%',
+                          marginTop: '0.5rem',
+                          padding: '0.5rem 1rem',
+                          backgroundColor: '#28a745',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          fontSize: '0.9rem',
+                          fontWeight: 'bold'
+                        }}
+                      >
+                        📝 Register for Event
+                      </button>
+                    )}
                   </div>
                 ))
               )}
@@ -384,7 +570,7 @@ export default function TAEventsPage() {
         </main>
       </div>
 
-      {/* Modal for event details */}
+      {/* Modal for event details - Same as before, keeping it unchanged */}
       {selectedEvent && (
         <div 
           className="modal-overlay" 
@@ -441,7 +627,6 @@ export default function TAEventsPage() {
             
             <hr style={{margin: '1.5rem 0'}} />
             
-            {/* Conference Details */}
             {selectedEvent.type === 'Conference' && selectedEvent.conference && (
               <div>
                 <h3>Conference Details</h3>
@@ -457,7 +642,6 @@ export default function TAEventsPage() {
               </div>
             )}
 
-            {/* Workshop Details */}
             {selectedEvent.type === 'Workshop' && selectedEvent.workshop && (
               <div>
                 <h3>Workshop Details</h3>
@@ -469,7 +653,6 @@ export default function TAEventsPage() {
               </div>
             )}
 
-            {/* Trip Details */}
             {selectedEvent.type === 'Trip' && selectedEvent.trip && (
               <div>
                 <h3>Trip Details</h3>
@@ -484,7 +667,6 @@ export default function TAEventsPage() {
               </div>
             )}
 
-            {/* Bazaar Details with Vendors */}
             {selectedEvent.type === 'Bazaar' && (
               <div>
                 <h3>Bazaar Details</h3>
@@ -515,16 +697,11 @@ export default function TAEventsPage() {
                     </div>
                   </>
                 )}
-                
-                {(!selectedEvent.vendors || selectedEvent.vendors.length === 0) && (
-                  <p style={{marginTop: '1rem', fontStyle: 'italic'}}>No vendors registered yet</p>
-                )}
               </div>
             )}
 
             <hr style={{margin: '1.5rem 0'}} />
 
-            {/* Ratings and Comments Section */}
             <div>
               <h3 style={{ marginBottom: '1rem' }}>Ratings & Comments</h3>
               
@@ -532,7 +709,6 @@ export default function TAEventsPage() {
 
               {!loadingComments && eventComments && (
                 <>
-                  {/* Average Rating Summary */}
                   {eventComments.averageRating && (
                     <div style={{
                       backgroundColor: '#f8f9fa',
@@ -556,7 +732,6 @@ export default function TAEventsPage() {
                     </div>
                   )}
 
-                  {/* Comments List */}
                   {eventComments.comments && eventComments.comments.length > 0 ? (
                     <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
                       {eventComments.comments.map((comment) => (
@@ -599,6 +774,135 @@ export default function TAEventsPage() {
             >
               Close
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* ADD Registration Modal */}
+      {showRegistrationModal && registrationEvent && (
+        <div 
+          className="modal-overlay" 
+          onClick={() => setShowRegistrationModal(false)}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0,0,0,0.7)',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            zIndex: 1001
+          }}
+        >
+          <div 
+            className="modal-content"
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              backgroundColor: 'white',
+              padding: '2rem',
+              borderRadius: '8px',
+              maxWidth: '500px',
+              width: '90%',
+              color: '#333'
+            }}
+          >
+            <h2>Register for {registrationEvent.name}</h2>
+            <p style={{ color: '#666', marginBottom: '1rem' }}>
+              <strong>Type:</strong> {registrationEvent.type}
+            </p>
+            
+            <form onSubmit={handleRegistrationSubmit}>
+              <div style={{ marginBottom: '1rem' }}>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>
+                  Name:
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={registrationForm.name}
+                  onChange={(e) => setRegistrationForm({...registrationForm, name: e.target.value})}
+                  style={{
+                    width: '100%',
+                    padding: '0.5rem',
+                    border: '1px solid #ddd',
+                    borderRadius: '4px',
+                    fontSize: '1rem'
+                  }}
+                />
+              </div>
+
+              <div style={{ marginBottom: '1rem' }}>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>
+                  Email:
+                </label>
+                <input
+                  type="email"
+                  required
+                  value={registrationForm.email}
+                  onChange={(e) => setRegistrationForm({...registrationForm, email: e.target.value})}
+                  style={{
+                    width: '100%',
+                    padding: '0.5rem',
+                    border: '1px solid #ddd',
+                    borderRadius: '4px',
+                    fontSize: '1rem'
+                  }}
+                />
+              </div>
+
+              <div style={{ marginBottom: '1rem' }}>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>
+                  Personal ID:
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={registrationForm.personalId}
+                  onChange={(e) => setRegistrationForm({...registrationForm, personalId: e.target.value})}
+                  style={{
+                    width: '100%',
+                    padding: '0.5rem',
+                    border: '1px solid #ddd',
+                    borderRadius: '4px',
+                    fontSize: '1rem'
+                  }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <button 
+                  type="submit"
+                  disabled={registering}
+                  className="btn-primary"
+                  style={{ 
+                    flex: 1,
+                    opacity: registering ? 0.7 : 1,
+                    cursor: registering ? 'not-allowed' : 'pointer'
+                  }}
+                >
+                  {registering ? 'Registering...' : 'Register'}
+                </button>
+                <button 
+                  type="button"
+                  onClick={() => setShowRegistrationModal(false)}
+                  disabled={registering}
+                  style={{
+                    flex: 1,
+                    padding: '0.5rem',
+                    backgroundColor: '#6c757d',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    cursor: registering ? 'not-allowed' : 'pointer',
+                    fontSize: '1rem'
+                  }}
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
