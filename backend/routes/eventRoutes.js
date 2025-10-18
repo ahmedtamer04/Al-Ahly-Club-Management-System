@@ -3,8 +3,8 @@ import {
   getUpcomingEvents,
   filterEvents,
   sortEventsByDate,
-  deleteEvent
-  // getEventById,
+  deleteEvent,
+  getEventById
 } from "../controllers/eventController.js";
 
 import {auth, requireStudentOrAbove, requireAdminOrEventsOffice} from "../middleware/auth.js";
@@ -22,7 +22,7 @@ router.get("/sort/date/:order", auth, requireStudentOrAbove, sortEventsByDate);
 
 router.delete("/delete/:eventId", auth, requireAdminOrEventsOffice, deleteEvent);
 
-// // GET event by ID
-// router.get("/:id", getEventById);
+// GET event by ID
+router.get("/:id", auth, requireStudentOrAbove, getEventById);
 
 export default router;

@@ -53,16 +53,19 @@ export const signupUser = async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     const hash = await bcrypt.hash(password, salt);
     if(role=="Staff" || role=="TA" || role=="Professor") {
+      // For testing the staff frontend, create these accounts as active
+      // (auto-approve instead of requiring admin approval)
       const user = await User.create({
       first_name,
       last_name,
       email,
       id_number,
-      status: "pending", // Staff/TA/Professor need admin approval
+      status: "active",
       password_hash: hash,
-      role
+      role,
+      role_admin_verified: true
     });
-    return res.status(201).json({ message: "Staff/TA/Professor account pending for approval", user });
+    return res.status(201).json({ message: "Staff/TA/Professor account created", user });
   }
 
     // Create user

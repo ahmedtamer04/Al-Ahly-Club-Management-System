@@ -31,8 +31,23 @@ console.log("JWT_SECRET:", process.env.JWT_SECRET ? "✅ Loaded" : "❌ Not foun
 app.use(cors());
 app.use(express.json());
 
-// Connect to MongoDB
-connectDB();
+// Connect to MongoDB and start server after successful connection
+const startServer = async () => {
+  try {
+    await connectDB();
+
+    const PORT = process.env.PORT || 5000;
+
+    app.listen(PORT, () => {
+      console.log(`Server running on port ${PORT}`);
+    });
+  } catch (err) {
+    console.error('Failed to start server due to DB connection error:', err.message);
+    process.exit(1);
+  }
+};
+
+startServer();
 
 // Basic route for testing (before API routes)
 app.get("/", (req, res) => {
@@ -58,9 +73,5 @@ app.use("/api/events", eventRoutes);
 
 
 
-const PORT = process.env.PORT || 5000;
-
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+// Note: server is started in startServer() after DB connection
 

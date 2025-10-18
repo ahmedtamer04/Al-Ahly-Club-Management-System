@@ -13,7 +13,9 @@ export const registerForEvent = async (req, res) => {
       return res.status(400).json({ message: "All fields are required." });
     }
     
-    if (!["student", "staff", "TA", "professor"].includes(role)) {
+    // Normalize role for validation (accept 'Staff' or 'staff', 'TA' or 'ta')
+    const roleLower = role ? role.toString().toLowerCase() : '';
+    if (!["student", "staff", "ta", "professor"].includes(roleLower)) {
       return res.status(400).json({ message: "Invalid role." });
     }
 
@@ -38,7 +40,7 @@ export const registerForEvent = async (req, res) => {
       name,
       email,
       personalId,
-      role,
+      role: roleLower,
     });
     
     await registration.save();

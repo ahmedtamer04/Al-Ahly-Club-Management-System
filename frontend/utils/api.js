@@ -318,6 +318,9 @@ export const eventAPI = {
   // Auth: requireStudentOrAbove
   // order: "asc" | "desc"
   sortByDate: (order) => api.get(`/events/sort/date/${order}`),
+
+  // GET /api/events/:id
+  getById: (id) => api.get(`/events/${id}`),
 };
 
 // ================================
