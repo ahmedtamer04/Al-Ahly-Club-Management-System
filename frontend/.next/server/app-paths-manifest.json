@@ -1,7 +1,7 @@
 {
   "/auth/login/page": "app/auth/login/page.js",
+  "/professor/page": "app/professor/page.js",
   "/professor/events/page": "app/professor/events/page.js",
-  "/professor/profile/page": "app/professor/profile/page.js",
   "/professor/workshops/page": "app/professor/workshops/page.js",
-  "/professor/page": "app/professor/page.js"
+  "/professor/profile/page": "app/professor/profile/page.js"
 }
