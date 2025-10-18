@@ -1,10 +1,9 @@
 {
   "/page": "app/page.js",
-  "/eventsoffice/trips/page": "app/eventsoffice/trips/page.js",
   "/eventsoffice/page": "app/eventsoffice/page.js",
-  "/eventsoffice/bazaars/page": "app/eventsoffice/bazaars/page.js",
+  "/eventsoffice/trips/page": "app/eventsoffice/trips/page.js",
   "/eventsoffice/events/page": "app/eventsoffice/events/page.js",
   "/eventsoffice/vendors/page": "app/eventsoffice/vendors/page.js",
-  "/eventsoffice/registrations/page": "app/eventsoffice/registrations/page.js",
-  "/eventsoffice/profile/page": "app/eventsoffice/profile/page.js"
+  "/eventsoffice/profile/page": "app/eventsoffice/profile/page.js",
+  "/eventsoffice/registrations/page": "app/eventsoffice/registrations/page.js"
 }
