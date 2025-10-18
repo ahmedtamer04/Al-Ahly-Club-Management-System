@@ -65,8 +65,21 @@ function EventCard({ event }) {
 
 export default function ProfessorEvents() {
   const [events, setEvents] = useState([]);
+  const [filteredEvents, setFilteredEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchType, setSearchType] = useState('all');
+  const [sortOrder, setSortOrder] = useState('desc'); // 'desc' for newest first, 'asc' for oldest first
+
+  // Function to sort events by date
+  const sortEvents = (events, order) => {
+    return [...events].sort((a, b) => {
+      const dateA = new Date(a.start_date);
+      const dateB = new Date(b.start_date);
+      return order === 'asc' ? dateA - dateB : dateB - dateA;
+    });
+  };
 
   useEffect(() => {
     let mounted = true;
@@ -75,6 +88,9 @@ export default function ProfessorEvents() {
       setLoading(true);
       try {
         const data = await eventAPI.getUpcoming();
+        const sortedData = sortEvents(data, sortOrder);
+        
+        console.log('Raw events data:', data.map(ev => ({ id: ev.id, type: ev.type, name: ev.name })));
 
         // If events include vendor IDs or have type Bazaar/Booth, try to enrich with vendor details
         const enriched = await Promise.all((data || []).map(async (ev) => {
@@ -118,6 +134,71 @@ export default function ProfessorEvents() {
     return () => { mounted = false; };
   }, []);
 
+  // Filter events based on search query and type
+  const handleSearch = (query, type) => {
+    if (!events.length) return;
+    
+    const searchStr = query.toLowerCase();
+    const filtered = events.filter(event => {
+      // Type filtering
+      if (type !== 'all') {
+        // Ensure we have a valid event type
+        const eventType = event.type?.toLowerCase() || '';
+        
+        switch(type) {
+          case 'Bazaar':
+            // Match both "Bazaar" and any type containing "bazaar"
+            return eventType === 'bazaar' || eventType.includes('bazaar');
+          case 'Booth':
+            // Match both "Booth" and any type containing "booth"
+            return eventType === 'booth' || eventType.includes('booth');
+          case 'Workshop':
+            // Match both "Workshop" and any type containing "workshop"
+            return eventType === 'workshop' || eventType.includes('workshop');
+          case 'Conference':
+            // Match both "Conference" and any type containing "conference"
+            return eventType === 'conference' || eventType.includes('conference');
+          default:
+            return false;
+        }
+      }
+      
+      // Text search filtering
+      return (
+        event.name?.toLowerCase().includes(searchStr) ||
+        event.professors_participating?.toLowerCase().includes(searchStr) ||
+        event.faculty_responsible?.toLowerCase().includes(searchStr)
+      );
+    });
+    
+    console.log('Filtering events:', { 
+      type, 
+      query: searchStr,
+      totalEvents: events.length, 
+      filteredCount: filtered.length,
+      allTypes: events.map(e => e.type),
+      filteredTypes: filtered.map(e => e.type)
+    });
+    
+    // Apply sorting to filtered results
+    const sortedFiltered = sortEvents(filtered, sortOrder);
+    setFilteredEvents(sortedFiltered);
+  };
+
+  // Handle sort order change
+  const handleSortChange = () => {
+    const newOrder = sortOrder === 'desc' ? 'asc' : 'desc';
+    setSortOrder(newOrder);
+    // Re-sort the current filtered results
+    const sorted = sortEvents(filteredEvents, newOrder);
+    setFilteredEvents(sorted);
+  };
+
+  // Update search when query or type changes
+  useEffect(() => {
+    handleSearch(searchQuery, searchType);
+  }, [searchQuery, searchType, events]);
+
   return (
     <div className="dashboard">
       <nav className="dashboard-nav">
@@ -146,6 +227,35 @@ export default function ProfessorEvents() {
           <section className="section">
             <div className="section-header">
               <h2>Upcoming Events</h2>
+              <div className="search-controls">
+                <div className="search-input">
+                  <input
+                    type="text"
+                    placeholder="Search by event name or professor..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="search-box"
+                  />
+                </div>
+                <select
+                  value={searchType}
+                  onChange={(e) => setSearchType(e.target.value)}
+                  className="type-filter"
+                >
+                  <option value="all">All Types</option>
+                  <option value="Workshop">Workshops</option>
+                  <option value="Bazaar">Bazaars</option>
+                  <option value="Conference">Conferences</option>
+                  <option value="Booth">Booths</option>
+                </select>
+                <button 
+                  onClick={handleSortChange} 
+                  className="btn-secondary"
+                  title={sortOrder === 'desc' ? 'Sort by oldest first' : 'Sort by newest first'}
+                >
+                  📅 {sortOrder === 'desc' ? 'Newest First' : 'Oldest First'}
+                </button>
+              </div>
             </div>
 
             {loading && (
@@ -165,7 +275,7 @@ export default function ProfessorEvents() {
             )}
 
             <div className="events-list">
-              {events.map((ev) => (
+              {(filteredEvents.length > 0 ? filteredEvents : events).map((ev) => (
                 <EventCard key={ev._id || ev.id || ev.event_id} event={ev} />
               ))}
             </div>
