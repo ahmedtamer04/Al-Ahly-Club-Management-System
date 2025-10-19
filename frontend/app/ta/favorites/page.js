@@ -11,7 +11,6 @@ export default function TAFavoritesPage() {
   const [eventComments, setEventComments] = useState(null);
   const [loadingComments, setLoadingComments] = useState(false);
 
-  // ADD these registration states:
   const [showRegistrationModal, setShowRegistrationModal] = useState(false);
   const [registrationEvent, setRegistrationEvent] = useState(null);
   const [registrationForm, setRegistrationForm] = useState({
@@ -109,12 +108,23 @@ export default function TAFavoritesPage() {
     fetchEventComments(event._id);
   };
 
-  // ADD these registration functions:
   const handleRegisterClick = (event) => {
     if (event.type !== 'Workshop' && event.type !== 'Trip') {
       alert('Registration is only available for Workshops and Trips');
       return;
     }
+    
+    // Auto-fill form with user's data
+    const userStr = localStorage.getItem('user');
+    if (userStr) {
+      const user = JSON.parse(userStr);
+      setRegistrationForm({
+        name: `${user.first_name} ${user.last_name}`,
+        email: user.email,
+        personalId: user.id_number
+      });
+    }
+    
     setRegistrationEvent(event);
     setShowRegistrationModal(true);
   };
@@ -125,6 +135,16 @@ export default function TAFavoritesPage() {
 
     try {
       const token = localStorage.getItem('token');
+      const userStr = localStorage.getItem('user');
+      
+      if (!userStr) {
+        alert('User data not found. Please login again.');
+        setRegistering(false);
+        return;
+      }
+
+      const user = JSON.parse(userStr);
+      
       const response = await fetch('http://localhost:5000/api/registration/register', {
         method: 'POST',
         headers: {
@@ -133,8 +153,10 @@ export default function TAFavoritesPage() {
         },
         body: JSON.stringify({
           event_id: registrationEvent._id,
-          role: 'TA',
-          ...registrationForm
+          name: registrationForm.name,
+          email: registrationForm.email,
+          personalId: registrationForm.personalId,
+          role: user.role
         })
       });
 
@@ -293,7 +315,7 @@ export default function TAFavoritesPage() {
         </main>
       </div>
 
-      {/* Modal - Same as events page */}
+      {/* Event Details Modal - UPDATED WITH CORRECT FIELDS */}
       {selectedEvent && (
         <div 
           className="modal-overlay" 
@@ -346,85 +368,206 @@ export default function TAFavoritesPage() {
             <p><strong>Start Date:</strong> {formatDate(selectedEvent.start_date)}</p>
             <p><strong>End Date:</strong> {formatDate(selectedEvent.end_date)}</p>
             <p><strong>Time:</strong> {selectedEvent.time}</p>
+            <p><strong>Status:</strong> <span style={{
+              color: selectedEvent.status === 'upcoming' ? '#28a745' : '#6c757d',
+              fontWeight: 'bold',
+              textTransform: 'capitalize'
+            }}>{selectedEvent.status}</span></p>
             <p><strong>Description:</strong> {selectedEvent.short_description}</p>
             
             <hr style={{margin: '1.5rem 0'}} />
             
-            {selectedEvent.type === 'Conference' && selectedEvent.conference && (
-              <div>
-                <h3>Conference Details</h3>
-                <p><strong>Campus:</strong> {selectedEvent.conference.campus}</p>
-                <p><strong>Professors:</strong> {selectedEvent.conference.professors_participating?.join(', ')}</p>
-                <p><strong>Website:</strong> <a href={selectedEvent.conference.conference_website} target="_blank" rel="noopener noreferrer">{selectedEvent.conference.conference_website}</a></p>
-                <p><strong>Budget:</strong> ${selectedEvent.conference.required_budget}</p>
-                <p><strong>Funding Source:</strong> {selectedEvent.conference.funding_source}</p>
-                <p><strong>Agenda:</strong></p>
-                <p style={{whiteSpace: 'pre-wrap', backgroundColor: '#f5f5f5', padding: '1rem', borderRadius: '4px'}}>
-                  {selectedEvent.conference.full_agenda}
-                </p>
-              </div>
-            )}
-
+            {/* WORKSHOP DETAILS - Using correct schema fields */}
             {selectedEvent.type === 'Workshop' && selectedEvent.workshop && (
               <div>
                 <h3>Workshop Details</h3>
-                <p><strong>Campus:</strong> {selectedEvent.workshop.campus}</p>
-                <p><strong>Professors:</strong> {selectedEvent.workshop.professors_participating?.join(', ')}</p>
-                <p><strong>Max Attendees:</strong> {selectedEvent.workshop.max_attendees}</p>
-                <p><strong>Materials Needed:</strong> {selectedEvent.workshop.materials_needed?.join(', ')}</p>
-                <p><strong>Budget:</strong> ${selectedEvent.workshop.required_budget}</p>
+                {selectedEvent.workshop.faculty_responsible && (
+                  <p><strong>Faculty Responsible:</strong> {selectedEvent.workshop.faculty_responsible}</p>
+                )}
+                {selectedEvent.workshop.professors_participating && selectedEvent.workshop.professors_participating.length > 0 && (
+                  <p><strong>Professors:</strong> {selectedEvent.workshop.professors_participating.join(', ')}</p>
+                )}
+                {selectedEvent.workshop.capacity && (
+                  <p><strong>Capacity:</strong> {selectedEvent.workshop.capacity} attendees</p>
+                )}
+                {selectedEvent.workshop.registration_deadline && (
+                  <p><strong>Registration Deadline:</strong> {formatDate(selectedEvent.workshop.registration_deadline)}</p>
+                )}
+                {selectedEvent.workshop.required_budget && (
+                  <p><strong>Budget:</strong> ${selectedEvent.workshop.required_budget}</p>
+                )}
+                {selectedEvent.workshop.funding_source && (
+                  <p><strong>Funding Source:</strong> {selectedEvent.workshop.funding_source}</p>
+                )}
+                {selectedEvent.workshop.extra_resources && (
+                  <p><strong>Extra Resources:</strong> {selectedEvent.workshop.extra_resources}</p>
+                )}
+                {selectedEvent.workshop.full_agenda && (
+                  <>
+                    <p><strong>Full Agenda:</strong></p>
+                    <p style={{whiteSpace: 'pre-wrap', backgroundColor: '#f5f5f5', padding: '1rem', borderRadius: '4px'}}>
+                      {selectedEvent.workshop.full_agenda}
+                    </p>
+                  </>
+                )}
               </div>
             )}
 
+            {/* TRIP DETAILS - Using correct schema fields */}
             {selectedEvent.type === 'Trip' && selectedEvent.trip && (
               <div>
                 <h3>Trip Details</h3>
-                <p><strong>Destination:</strong> {selectedEvent.trip.destination}</p>
-                <p><strong>Transportation:</strong> {selectedEvent.trip.transportation_method}</p>
-                <p><strong>Max Attendees:</strong> {selectedEvent.trip.max_attendees}</p>
-                <p><strong>Price per Person:</strong> ${selectedEvent.trip.price_per_person}</p>
-                <p><strong>Itinerary:</strong></p>
-                <p style={{whiteSpace: 'pre-wrap', backgroundColor: '#f5f5f5', padding: '1rem', borderRadius: '4px'}}>
-                  {selectedEvent.trip.full_itinerary}
-                </p>
+                {selectedEvent.trip.price && (
+                  <p><strong>Price:</strong> ${selectedEvent.trip.price}</p>
+                )}
+                {selectedEvent.trip.capacity && (
+                  <p><strong>Capacity:</strong> {selectedEvent.trip.capacity} attendees</p>
+                )}
+                {selectedEvent.trip.registration_deadline && (
+                  <p><strong>Registration Deadline:</strong> {formatDate(selectedEvent.trip.registration_deadline)}</p>
+                )}
               </div>
             )}
 
-            {selectedEvent.type === 'Bazaar' && (
+            {/* CONFERENCE DETAILS - Using correct schema fields */}
+            {selectedEvent.type === 'Conference' && selectedEvent.conference && (
               <div>
-                <h3>Bazaar Details</h3>
-                {selectedEvent.bazaar && (
+                <h3>Conference Details</h3>
+                {selectedEvent.conference.campus && (
+                  <p><strong>Campus:</strong> {selectedEvent.conference.campus}</p>
+                )}
+                {selectedEvent.conference.professors_participating && selectedEvent.conference.professors_participating.length > 0 && (
+                  <p><strong>Professors:</strong> {selectedEvent.conference.professors_participating.join(', ')}</p>
+                )}
+                {selectedEvent.conference.conference_website && (
+                  <p><strong>Website:</strong> <a href={selectedEvent.conference.conference_website} target="_blank" rel="noopener noreferrer" style={{color: '#007bff'}}>{selectedEvent.conference.conference_website}</a></p>
+                )}
+                {selectedEvent.conference.required_budget && (
+                  <p><strong>Budget:</strong> ${selectedEvent.conference.required_budget}</p>
+                )}
+                {selectedEvent.conference.funding_source && (
+                  <p><strong>Funding Source:</strong> {selectedEvent.conference.funding_source}</p>
+                )}
+                {selectedEvent.conference.extra_required_sources && (
+                  <p><strong>Extra Required Sources:</strong> {selectedEvent.conference.extra_required_sources}</p>
+                )}
+                {selectedEvent.conference.full_agenda && (
                   <>
-                    <p><strong>Theme:</strong> {selectedEvent.bazaar.theme}</p>
-                    <p><strong>Total Booths:</strong> {selectedEvent.bazaar.total_booths}</p>
-                    <p><strong>Booth Price:</strong> ${selectedEvent.bazaar.booth_price}</p>
+                    <p><strong>Full Agenda:</strong></p>
+                    <p style={{whiteSpace: 'pre-wrap', backgroundColor: '#f5f5f5', padding: '1rem', borderRadius: '4px'}}>
+                      {selectedEvent.conference.full_agenda}
+                    </p>
                   </>
                 )}
+              </div>
+            )}
+
+            {/* BAZAAR DETAILS WITH VENDORS - Using correct schema fields */}
+            {selectedEvent.type === 'Bazaar' && selectedEvent.bazaar && (
+              <div>
+                <h3>Bazaar Details</h3>
+                {selectedEvent.bazaar.registration_deadline && (
+                  <p><strong>Vendor Registration Deadline:</strong> {formatDate(selectedEvent.bazaar.registration_deadline)}</p>
+                )}
                 
-                {selectedEvent.vendors && selectedEvent.vendors.length > 0 && (
+                {selectedEvent.bazaar.vendors_participating && selectedEvent.bazaar.vendors_participating.length > 0 && (
                   <>
-                    <h4 style={{marginTop: '1.5rem'}}>Participating Vendors ({selectedEvent.vendors.length})</h4>
+                    <h4 style={{marginTop: '1.5rem'}}>Participating Vendors ({selectedEvent.bazaar.vendors_participating.length})</h4>
                     <div style={{display: 'grid', gap: '1rem', marginTop: '1rem'}}>
-                      {selectedEvent.vendors.map((vendor, idx) => (
+                      {selectedEvent.bazaar.vendors_participating.map((vendor, idx) => (
                         <div key={idx} style={{
                           border: '1px solid #ddd',
                           padding: '1rem',
                           borderRadius: '8px',
                           backgroundColor: '#f9f9f9'
                         }}>
-                          <p><strong>🏪 {vendor.business_name}</strong></p>
-                          <p><strong>Booth:</strong> {vendor.booth_number || 'TBA'}</p>
-                          <p><strong>Products/Services:</strong> {vendor.products_services}</p>
+                          {vendor.vendor_name && (
+                            <p><strong>🏪 Vendor:</strong> {vendor.vendor_name}</p>
+                          )}
+                          {vendor.booth_number && (
+                            <p><strong>Booth Number:</strong> {vendor.booth_number}</p>
+                          )}
+                          {vendor.products && vendor.products.length > 0 && (
+                            <p><strong>Products:</strong> {vendor.products.join(', ')}</p>
+                          )}
+                          {vendor.payment_status && (
+                            <p><strong>Payment Status:</strong> <span style={{
+                              color: vendor.payment_status === 'paid' ? '#28a745' : vendor.payment_status === 'pending' ? '#ffc107' : '#dc3545',
+                              fontWeight: 'bold',
+                              textTransform: 'capitalize'
+                            }}>{vendor.payment_status}</span></p>
+                          )}
+                          {vendor.registration_date && (
+                            <p style={{fontSize: '0.9rem', color: '#666'}}><strong>Registered:</strong> {formatDate(vendor.registration_date)}</p>
+                          )}
                         </div>
                       ))}
                     </div>
                   </>
+                )}
+                
+                {(!selectedEvent.bazaar.vendors_participating || selectedEvent.bazaar.vendors_participating.length === 0) && (
+                  <p style={{fontStyle: 'italic', color: '#888', marginTop: '1rem'}}>No vendors registered yet</p>
+                )}
+              </div>
+            )}
+
+            {/* BOOTH DETAILS WITH VENDORS - Using correct schema fields */}
+            {selectedEvent.type === 'Booth' && selectedEvent.booth && (
+              <div>
+                <h3>Booth Details</h3>
+                
+                {selectedEvent.booth.vendors && selectedEvent.booth.vendors.length > 0 && (
+                  <>
+                    <h4 style={{marginTop: '1.5rem'}}>Vendors ({selectedEvent.booth.vendors.length})</h4>
+                    <div style={{display: 'grid', gap: '1rem', marginTop: '1rem'}}>
+                      {selectedEvent.booth.vendors.map((vendor, idx) => (
+                        <div key={idx} style={{
+                          border: '1px solid #ddd',
+                          padding: '1rem',
+                          borderRadius: '8px',
+                          backgroundColor: '#f9f9f9'
+                        }}>
+                          {vendor.vendor_name && (
+                            <p><strong>🏪 Vendor:</strong> {vendor.vendor_name}</p>
+                          )}
+                          {vendor.company_name && (
+                            <p><strong>Company:</strong> {vendor.company_name}</p>
+                          )}
+                          {vendor.booth_assignment && (
+                            <p><strong>Booth Assignment:</strong> {vendor.booth_assignment}</p>
+                          )}
+                          {vendor.setup_time && (
+                            <p><strong>Setup Time:</strong> {vendor.setup_time}</p>
+                          )}
+                          {vendor.contact_info && (
+                            <div style={{marginTop: '0.5rem'}}>
+                              {vendor.contact_info.phone && (
+                                <p><strong>Phone:</strong> {vendor.contact_info.phone}</p>
+                              )}
+                              {vendor.contact_info.email && (
+                                <p><strong>Email:</strong> {vendor.contact_info.email}</p>
+                              )}
+                            </div>
+                          )}
+                          {vendor.assigned_date && (
+                            <p style={{fontSize: '0.9rem', color: '#666'}}><strong>Assigned:</strong> {formatDate(vendor.assigned_date)}</p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
+                
+                {(!selectedEvent.booth.vendors || selectedEvent.booth.vendors.length === 0) && (
+                  <p style={{fontStyle: 'italic', color: '#888', marginTop: '1rem'}}>No vendors assigned yet</p>
                 )}
               </div>
             )}
 
             <hr style={{margin: '1.5rem 0'}} />
 
+            {/* Comments Section */}
             <div>
               <h3 style={{ marginBottom: '1rem' }}>Ratings & Comments</h3>
               
@@ -501,7 +644,7 @@ export default function TAFavoritesPage() {
         </div>
       )}
 
-      {/* ADD Registration Modal */}
+      {/* Registration Modal */}
       {showRegistrationModal && registrationEvent && (
         <div 
           className="modal-overlay" 
