@@ -3,11 +3,10 @@ import Event from "../models/Events.js";
 import mongoose from "mongoose";
 
 // Register for a workshop or trip
-
 export const registerForEvent = async (req, res) => {
   try {
     const { event_id, name, email, personalId, role } = req.body;
-    const user_id = req.user._id; // Get from auth middleware
+    const user_id = req.user._id;
     
     if (!event_id || !name || !email || !personalId || !role) {
       return res.status(400).json({ message: "All fields are required." });
@@ -17,17 +16,22 @@ export const registerForEvent = async (req, res) => {
       return res.status(400).json({ message: "Invalid role." });
     }
 
-    // Validate event exists and registration is open
     const event = await Event.findById(event_id);
     if (!event) {
       return res.status(404).json({ message: "Event not found." });
+    }
+
+    // CHECK: Only Workshop and Trip can be registered
+    if (event.type !== 'Workshop' && event.type !== 'Trip') {
+      return res.status(400).json({ 
+        message: "Only Workshops and Trips are available for registration." 
+      });
     }
 
     if (!event.registration_open) {
       return res.status(400).json({ message: "Registration is closed for this event." });
     }
 
-    // Check capacity (for events that have capacity limits)
     if ((event.type === 'Workshop' || event.type === 'Trip') && event.available_spots <= 0) {
       return res.status(400).json({ message: "Event is full." });
     }
@@ -38,11 +42,17 @@ export const registerForEvent = async (req, res) => {
       name,
       email,
       personalId,
-      role,
+      role
     });
     
     await registration.save();
-    res.status(201).json({ message: "Registration successful.", registration });
+    
+    const populatedRegistration = await Registration.findById(registration._id).populate('event_id');
+    
+    res.status(201).json({ 
+      message: "Registration successful.", 
+      registration: populatedRegistration
+    });
     
   } catch (error) {
     if (error.code === 11000) {
@@ -55,19 +65,17 @@ export const registerForEvent = async (req, res) => {
 // View registered events (upcoming & past)
 export const viewRegisteredEvents = async (req, res) => {
   try {
-    const user_id = req.user._id; // Get from auth middleware
+    const user_id = req.user._id;
     
     if (!user_id) {
       return res.status(400).json({ message: "User ID is required." });
     }
 
-    // Find all registrations for the user
     const registrations = await Registration.find({ 
       user_id, 
       status: "registered" 
     }).populate('event_id');
 
-    // Filter out registrations where event doesn't exist
     const validRegistrations = registrations.filter(reg => reg.event_id);
 
     const now = new Date();
@@ -77,19 +85,20 @@ export const viewRegisteredEvents = async (req, res) => {
     validRegistrations.forEach(registration => {
       const event = registration.event_id;
       
-      // ✅ FIXED: Use correct field names
+      const registrationData = {
+        _id: registration._id,
+        registration_date: registration.createdAt,
+        name: registration.name,
+        email: registration.email,
+        personalId: registration.personalId,
+        status: registration.status,
+        event_id: event
+      };
+      
       if (event.end_date >= now) {
-        upcoming.push({
-          registration_id: registration._id,
-          registration_date: registration.createdAt,
-          ...event.toObject()
-        });
+        upcoming.push(registrationData);
       } else {
-        past.push({
-          registration_id: registration._id,
-          registration_date: registration.createdAt,
-          ...event.toObject()
-        });
+        past.push(registrationData);
       }
     });
 
@@ -97,11 +106,7 @@ export const viewRegisteredEvents = async (req, res) => {
       message: "Registered events retrieved successfully",
       upcoming, 
       past,
-      totals: {
-        upcoming: upcoming.length,
-        past: past.length,
-        total: validRegistrations.length
-      }
+      total: validRegistrations.length
     });
     
   } catch (error) {
