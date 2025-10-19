@@ -176,22 +176,37 @@ export default function ProfessorEvents() {
       
       // Enrich with vendor data if needed
       const enriched = await Promise.all(registered.map(async (ev) => {
-        if (ev.vendors && ev.vendors.length) return ev;
-        
-        if ((ev.type && ev.type.toLowerCase().includes('bazaar')) || 
-            (ev.type && ev.type.toLowerCase().includes('booth'))) {
+        // For bazaars, extract vendors from bazaar.vendors_participating
+        if (ev.type && ev.type.toLowerCase().includes('bazaar')) {
+          if (ev.bazaar && ev.bazaar.vendors_participating && ev.bazaar.vendors_participating.length > 0) {
+            ev.vendors = ev.bazaar.vendors_participating;
+            return ev;
+          }
+          
+          // If not already populated, try to fetch bazaar by id
           try {
-            if (ev.bazaar_id || ev.id) {
-              const bazaarId = ev.bazaar_id || ev.id;
-              const baz = await bazaarAPI.getById(bazaarId);
-              if (baz && baz.vendors) {
-                ev.vendors = baz.vendors;
+            if (ev.bazaar_id || ev.id || ev._id) {
+              const bazaarId = ev.bazaar_id || ev.id || ev._id;
+              const response = await bazaarAPI.getById(bazaarId);
+              // Response format: { message, bazaar }
+              if (response && response.bazaar && response.bazaar.bazaar && response.bazaar.bazaar.vendors_participating) {
+                ev.vendors = response.bazaar.bazaar.vendors_participating;
+                return ev;
               }
             }
           } catch (e) {
-            // ignore and fallback
+            console.error('Error fetching bazaar vendors:', e);
           }
         }
+        
+        // For booths, extract vendors from booth.vendors
+        if (ev.type && ev.type.toLowerCase().includes('booth')) {
+          if (ev.booth && ev.booth.vendors && ev.booth.vendors.length > 0) {
+            ev.vendors = ev.booth.vendors;
+            return ev;
+          }
+        }
+        
         return ev;
       }));
       
@@ -245,23 +260,48 @@ export default function ProfessorEvents() {
 
         // If events include vendor IDs or have type Bazaar/Booth, try to enrich with vendor details
         const enriched = await Promise.all((data || []).map(async (ev) => {
-          // If event already contains vendors array, return as-is
-          if (ev.vendors && ev.vendors.length) return ev;
-
-          // For bazaars or booths, try to fetch bazaar/booth by id to get vendors
-          if ((ev.type && ev.type.toLowerCase().includes('bazaar')) || (ev.type && ev.type.toLowerCase().includes('booth'))) {
+          // For bazaars, extract vendors from bazaar.vendors_participating
+          if (ev.type && ev.type.toLowerCase().includes('bazaar')) {
+            console.log('Processing bazaar:', ev.name, 'Has bazaar object:', !!ev.bazaar);
+            
+            if (ev.bazaar && ev.bazaar.vendors_participating && ev.bazaar.vendors_participating.length > 0) {
+              console.log('Found vendors in event.bazaar.vendors_participating:', ev.bazaar.vendors_participating.length);
+              ev.vendors = ev.bazaar.vendors_participating;
+              return ev;
+            }
+            
+            // If not already populated, try to fetch bazaar by id
             try {
-              // If event has bazaar_id or id, attempt bazaarAPI.getById
-              if (ev.bazaar_id || ev.id) {
-                const bazaarId = ev.bazaar_id || ev.id;
-                const baz = await bazaarAPI.getById(bazaarId);
-                if (baz && baz.vendors) {
-                  ev.vendors = baz.vendors;
-                  return ev;
+              if (ev.bazaar_id || ev.id || ev._id) {
+                const bazaarId = ev.bazaar_id || ev.id || ev._id;
+                console.log('Fetching bazaar details for ID:', bazaarId);
+                const response = await bazaarAPI.getById(bazaarId);
+                console.log('Bazaar API response:', response);
+                
+                // Response format: { message, bazaar }
+                // The bazaar object itself contains the bazaar property with vendors_participating
+                if (response && response.bazaar) {
+                  if (response.bazaar.bazaar && response.bazaar.bazaar.vendors_participating) {
+                    console.log('Found vendors in response.bazaar.bazaar.vendors_participating:', response.bazaar.bazaar.vendors_participating.length);
+                    ev.vendors = response.bazaar.bazaar.vendors_participating;
+                    return ev;
+                  } else if (response.bazaar.vendors_participating) {
+                    console.log('Found vendors in response.bazaar.vendors_participating:', response.bazaar.vendors_participating.length);
+                    ev.vendors = response.bazaar.vendors_participating;
+                    return ev;
+                  }
                 }
               }
             } catch (e) {
-              // ignore and fallback
+              console.error('Error fetching bazaar vendors:', e);
+            }
+          }
+          
+          // For booths, extract vendors from booth.vendors
+          if (ev.type && ev.type.toLowerCase().includes('booth')) {
+            if (ev.booth && ev.booth.vendors && ev.booth.vendors.length > 0) {
+              ev.vendors = ev.booth.vendors;
+              return ev;
             }
           }
 
@@ -299,9 +339,31 @@ export default function ProfessorEvents() {
       const searchStr = searchQuery.toLowerCase();
       result = result.filter(event => {
         const matchesEventName = event.name?.toLowerCase().includes(searchStr);
-        const matchesProfessor = 
-          event.professors_participating?.toLowerCase().includes(searchStr) ||
-          event.faculty_responsible?.toLowerCase().includes(searchStr);
+        
+        // Search in workshop professors
+        let matchesProfessor = false;
+        if (event.workshop) {
+          if (event.workshop.professors_participating && Array.isArray(event.workshop.professors_participating)) {
+            matchesProfessor = event.workshop.professors_participating.some(prof => 
+              prof.toLowerCase().includes(searchStr)
+            );
+          }
+          if (!matchesProfessor && event.workshop.faculty_responsible) {
+            matchesProfessor = event.workshop.faculty_responsible.toLowerCase().includes(searchStr);
+          }
+        }
+        
+        // Search in conference professors (if applicable)
+        if (!matchesProfessor && event.conference) {
+          if (event.conference.professors_participating && Array.isArray(event.conference.professors_participating)) {
+            matchesProfessor = event.conference.professors_participating.some(prof => 
+              prof.toLowerCase().includes(searchStr)
+            );
+          }
+          if (!matchesProfessor && event.conference.faculty_responsible) {
+            matchesProfessor = event.conference.faculty_responsible.toLowerCase().includes(searchStr);
+          }
+        }
         
         return matchesEventName || matchesProfessor;
       });
@@ -330,10 +392,24 @@ export default function ProfessorEvents() {
     if (filterProfessor.trim()) {
       const professorStr = filterProfessor.toLowerCase();
       result = result.filter(event => {
-        return (
-          event.professors_participating?.toLowerCase().includes(professorStr) ||
-          event.faculty_responsible?.toLowerCase().includes(professorStr)
-        );
+        // Check workshop.professors_participating array
+        if (event.workshop && event.workshop.professors_participating) {
+          const profArray = event.workshop.professors_participating;
+          return profArray.some(prof => prof.toLowerCase().includes(professorStr));
+        }
+        // Check conference.professors_participating array (if conferences have it)
+        if (event.conference && event.conference.professors_participating) {
+          const profArray = event.conference.professors_participating;
+          return profArray.some(prof => prof.toLowerCase().includes(professorStr));
+        }
+        // Also check faculty_responsible as fallback
+        if (event.workshop && event.workshop.faculty_responsible) {
+          return event.workshop.faculty_responsible.toLowerCase().includes(professorStr);
+        }
+        if (event.conference && event.conference.faculty_responsible) {
+          return event.conference.faculty_responsible.toLowerCase().includes(professorStr);
+        }
+        return false;
       });
     }
     
@@ -1206,17 +1282,39 @@ export default function ProfessorEvents() {
                         borderRadius: '8px',
                         border: '1px solid #e9ecef'
                       }}>
-                        {selectedEvent.faculty_responsible && (
+                        {(selectedEvent.workshop?.faculty_responsible || selectedEvent.conference?.faculty_responsible) && (
                           <div style={{ marginBottom: '12px' }}>
                             <strong style={{ color: '#495057' }}>👨‍🏫 Faculty Responsible:</strong>
-                            <div style={{ marginTop: '4px', color: '#666' }}>{selectedEvent.faculty_responsible}</div>
+                            <div style={{ marginTop: '4px', color: '#666' }}>
+                              {selectedEvent.workshop?.faculty_responsible || selectedEvent.conference?.faculty_responsible}
+                            </div>
                           </div>
                         )}
                         
-                        {selectedEvent.professors_participating && (
+                        {((selectedEvent.workshop?.professors_participating && selectedEvent.workshop.professors_participating.length > 0) || 
+                          (selectedEvent.conference?.professors_participating && selectedEvent.conference.professors_participating.length > 0)) && (
                           <div style={{ marginBottom: '12px' }}>
                             <strong style={{ color: '#495057' }}>👥 Professors Participating:</strong>
-                            <div style={{ marginTop: '4px', color: '#666' }}>{selectedEvent.professors_participating}</div>
+                            <div style={{ marginTop: '8px' }}>
+                              {(selectedEvent.workshop?.professors_participating || selectedEvent.conference?.professors_participating || []).map((professor, idx) => (
+                                <div 
+                                  key={idx}
+                                  style={{ 
+                                    display: 'inline-block',
+                                    padding: '6px 12px',
+                                    margin: '4px 4px 4px 0',
+                                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                                    color: 'white',
+                                    borderRadius: '6px',
+                                    fontSize: '13px',
+                                    fontWeight: '500',
+                                    boxShadow: '0 2px 4px rgba(102, 126, 234, 0.3)'
+                                  }}
+                                >
+                                  👨‍🏫 {professor}
+                                </div>
+                              ))}
+                            </div>
                           </div>
                         )}
 
@@ -1289,21 +1387,171 @@ export default function ProfessorEvents() {
                         alignItems: 'center',
                         gap: '8px'
                       }}>
-                        🏪 Participating Vendors
+                        🏪 Participating Vendors ({selectedEvent.vendors.length})
                       </h3>
                       <div style={{
-                        background: '#f8f9fa',
-                        padding: '16px',
-                        borderRadius: '8px',
-                        border: '1px solid #e9ecef'
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+                        gap: '16px'
                       }}>
-                        <ul style={{ margin: 0, paddingLeft: '20px' }}>
-                          {selectedEvent.vendors.map((v, idx) => (
-                            <li key={v._id || v.id || idx} style={{ marginBottom: '8px', color: '#666' }}>
-                              {v.business_name || v.name || v.company_name || v.company}
-                            </li>
-                          ))}
-                        </ul>
+                        {selectedEvent.vendors.map((v, idx) => {
+                          const vendorUser = v.vendor_id;
+                          const businessName = v.business_name || v.vendor_name || vendorUser?.vendor_info?.company_name || 'N/A';
+                          const contactName = vendorUser ? `${vendorUser.first_name || ''} ${vendorUser.last_name || ''}`.trim() : '';
+                          const email = vendorUser?.email || v.contact_email || '';
+                          const boothNumber = v.booth_number || 'TBA';
+                          const products = v.products || [];
+                          
+                          return (
+                            <div 
+                              key={v._id || v.id || idx} 
+                              style={{
+                                background: '#f8f9fa',
+                                padding: '16px',
+                                borderRadius: '8px',
+                                border: '1px solid #e9ecef',
+                                transition: 'all 0.2s',
+                                cursor: 'default'
+                              }}
+                            >
+                              <div style={{ 
+                                fontWeight: '700', 
+                                fontSize: '15px',
+                                color: '#333',
+                                marginBottom: '12px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px'
+                              }}>
+                                <span style={{
+                                  background: '#0066cc',
+                                  color: 'white',
+                                  width: '24px',
+                                  height: '24px',
+                                  borderRadius: '50%',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  fontSize: '12px',
+                                  fontWeight: '700'
+                                }}>
+                                  {idx + 1}
+                                </span>
+                                {businessName}
+                              </div>
+                              
+                              {contactName && (
+                                <div style={{ 
+                                  display: 'flex', 
+                                  alignItems: 'center',
+                                  gap: '8px',
+                                  marginBottom: '8px',
+                                  fontSize: '13px',
+                                  color: '#666'
+                                }}>
+                                  <span>👤</span>
+                                  <span>{contactName}</span>
+                                </div>
+                              )}
+                              
+                              {email && (
+                                <div style={{ 
+                                  display: 'flex', 
+                                  alignItems: 'center',
+                                  gap: '8px',
+                                  marginBottom: '8px',
+                                  fontSize: '13px',
+                                  color: '#666',
+                                  wordBreak: 'break-word'
+                                }}>
+                                  <span>📧</span>
+                                  <a 
+                                    href={`mailto:${email}`}
+                                    style={{
+                                      color: '#0066cc',
+                                      textDecoration: 'none'
+                                    }}
+                                    onMouseOver={(e) => e.target.style.textDecoration = 'underline'}
+                                    onMouseOut={(e) => e.target.style.textDecoration = 'none'}
+                                  >
+                                    {email}
+                                  </a>
+                                </div>
+                              )}
+                              
+                              <div style={{ 
+                                display: 'flex', 
+                                alignItems: 'center',
+                                gap: '8px',
+                                marginBottom: products.length > 0 ? '8px' : '0',
+                                fontSize: '13px',
+                                color: '#666'
+                              }}>
+                                <span>📍</span>
+                                <span>Booth: <strong>{boothNumber}</strong></span>
+                              </div>
+                              
+                              {products.length > 0 && (
+                                <div style={{
+                                  marginTop: '12px',
+                                  paddingTop: '12px',
+                                  borderTop: '1px solid #dee2e6'
+                                }}>
+                                  <div style={{ 
+                                    fontSize: '12px',
+                                    fontWeight: '600',
+                                    color: '#495057',
+                                    marginBottom: '6px'
+                                  }}>
+                                    Products/Services:
+                                  </div>
+                                  <div style={{
+                                    display: 'flex',
+                                    flexWrap: 'wrap',
+                                    gap: '6px'
+                                  }}>
+                                    {products.map((product, pIdx) => (
+                                      <span
+                                        key={pIdx}
+                                        style={{
+                                          background: 'white',
+                                          padding: '4px 10px',
+                                          borderRadius: '12px',
+                                          fontSize: '11px',
+                                          color: '#555',
+                                          border: '1px solid #dee2e6'
+                                        }}
+                                      >
+                                        {product}
+                                      </span>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Show message if bazaar but no vendors yet */}
+                  {(selectedEvent.type?.toLowerCase().includes('bazaar') || selectedEvent.type?.toLowerCase().includes('booth')) && 
+                   (!selectedEvent.vendors || selectedEvent.vendors.length === 0) && (
+                    <div style={{
+                      marginBottom: '24px',
+                      padding: '16px',
+                      background: '#fff3cd',
+                      borderRadius: '8px',
+                      border: '1px solid #ffc107',
+                      textAlign: 'center'
+                    }}>
+                      <div style={{
+                        fontSize: '14px',
+                        color: '#856404',
+                        fontWeight: '500'
+                      }}>
+                        ℹ️ No vendors have been approved for this {selectedEvent.type?.toLowerCase()} yet.
                       </div>
                     </div>
                   )}

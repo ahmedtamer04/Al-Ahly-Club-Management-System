@@ -261,10 +261,48 @@ vendorAppSchema.methods.canEdit = function() {
   return this.status === 'pending';
 };
 
-vendorAppSchema.methods.approve = function(approvedBy) {
+vendorAppSchema.methods.approve = async function(approvedBy) {
   this.status = 'accepted';
   this.approved_by = approvedBy;
   this.approved_at = new Date();
+  
+  // If this is a bazaar application, add vendor to the bazaar's vendors_participating
+  if (this.kind === 'bazaar' && this.bazaar_id) {
+    const Event = mongoose.model('Event');
+    const User = mongoose.model('User');
+    
+    try {
+      // Get the bazaar event
+      const bazaar = await Event.findById(this.bazaar_id);
+      // Get the vendor user info
+      const vendor = await User.findById(this.vendor_user_id);
+      
+      if (bazaar && vendor) {
+        // Check if vendor is not already in the list
+        const alreadyExists = bazaar.bazaar.vendors_participating.some(
+          v => v.vendor_id && v.vendor_id.toString() === this.vendor_user_id.toString()
+        );
+        
+        if (!alreadyExists) {
+          // Add vendor to bazaar's vendors_participating array
+          bazaar.bazaar.vendors_participating.push({
+            vendor_id: this.vendor_user_id,
+            vendor_name: vendor.vendor_info?.company_name || `${vendor.first_name} ${vendor.last_name}`,
+            booth_number: 'TBA', // Will be assigned later
+            products: [], // Can be updated later
+            registration_date: new Date(),
+            payment_status: 'pending'
+          });
+          
+          await bazaar.save();
+        }
+      }
+    } catch (error) {
+      console.error('Error adding vendor to bazaar:', error);
+      // Continue with approval even if adding to bazaar fails
+    }
+  }
+  
   return this.save();
 };
 

@@ -13,10 +13,7 @@ export default function ApplyBoothPage() {
   const [isClient, setIsClient] = useState(false);
   const [formData, setFormData] = useState({
     business_name: '',
-    business_type: '',
-    business_description: '',
     booth_size: 'small',
-    products_offered: '',
     contact_phone: '',
     contact_email: '',
     preferred_start_date: '',
@@ -43,8 +40,6 @@ export default function ApplyBoothPage() {
       setFormData(prev => ({
         ...prev,
         business_name: user.vendor_info?.company_name || '',
-        business_type: user.vendor_info?.business_type || '',
-        business_description: user.vendor_info?.business_description || '',
         contact_phone: user.vendor_info?.phone || user.phone || '',
         contact_email: user.email || ''
       }));
@@ -72,10 +67,7 @@ export default function ApplyBoothPage() {
   const handleReset = () => {
     setFormData({
       business_name: user?.vendor_info?.company_name || '',
-      business_type: user?.vendor_info?.business_type || '',
-      business_description: user?.vendor_info?.business_description || '',
       booth_size: 'small',
-      products_offered: '',
       contact_phone: user?.vendor_info?.phone || user?.phone || '',
       contact_email: user?.email || '',
       preferred_start_date: '',
@@ -142,71 +134,25 @@ export default function ApplyBoothPage() {
                   <h3>Business Information</h3>
                 </div>
                 
-                <div className="form-row">
-                  <div className="form-group">
-                    <label htmlFor="businessName">
-                      <span className="label-icon">🏪</span>
-                      Business Name *
-                    </label>
-                    <input
-                      type="text"
-                      id="businessName"
-                      required
-                      placeholder="Your business name"
-                      value={formData.business_name}
-                      onChange={(e) => setFormData({...formData, business_name: e.target.value})}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label htmlFor="businessType">
-                      <span className="label-icon">🏷️</span>
-                      Business Type *
-                    </label>
-                    <select
-                      id="businessType"
-                      required
-                      value={formData.business_type}
-                      onChange={(e) => setFormData({...formData, business_type: e.target.value})}
-                    >
-                      <option value="">-- Select type --</option>
-                      <option value="food">🍔 Food & Beverages</option>
-                      <option value="retail">🛍️ Retail & Products</option>
-                      <option value="services">💼 Services</option>
-                      <option value="crafts">🎨 Arts & Crafts</option>
-                      <option value="technology">💻 Technology</option>
-                      <option value="other">📦 Other</option>
-                    </select>
-                  </div>
-                </div>
-
                 <div className="form-group">
-                  <label htmlFor="description">
-                    <span className="label-icon">📝</span>
-                    Business Description *
+                  <label htmlFor="businessName">
+                    <span className="label-icon">🏪</span>
+                    Business Name
                   </label>
-                  <textarea
-                    id="description"
-                    rows="4"
-                    required
-                    placeholder="Describe your business and what you'll showcase..."
-                    value={formData.business_description}
-                    onChange={(e) => setFormData({...formData, business_description: e.target.value})}
+                  <input
+                    type="text"
+                    id="businessName"
+                    value={formData.business_name}
+                    readOnly
+                    style={{
+                      backgroundColor: '#f0f0f0',
+                      cursor: 'not-allowed',
+                      color: '#666'
+                    }}
                   />
-                </div>
-
-                <div className="form-group">
-                  <label htmlFor="productsOffered">
-                    <span className="label-icon">📦</span>
-                    Products/Services Offered *
-                  </label>
-                  <textarea
-                    id="productsOffered"
-                    rows="3"
-                    required
-                    placeholder="List the products or services you will offer at your booth..."
-                    value={formData.products_offered}
-                    onChange={(e) => setFormData({...formData, products_offered: e.target.value})}
-                  />
+                  <small className="field-hint">
+                    This is your registered business name and cannot be changed here
+                  </small>
                 </div>
               </div>
 
