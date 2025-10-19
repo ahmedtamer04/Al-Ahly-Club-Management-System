@@ -1,8 +1,8 @@
 {
-  "/admin/page": "app/admin/page.js",
-  "/admin/vendors/page": "app/admin/vendors/page.js",
-  "/admin/facilities/page": "app/admin/facilities/page.js",
-  "/admin/registrations/page": "app/admin/registrations/page.js",
-  "/admin/users/page": "app/admin/users/page.js",
-  "/admin/events/page": "app/admin/events/page.js"
+  "/vendor/page": "app/vendor/page.js",
+  "/eventsoffice/page": "app/eventsoffice/page.js",
+  "/vendor/applications/page": "app/vendor/applications/page.js",
+  "/vendor/apply-bazaar/page": "app/vendor/apply-bazaar/page.js",
+  "/vendor/booths/page": "app/vendor/booths/page.js",
+  "/page": "app/page.js"
 }

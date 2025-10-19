@@ -176,6 +176,76 @@ export default function CreateEventPage() {
                 </div>
               )}
 
+              {eventType === 'GymSession' && (
+                <>
+                  <div className="form-group">
+                    <label>Session Date *</label>
+                    <input
+                      type="date"
+                      placeholder="Select date"
+                      required
+                      style={{padding: '0.75rem', borderRadius: '8px', border: '2px solid #E5E5E5', width: '100%'}}
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label>Session Time *</label>
+                    <input
+                      type="time"
+                      placeholder="e.g., 14:00"
+                      required
+                      style={{padding: '0.75rem', borderRadius: '8px', border: '2px solid #E5E5E5', width: '100%'}}
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label>Duration (minutes) *</label>
+                    <input
+                      type="number"
+                      placeholder="e.g., 60"
+                      min="15"
+                      max="180"
+                      step="15"
+                      required
+                      style={{padding: '0.75rem', borderRadius: '8px', border: '2px solid #E5E5E5', width: '100%'}}
+                    />
+                    <small style={{color: '#666', fontSize: '0.85rem'}}>Duration in minutes (15 min intervals)</small>
+                  </div>
+
+                  <div className="form-group">
+                    <label>Session Type *</label>
+                    <select 
+                      required
+                      style={{padding: '0.75rem', borderRadius: '8px', border: '2px solid #E5E5E5', width: '100%'}}
+                    >
+                      <option value="">Select session type...</option>
+                      <option value="Cardio">🏃 Cardio</option>
+                      <option value="Strength">💪 Strength Training</option>
+                      <option value="Yoga">🧘 Yoga</option>
+                      <option value="Pilates">🤸 Pilates</option>
+                      <option value="CrossFit">🏋️ CrossFit</option>
+                      <option value="Zumba">💃 Zumba</option>
+                      <option value="Spinning">🚴 Spinning</option>
+                      <option value="HIIT">⚡ HIIT</option>
+                      <option value="General">🏋️ General Gym Session</option>
+                    </select>
+                  </div>
+
+                  <div className="form-group">
+                    <label>Maximum Participants *</label>
+                    <input
+                      type="number"
+                      placeholder="e.g., 20"
+                      min="1"
+                      max="100"
+                      required
+                      style={{padding: '0.75rem', borderRadius: '8px', border: '2px solid #E5E5E5', width: '100%'}}
+                    />
+                    <small style={{color: '#666', fontSize: '0.85rem'}}>Maximum number of participants allowed</small>
+                  </div>
+                </>
+              )}
+
               <div style={{display: 'flex', gap: '1rem', marginTop: '1rem'}}>
                 <button type="submit" className="btn-primary">
                   ✅ Create {eventType}

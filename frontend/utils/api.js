@@ -328,8 +328,14 @@ export const eventAPI = {
   // Auth: requireAdminOrEventsOffice
   // Can only delete if no registrations exist
   delete: (eventId) => api.delete(`/events/delete/${eventId}`),
+  
   // GET /api/events/:id
   getById: (id) => api.get(`/events/${id}`),
+  
+  // GET /api/events/:event_id/comments
+  // Auth: requireStudentOrAbove
+  // Returns all comments for a specific event
+  getComments: (eventId) => api.get(`/events/${eventId}/comments`),
 };
 
 // ================================
@@ -450,7 +456,13 @@ export const adminAPI = {
 
   // POST /api/admin/user/:userId/block
   // Auth: requireAdmin
-  toggleUserBlock: (userId) => api.post(`/admin/user/${userId}/block`, {}),
+  // Required: { action: "block" | "unblock" }
+  toggleUserBlock: (userId, action) => api.post(`/admin/user/${userId}/block`, { action }),
+
+  // DELETE /api/admin/comment/:commentId
+  // Auth: requireAdmin
+  // Soft deletes a comment (marks as deleted, doesn't permanently remove)
+  deleteComment: (commentId) => api.delete(`/admin/comment/${commentId}`),
 
   // GET /api/admin/users
   // Auth: requireAdmin

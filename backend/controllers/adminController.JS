@@ -84,13 +84,6 @@ export const deleteAdminUser = async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    // Only allow deletion of Admin or EventsOffice users
-    if (userToDelete.role !== 'Admin' && userToDelete.role !== 'EventsOffice') {
-      return res.status(400).json({ 
-        message: "Can only delete Admin or EventsOffice users" 
-      });
-    }
-
     // Prevent self-deletion (optional security measure)
     if (req.user && req.user._id.toString() === userId) {
       return res.status(400).json({ 
@@ -112,7 +105,7 @@ export const deleteAdminUser = async (req, res) => {
     });
 
   } catch (err) {
-    console.error('Error deleting admin user:', err);
+    console.error('Error deleting user:', err);
     res.status(500).json({ message: err.message });
   }
 };
@@ -317,9 +310,9 @@ export const toggleUserBlock = async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    // Prevent blocking other admins and events office users
-    if (user.role === "Admin" || user.role === "EventsOffice") {
-      return res.status(403).json({ message: `Cannot block ${user.role} users` });
+    // Prevent blocking yourself
+    if (req.user && req.user._id.toString() === userId.toString()) {
+      return res.status(403).json({ message: "You cannot block your own account" });
     }
 
     // Update user status
@@ -353,7 +346,10 @@ export const getAllUsers = async (req, res) => {
     res.json({
       message: "Users retrieved successfully",
       users: users.map(user => ({
-        id: user._id,
+        _id: user._id,  // MongoDB ID field
+        id: user._id,   // Alias for compatibility
+        first_name: user.first_name,
+        last_name: user.last_name,
         name: `${user.first_name} ${user.last_name}`,
         email: user.email,
         role: user.role,

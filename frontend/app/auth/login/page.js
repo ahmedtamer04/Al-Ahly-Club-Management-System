@@ -27,35 +27,44 @@ export default function LoginPage() {
       // Success - redirect based on role
       const userRole = response.user.role;
       
+      // Debug logging
+      console.log('=== LOGIN SUCCESS DEBUG ===');
+      console.log('Full response:', response);
+      console.log('User object:', response.user);
+      console.log('User role:', userRole);
+      console.log('User role type:', typeof userRole);
+      console.log('========================');
+      
       // Show success message briefly before redirect
       setMessage({ text: 'Login successful! Redirecting...', type: 'success' });
       
       // Redirect to appropriate dashboard
       setTimeout(() => {
-        switch(userRole) {
-          case 'Student':
-            router.push('/student');
-            break;
-          case 'Staff':
-            router.push('/staff');
-            break;
-          case 'TA':
-            router.push('/ta');
-            break;
-          case 'Professor':
-            router.push('/professor');
-            break;
-          case 'Vendor':
-            router.push('/vendor');
-            break;
-          case 'Admin':
-            router.push('/admin');
-            break;
-          case 'EventsOffice':
-            router.push('/eventsoffice');
-            break;
-          default:
-            router.push('/');
+        // Normalize the role to handle case sensitivity
+        const normalizedRole = userRole ? userRole.trim() : '';
+        
+        console.log('About to redirect. Normalized role:', normalizedRole);
+        
+        // Use if-else for more reliable matching
+        if (normalizedRole === 'Vendor' || normalizedRole === 'vendor') {
+          console.log('Matched Vendor role, redirecting to /vendor');
+          router.push('/vendor');
+        } else if (normalizedRole === 'Student') {
+          router.push('/student');
+        } else if (normalizedRole === 'Staff') {
+          router.push('/staff');
+        } else if (normalizedRole === 'TA') {
+          router.push('/ta');
+        } else if (normalizedRole === 'Professor') {
+          router.push('/professor');
+        } else if (normalizedRole === 'Admin') {
+          router.push('/admin');
+        } else if (normalizedRole === 'EventsOffice' || normalizedRole === 'eventsoffice' || normalizedRole === 'Events Office') {
+          console.log('Matched EventsOffice role, redirecting to /eventsoffice');
+          router.push('/eventsoffice');
+        } else {
+          console.log('No role matched, redirecting to home. Role was:', normalizedRole);
+          router.push('/');
         }
       }, 1000);
 

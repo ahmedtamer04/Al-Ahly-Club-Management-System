@@ -152,6 +152,8 @@ export default function AllEventsPage() {
   const [registrationCounts, setRegistrationCounts] = useState({}); // New state for registration counts
   const [viewEventModal, setViewEventModal] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState(null);
+  const [eventComments, setEventComments] = useState([]);
+  const [loadingComments, setLoadingComments] = useState(false);
   const [stats, setStats] = useState({
     workshops: 0,
     trips: 0,
@@ -323,9 +325,45 @@ export default function AllEventsPage() {
     }
   };
 
-  const handleViewEvent = (event) => {
+  const handleViewEvent = async (event) => {
     setSelectedEvent(event);
     setViewEventModal(true);
+    
+    // Fetch comments for this event
+    await fetchEventComments(event._id);
+  };
+
+  const fetchEventComments = async (eventId) => {
+    try {
+      setLoadingComments(true);
+      const response = await api.get(`/events/${eventId}/comments`);
+      console.log('Comments response:', response);
+      setEventComments(response.comments || []);
+    } catch (error) {
+      console.error('Error fetching comments:', error);
+      setEventComments([]);
+    } finally {
+      setLoadingComments(false);
+    }
+  };
+
+  const handleDeleteComment = async (commentId) => {
+    if (!confirm('Are you sure you want to delete this comment? This action cannot be undone.')) {
+      return;
+    }
+    
+    try {
+      await api.delete(`/admin/comment/${commentId}`);
+      alert('Comment deleted successfully!');
+      
+      // Refresh comments for the current event
+      if (selectedEvent) {
+        await fetchEventComments(selectedEvent._id);
+      }
+    } catch (error) {
+      console.error('Error deleting comment:', error);
+      alert('Failed to delete comment: ' + (error.response?.data?.message || error.message));
+    }
   };
 
   const EventDetailsModal = ({ isOpen, onClose, event }) => {
@@ -520,6 +558,97 @@ export default function AllEventsPage() {
           )}
 
           {renderEventSpecificDetails()}
+
+          {/* Comments Section */}
+          <div style={{marginTop: '1.5rem', padding: '1rem', backgroundColor: '#f8f9fa', borderRadius: '8px', border: '1px solid #dee2e6'}}>
+            <h4 style={{marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem'}}>
+              💬 Comments & Feedback
+              <span style={{
+                fontSize: '0.85rem',
+                fontWeight: 'normal',
+                color: '#666',
+                backgroundColor: '#e9ecef',
+                padding: '2px 8px',
+                borderRadius: '12px'
+              }}>
+                {eventComments.length}
+              </span>
+            </h4>
+            
+            {loadingComments ? (
+              <div style={{textAlign: 'center', padding: '1rem', color: '#666'}}>
+                ⏳ Loading comments...
+              </div>
+            ) : eventComments.length === 0 ? (
+              <div style={{textAlign: 'center', padding: '2rem', color: '#999'}}>
+                <p>💬 No comments yet</p>
+                <small>Users haven't commented on this event yet</small>
+              </div>
+            ) : (
+              <div style={{maxHeight: '400px', overflowY: 'auto'}}>
+                {eventComments.map((comment) => (
+                  <div 
+                    key={comment._id} 
+                    style={{
+                      backgroundColor: comment.status === 'deleted' ? '#ffebee' : 'white',
+                      padding: '1rem',
+                      marginBottom: '0.75rem',
+                      borderRadius: '8px',
+                      border: comment.status === 'deleted' ? '1px solid #ef5350' : '1px solid #e0e0e0',
+                      opacity: comment.status === 'deleted' ? 0.6 : 1
+                    }}
+                  >
+                    <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '0.5rem'}}>
+                      <div>
+                        <strong style={{color: '#333'}}>
+                          {comment.author_id?.first_name} {comment.author_id?.last_name}
+                        </strong>
+                        <br/>
+                        <small style={{color: '#666', fontSize: '0.85em'}}>
+                          {comment.author_id?.email}
+                        </small>
+                        {comment.status === 'deleted' && (
+                          <span style={{
+                            marginLeft: '0.5rem',
+                            color: '#d32f2f',
+                            fontSize: '0.85em',
+                            fontWeight: 'bold'
+                          }}>
+                            🗑️ DELETED
+                          </span>
+                        )}
+                      </div>
+                      <div style={{display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.25rem'}}>
+                        <small style={{color: '#999', fontSize: '0.85em'}}>
+                          {new Date(comment.createdAt).toLocaleDateString()} {new Date(comment.createdAt).toLocaleTimeString()}
+                        </small>
+                        {comment.status !== 'deleted' && (
+                          <button
+                            onClick={() => handleDeleteComment(comment._id)}
+                            style={{
+                              padding: '4px 8px',
+                              fontSize: '0.75em',
+                              backgroundColor: '#dc3545',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '4px',
+                              cursor: 'pointer'
+                            }}
+                            title="Delete Comment"
+                          >
+                            🗑️ Delete
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                    <p style={{margin: '0.5rem 0 0 0', color: '#333', lineHeight: '1.5'}}>
+                      {comment.body}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
     );

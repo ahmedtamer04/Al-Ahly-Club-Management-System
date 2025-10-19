@@ -147,21 +147,25 @@ export const getEventComments = async (req, res) => {
     }
 
     // Fetch comments with user details populated
-    const comments = await Comment.find({ event_id })
-      .populate('user_id', 'name email') // populate user info
+    const comments = await Comment.find({ event_id, status: { $ne: 'deleted' } })
+      .populate('author_id', 'first_name last_name email') // populate author info
       .sort({ createdAt: -1 }); // newest first
 
-    // Calculate average rating
-    const ratings = comments.filter(c => c.rating != null).map(c => c.rating);
-    const averageRating = ratings.length > 0 
-      ? (ratings.reduce((sum, r) => sum + r, 0) / ratings.length).toFixed(1)
-      : null;
+    // Also fetch deleted comments for admin visibility
+    const deletedComments = await Comment.find({ event_id, status: 'deleted' })
+      .populate('author_id', 'first_name last_name email')
+      .populate('deleted_by', 'first_name last_name')
+      .sort({ createdAt: -1 });
+
+    const allComments = [...comments, ...deletedComments].sort((a, b) => 
+      new Date(b.createdAt) - new Date(a.createdAt)
+    );
 
     res.status(200).json({
-      comments,
-      totalComments: comments.length,
-      averageRating,
-      totalRatings: ratings.length
+      comments: allComments,
+      totalComments: allComments.length,
+      activeComments: comments.length,
+      deletedComments: deletedComments.length
     });
   } catch (err) {
     console.error('Error fetching comments:', err);

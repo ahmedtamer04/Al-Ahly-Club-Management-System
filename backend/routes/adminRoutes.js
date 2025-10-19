@@ -41,25 +41,25 @@ router.post("/vendor-requests/:applicationId/reject", requireAdminOrEventsOffice
 router.use(requireAdmin);
 
 // Admin user management
-router.post("/create-admin", createAdminUser);
-router.delete("/delete-admin/:userId", deleteAdminUser);
-router.get("/admin-users", getAdminUsers);
-router.get("/user/:userId", getUserById);
-router.get("/users", getAllUsers);
+router.post("/create-admin", requireAdmin, createAdminUser);
+router.delete("/delete-admin/:userId", requireAdmin, deleteAdminUser);
+router.get("/admin-users", requireAdmin, getAdminUsers);
+router.get("/user/:userId", requireAdmin, getUserById);
+router.get("/users", requireAdmin, getAllUsers);
 
 // User management and moderation
 router.post("/user/:userId/block", toggleUserBlock);
 router.delete("/comment/:commentId", deleteComment);
 
 // User approval system
-router.get("/pending-users", getPendingUsers);
-router.post("/approve/:userId", approveUser);
-router.post("/resend-verification/:userId", resendVerificationEmail);
+router.get("/pending-users", requireAdmin, getPendingUsers);
+router.post("/approve/:userId", requireAdmin, approveUser);
+router.post("/resend-verification/:userId", requireAdmin, resendVerificationEmail);
 
 // Registration management
-router.get("/registrations", getAllRegistrations);
-router.get("/registrations/counts", getAllEventRegistrationCounts);
-router.get("/registrations/event/:eventId/count", getEventRegistrationCount);
+router.get("/registrations", requireAdmin, getAllRegistrations);
+router.get("/registrations/counts", requireAdmin, getAllEventRegistrationCounts);
+router.get("/registrations/event/:eventId/count", requireAdmin, getEventRegistrationCount);
 
 export default router;
 
