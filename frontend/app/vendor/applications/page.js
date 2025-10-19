@@ -20,6 +20,8 @@ export default function VendorApplicationsPage() {
   });
   const [cancelling, setCancelling] = useState(null);
   const [activeFilter, setActiveFilter] = useState('all'); // 'all', 'approved', 'pending-rejected'
+  const [selectedApplication, setSelectedApplication] = useState(null);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
 
   // Load user data on client side only
   useEffect(() => {
@@ -135,6 +137,16 @@ export default function VendorApplicationsPage() {
     if (activeFilter === 'pending-rejected') return app.status === 'pending' || app.status === 'rejected';
     return true;
   });
+
+  const handleViewDetails = (app) => {
+    setSelectedApplication(app);
+    setShowDetailsModal(true);
+  };
+
+  const closeDetailsModal = () => {
+    setShowDetailsModal(false);
+    setSelectedApplication(null);
+  };
 
   return (
     <div className="dashboard">
@@ -268,31 +280,42 @@ export default function VendorApplicationsPage() {
                           </span>
                         </td>
                         <td>
-                          {canCancelApplication(app) && (
+                          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                             <button
-                              onClick={() => handleCancelApplication(app._id)}
-                              disabled={cancelling === app._id}
+                              onClick={() => handleViewDetails(app)}
                               style={{
                                 padding: '6px 12px',
-                                background: '#dc3545',
+                                background: '#1976d2',
                                 color: 'white',
                                 border: 'none',
                                 borderRadius: '4px',
-                                cursor: cancelling === app._id ? 'not-allowed' : 'pointer',
-                                opacity: cancelling === app._id ? 0.6 : 1
+                                cursor: 'pointer',
+                                fontSize: '0.9em',
+                                fontWeight: '500'
                               }}
                             >
-                              {cancelling === app._id ? 'Cancelling...' : '🚫 Cancel'}
+                              👁️ View Details
                             </button>
-                          )}
-                          {!canCancelApplication(app) && (
-                            <span style={{ color: '#6c757d', fontSize: '0.9em' }}>
-                              {app.status === 'cancelled' ? 'Cancelled' : 
-                               app.status === 'accepted' ? 'Approved' :
-                               app.status === 'rejected' ? 'Rejected' :
-                               app.payment_status === 'paid' ? 'Payment Completed' : '-'}
-                            </span>
-                          )}
+                            {canCancelApplication(app) && (
+                              <button
+                                onClick={() => handleCancelApplication(app._id)}
+                                disabled={cancelling === app._id}
+                                style={{
+                                  padding: '6px 12px',
+                                  background: '#dc3545',
+                                  color: 'white',
+                                  border: 'none',
+                                  borderRadius: '4px',
+                                  cursor: cancelling === app._id ? 'not-allowed' : 'pointer',
+                                  opacity: cancelling === app._id ? 0.6 : 1,
+                                  fontSize: '0.9em',
+                                  fontWeight: '500'
+                                }}
+                              >
+                                {cancelling === app._id ? 'Cancelling...' : '🚫 Cancel'}
+                              </button>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     ))
@@ -303,6 +326,228 @@ export default function VendorApplicationsPage() {
           </section>
         </main>
       </div>
+
+      {/* Details Modal */}
+      {showDetailsModal && selectedApplication && (
+        <div className="modal-overlay" onClick={closeDetailsModal}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Application Details</h2>
+              <button className="modal-close" onClick={closeDetailsModal}>✕</button>
+            </div>
+            
+            <div className="modal-body">
+              {/* Status Section */}
+              <div className="detail-section">
+                <h3 className="detail-section-title">
+                  <span className="section-icon">📊</span>
+                  Status Information
+                </h3>
+                <div className="detail-grid">
+                  <div className="detail-item">
+                    <span className="detail-label">Status:</span>
+                    <span style={{
+                      padding: '6px 12px',
+                      borderRadius: '4px',
+                      background: getStatusColor(selectedApplication.status),
+                      color: 'white',
+                      fontWeight: '500',
+                      display: 'inline-block'
+                    }}>
+                      {getStatusIcon(selectedApplication.status)} {selectedApplication.status.charAt(0).toUpperCase() + selectedApplication.status.slice(1)}
+                    </span>
+                  </div>
+                  <div className="detail-item">
+                    <span className="detail-label">Application Type:</span>
+                    <span className="detail-value">
+                      {selectedApplication.kind === 'bazaar' ? '🎪 Bazaar' : '🏪 Booth Event'}
+                    </span>
+                  </div>
+                  <div className="detail-item">
+                    <span className="detail-label">Applied Date:</span>
+                    <span className="detail-value">{formatDate(selectedApplication.applied_at)}</span>
+                  </div>
+                  {selectedApplication.approved_at && (
+                    <div className="detail-item">
+                      <span className="detail-label">Approved Date:</span>
+                      <span className="detail-value">{formatDate(selectedApplication.approved_at)}</span>
+                    </div>
+                  )}
+                  {selectedApplication.payment_status && (
+                    <div className="detail-item">
+                      <span className="detail-label">Payment Status:</span>
+                      <span className="detail-value">{selectedApplication.payment_status}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Rejection Reason */}
+              {selectedApplication.status === 'rejected' && selectedApplication.rejection_reason && (
+                <div className="detail-section rejection-section">
+                  <h3 className="detail-section-title">
+                    <span className="section-icon">❌</span>
+                    Rejection Reason
+                  </h3>
+                  <div className="rejection-box">
+                    {selectedApplication.rejection_reason}
+                  </div>
+                </div>
+              )}
+
+              {/* Event/Bazaar Information */}
+              {selectedApplication.kind === 'bazaar' && selectedApplication.bazaar && (
+                <div className="detail-section">
+                  <h3 className="detail-section-title">
+                    <span className="section-icon">🎪</span>
+                    Bazaar Information
+                  </h3>
+                  <div className="detail-grid">
+                    <div className="detail-item">
+                      <span className="detail-label">Event Name:</span>
+                      <span className="detail-value">{selectedApplication.bazaar.name}</span>
+                    </div>
+                    <div className="detail-item">
+                      <span className="detail-label">Location:</span>
+                      <span className="detail-value">{selectedApplication.bazaar.location}</span>
+                    </div>
+                    <div className="detail-item">
+                      <span className="detail-label">Start Date:</span>
+                      <span className="detail-value">{formatDate(selectedApplication.bazaar.start_date)}</span>
+                    </div>
+                    <div className="detail-item">
+                      <span className="detail-label">End Date:</span>
+                      <span className="detail-value">{formatDate(selectedApplication.bazaar.end_date)}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Business Information */}
+              <div className="detail-section">
+                <h3 className="detail-section-title">
+                  <span className="section-icon">🏢</span>
+                  Business Information
+                </h3>
+                <div className="detail-grid">
+                  {selectedApplication.business_name && (
+                    <div className="detail-item">
+                      <span className="detail-label">Business Name:</span>
+                      <span className="detail-value">{selectedApplication.business_name}</span>
+                    </div>
+                  )}
+                  {selectedApplication.business_type && (
+                    <div className="detail-item">
+                      <span className="detail-label">Business Type:</span>
+                      <span className="detail-value">{selectedApplication.business_type}</span>
+                    </div>
+                  )}
+                  {selectedApplication.business_description && (
+                    <div className="detail-item full-width">
+                      <span className="detail-label">Description:</span>
+                      <span className="detail-value">{selectedApplication.business_description}</span>
+                    </div>
+                  )}
+                  {selectedApplication.products_offered && (
+                    <div className="detail-item full-width">
+                      <span className="detail-label">Products/Services Offered:</span>
+                      <span className="detail-value">{selectedApplication.products_offered}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Booth Details */}
+              <div className="detail-section">
+                <h3 className="detail-section-title">
+                  <span className="section-icon">📦</span>
+                  Booth Details
+                </h3>
+                <div className="detail-grid">
+                  {selectedApplication.booth_size && (
+                    <div className="detail-item">
+                      <span className="detail-label">Booth Size:</span>
+                      <span className="detail-value">{selectedApplication.booth_size}</span>
+                    </div>
+                  )}
+                  {selectedApplication.duration_weeks && (
+                    <div className="detail-item">
+                      <span className="detail-label">Duration:</span>
+                      <span className="detail-value">{selectedApplication.duration_weeks} weeks</span>
+                    </div>
+                  )}
+                  {selectedApplication.preferred_start_date && (
+                    <div className="detail-item">
+                      <span className="detail-label">Preferred Start:</span>
+                      <span className="detail-value">{formatDate(selectedApplication.preferred_start_date)}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Staff Members */}
+              {((selectedApplication.bazaar_staff && selectedApplication.bazaar_staff.length > 0) ||
+                (selectedApplication.booth_staff && selectedApplication.booth_staff.length > 0)) && (
+                <div className="detail-section">
+                  <h3 className="detail-section-title">
+                    <span className="section-icon">👥</span>
+                    Staff Members
+                  </h3>
+                  <div className="staff-list">
+                    {(selectedApplication.bazaar_staff || selectedApplication.booth_staff || []).map((staff, index) => (
+                      <div key={index} className="staff-item">
+                        <span className="staff-name">👤 {staff.name}</span>
+                        <span className="staff-email">📧 {staff.email}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Contact Information */}
+              <div className="detail-section">
+                <h3 className="detail-section-title">
+                  <span className="section-icon">📞</span>
+                  Contact Information
+                </h3>
+                <div className="detail-grid">
+                  {selectedApplication.contact_phone && (
+                    <div className="detail-item">
+                      <span className="detail-label">Phone:</span>
+                      <span className="detail-value">{selectedApplication.contact_phone}</span>
+                    </div>
+                  )}
+                  {selectedApplication.contact_email && (
+                    <div className="detail-item">
+                      <span className="detail-label">Email:</span>
+                      <span className="detail-value">{selectedApplication.contact_email}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Additional Notes */}
+              {selectedApplication.notes && (
+                <div className="detail-section">
+                  <h3 className="detail-section-title">
+                    <span className="section-icon">📝</span>
+                    Additional Notes
+                  </h3>
+                  <div className="notes-box">
+                    {selectedApplication.notes}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="modal-footer">
+              <button className="btn btn-secondary" onClick={closeDetailsModal}>
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <style jsx>{`
         .stat-card {
@@ -317,6 +562,208 @@ export default function VendorApplicationsPage() {
         .stat-card-active {
           border: 2px solid #c41e3a;
           box-shadow: 0 4px 12px rgba(196, 30, 58, 0.2);
+        }
+
+        /* Modal Styles */
+        .modal-overlay {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: rgba(0, 0, 0, 0.6);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 1000;
+          padding: 1rem;
+          overflow-y: auto;
+        }
+
+        .modal-content {
+          background: white;
+          border-radius: 12px;
+          width: 100%;
+          max-width: 900px;
+          max-height: 90vh;
+          overflow-y: auto;
+          box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+          animation: modalSlideIn 0.3s ease;
+        }
+
+        @keyframes modalSlideIn {
+          from {
+            opacity: 0;
+            transform: translateY(-30px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
+        .modal-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 1.5rem 2rem;
+          border-bottom: 2px solid #f0f0f0;
+          background: linear-gradient(135deg, #c41e3a 0%, #a01830 100%);
+          color: white;
+          border-radius: 12px 12px 0 0;
+        }
+
+        .modal-header h2 {
+          margin: 0;
+          font-size: 1.5rem;
+        }
+
+        .modal-close {
+          background: rgba(255, 255, 255, 0.2);
+          border: none;
+          color: white;
+          font-size: 1.5rem;
+          width: 40px;
+          height: 40px;
+          border-radius: 50%;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: all 0.2s;
+        }
+
+        .modal-close:hover {
+          background: rgba(255, 255, 255, 0.3);
+          transform: rotate(90deg);
+        }
+
+        .modal-body {
+          padding: 2rem;
+        }
+
+        .detail-section {
+          margin-bottom: 2rem;
+          padding: 1.5rem;
+          background: #f8f9fa;
+          border-radius: 8px;
+          border-left: 4px solid #c41e3a;
+        }
+
+        .rejection-section {
+          background: #fee;
+          border-left-color: #dc3545;
+        }
+
+        .detail-section-title {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          margin: 0 0 1rem 0;
+          color: #333;
+          font-size: 1.1rem;
+          font-weight: 600;
+        }
+
+        .section-icon {
+          font-size: 1.3rem;
+        }
+
+        .detail-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+          gap: 1rem;
+        }
+
+        .detail-item {
+          display: flex;
+          flex-direction: column;
+          gap: 0.3rem;
+        }
+
+        .detail-item.full-width {
+          grid-column: 1 / -1;
+        }
+
+        .detail-label {
+          font-weight: 600;
+          color: #666;
+          font-size: 0.9rem;
+        }
+
+        .detail-value {
+          color: #333;
+          font-size: 1rem;
+          word-break: break-word;
+        }
+
+        .rejection-box, .notes-box {
+          padding: 1rem;
+          background: white;
+          border-radius: 6px;
+          color: #333;
+          line-height: 1.6;
+          border: 1px solid #ddd;
+        }
+
+        .rejection-box {
+          border-color: #dc3545;
+          background: #fff5f5;
+        }
+
+        .staff-list {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+          gap: 1rem;
+        }
+
+        .staff-item {
+          display: flex;
+          flex-direction: column;
+          gap: 0.5rem;
+          padding: 1rem;
+          background: white;
+          border-radius: 6px;
+          border: 1px solid #ddd;
+        }
+
+        .staff-name {
+          font-weight: 600;
+          color: #333;
+        }
+
+        .staff-email {
+          color: #666;
+          font-size: 0.9rem;
+        }
+
+        .modal-footer {
+          padding: 1.5rem 2rem;
+          border-top: 1px solid #f0f0f0;
+          display: flex;
+          justify-content: flex-end;
+          gap: 1rem;
+          background: #f8f9fa;
+          border-radius: 0 0 12px 12px;
+        }
+
+        @media (max-width: 768px) {
+          .modal-content {
+            max-width: 95%;
+            max-height: 95vh;
+          }
+
+          .modal-header, .modal-body, .modal-footer {
+            padding: 1rem;
+          }
+
+          .detail-grid {
+            grid-template-columns: 1fr;
+          }
+
+          .staff-list {
+            grid-template-columns: 1fr;
+          }
         }
       `}</style>
     </div>
