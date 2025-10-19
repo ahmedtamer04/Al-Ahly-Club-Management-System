@@ -1,6 +1,6 @@
 import express from "express";
-import { registerForEvent, viewRegisteredEvents, cancelRegistration } from "../controllers/registrationController.js";
-import { auth, requireRegistering } from "../middleware/auth.js";  
+import { registerForEvent, viewRegisteredEvents, cancelRegistration, getAllRegistrations } from "../controllers/registrationController.js";
+import { auth, requireRegistering, requireAdmin } from "../middleware/auth.js";  
 
 
 const router = express.Router();
@@ -14,5 +14,8 @@ router.get("/:user_id/events", auth, requireRegistering, viewRegisteredEvents);
 
 // PATCH /cancel/:registrationId - Cancel a registration
 router.patch("/cancel/:registrationId", auth, requireRegistering, cancelRegistration);
+
+// GET /all - Get all registrations (Admin only)
+router.get("/all", auth, requireAdmin, getAllRegistrations);
 
 export default router;

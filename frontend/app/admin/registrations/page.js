@@ -1,12 +1,230 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import '@/app/dashboard.css';
+import api from '@/utils/api';
+
+// Add custom styles for buttons
+const styles = `
+  .btn-sm {
+    padding: 4px 8px;
+    font-size: 0.85em;
+    margin: 0 2px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-block;
+  }
+
+  .btn-secondary {
+    background-color: #6c757d;
+    color: white;
+  }
+
+  .btn-secondary:hover {
+    background-color: #5a6268;
+  }
+
+  .btn-danger {
+    background-color: #dc3545;
+    color: white;
+  }
+
+  .btn-danger:hover {
+    background-color: #c82333;
+  }
+
+  .table-container {
+    overflow-x: auto;
+  }
+
+  .data-table td {
+    padding: 12px 8px;
+    vertical-align: top;
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 2rem;
+  }
+`;
+
+// Add styles to head
+if (typeof document !== 'undefined') {
+  const styleSheet = document.createElement('style');
+  styleSheet.innerText = styles;
+  document.head.appendChild(styleSheet);
+}
 
 export default function RegistrationsPage() {
+  const [registrations, setRegistrations] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
+  const [stats, setStats] = useState({
+    total: 0,
+    confirmed: 0,
+    pending: 0,
+    cancelled: 0
+  });
+
+  // Fetch registrations data
+  useEffect(() => {
+    const fetchRegistrations = async () => {
+      try {
+        setLoading(true);
+        console.log('===== FETCHING REGISTRATIONS =====');
+        console.log('API endpoint: /registration/all');
+        console.log('Token exists:', !!localStorage.getItem('token'));
+        console.log('User:', localStorage.getItem('user'));
+        
+        const response = await api.get('/registration/all');
+        console.log('===== API RESPONSE =====');
+        console.log('Full response:', response);
+        console.log('Response.registrations:', response.registrations);
+        console.log('Response.registrations length:', response.registrations?.length);
+        console.log('Response.stats:', response.stats);
+        
+        if (response.registrations && response.registrations.length > 0) {
+          console.log('===== SAMPLE DATA =====');
+          console.log('First registration:', response.registrations[0]);
+          console.log('User ID populated?', response.registrations[0].user_id);
+          console.log('Event ID populated?', response.registrations[0].event_id);
+        } else {
+          console.warn('⚠️ No registrations found in response');
+        }
+        
+        setRegistrations(response.registrations || []);
+        
+        // Calculate stats
+        const registrationsData = response.registrations || [];
+        const registrationStats = {
+          total: registrationsData.length,
+          confirmed: registrationsData.filter(r => r.status === 'registered').length,
+          pending: registrationsData.filter(r => r.status === 'pending').length,
+          cancelled: registrationsData.filter(r => r.status === 'canceled').length
+        };
+        
+        console.log('===== CALCULATED STATS =====');
+        console.log('Stats:', registrationStats);
+        setStats(registrationStats);
+        
+      } catch (error) {
+        console.error('===== ERROR FETCHING REGISTRATIONS =====');
+        console.error('Error object:', error);
+        console.error('Error message:', error.message);
+        console.error('Error stack:', error.stack);
+        setRegistrations([]);
+      } finally {
+        setLoading(false);
+        console.log('===== FETCH COMPLETE =====');
+      }
+    };
+
+    fetchRegistrations();
+  }, []);
+
+  // Helper function to get status badge
+  const getStatusBadge = (status) => {
+    switch(status) {
+      case 'registered':
+        return <span style={{color: '#4caf50', fontWeight: 'bold'}}>✅ Confirmed</span>;
+      case 'pending':
+        return <span style={{color: '#ff9800', fontWeight: 'bold'}}>⏳ Pending</span>;
+      case 'canceled':
+        return <span style={{color: '#f44336', fontWeight: 'bold'}}>❌ Cancelled</span>;
+      default:
+        return <span style={{color: '#666', fontWeight: 'bold'}}>❓ Unknown</span>;
+    }
+  };
+
+  // Helper function to get event type badge
+  const getEventTypeBadge = (eventType) => {
+    return (
+      <span style={{
+        display: 'inline-block',
+        padding: '4px 8px',
+        borderRadius: '12px',
+        fontSize: '0.85em',
+        fontWeight: '500',
+        backgroundColor: 
+          eventType === 'Workshop' ? '#e3f2fd' :
+          eventType === 'Trip' ? '#f3e5f5' :
+          eventType === 'Bazaar' ? '#fff3e0' :
+          eventType === 'Booth' ? '#e8f5e8' :
+          eventType === 'Conference' ? '#fce4ec' : '#f5f5f5',
+        color:
+          eventType === 'Workshop' ? '#1976d2' :
+          eventType === 'Trip' ? '#7b1fa2' :
+          eventType === 'Bazaar' ? '#ef6c00' :
+          eventType === 'Booth' ? '#388e3c' :
+          eventType === 'Conference' ? '#c2185b' : '#666'
+      }}>
+        {eventType}
+      </span>
+    );
+  };
+
+  // Filter registrations based on status and search term
+  const filteredRegistrations = registrations.filter(registration => {
+    // Filter by status
+    if (filter !== 'all') {
+      const statusMap = {
+        'confirmed': 'registered',
+        'pending': 'pending',
+        'cancelled': 'canceled'
+      };
+      if (registration.status !== statusMap[filter]) {
+        return false;
+      }
+    }
+    
+    // Filter by search term
+    if (searchTerm) {
+      const searchLower = searchTerm.toLowerCase();
+      const userName = `${registration.user_id?.first_name || ''} ${registration.user_id?.last_name || ''}`.toLowerCase();
+      const eventName = registration.event_id?.name?.toLowerCase() || '';
+      const userEmail = registration.email?.toLowerCase() || '';
+      
+      return userName.includes(searchLower) || 
+             eventName.includes(searchLower) || 
+             userEmail.includes(searchLower);
+    }
+    
+    return true;
+  });
+
+  const handleDeleteRegistration = async (registrationId, userName, eventName) => {
+    if (!confirm(`Are you sure you want to delete the registration for ${userName} in "${eventName}"? This action cannot be undone.`)) {
+      return;
+    }
+    
+    try {
+      // Note: We'll need to implement this endpoint or use the existing cancel endpoint
+      await api.delete(`/admin/registrations/${registrationId}`);
+      
+      // Refresh registrations list
+      const response = await api.get('/admin/registrations');
+      setRegistrations(response.registrations || []);
+      
+      // Recalculate stats
+      const registrationsData = response.registrations || [];
+      const registrationStats = {
+        total: registrationsData.length,
+        confirmed: registrationsData.filter(r => r.status === 'registered').length,
+        pending: registrationsData.filter(r => r.status === 'pending').length,
+        cancelled: registrationsData.filter(r => r.status === 'canceled').length
+      };
+      setStats(registrationStats);
+      
+      alert('Registration deleted successfully!');
+    } catch (error) {
+      console.error('Error deleting registration:', error);
+      alert('Failed to delete registration: ' + (error.response?.data?.message || error.message));
+    }
+  };
 
   return (
     <div className="dashboard">
@@ -45,28 +263,28 @@ export default function RegistrationsPage() {
             <div className="stat-card">
               <div className="stat-icon">🎫</div>
               <div className="stat-info">
-                <h3>0</h3>
+                <h3>{stats.total}</h3>
                 <p>Total Registrations</p>
               </div>
             </div>
             <div className="stat-card">
               <div className="stat-icon">✅</div>
               <div className="stat-info">
-                <h3>0</h3>
+                <h3>{stats.confirmed}</h3>
                 <p>Confirmed</p>
               </div>
             </div>
             <div className="stat-card">
               <div className="stat-icon">⏳</div>
               <div className="stat-info">
-                <h3>0</h3>
+                <h3>{stats.pending}</h3>
                 <p>Pending</p>
               </div>
             </div>
             <div className="stat-card">
               <div className="stat-icon">❌</div>
               <div className="stat-info">
-                <h3>0</h3>
+                <h3>{stats.cancelled}</h3>
                 <p>Cancelled</p>
               </div>
             </div>
@@ -121,21 +339,114 @@ export default function RegistrationsPage() {
                     <th>Event Type</th>
                     <th>Registration Date</th>
                     <th>Status</th>
-                    <th>Payment</th>
+                    <th>User Role</th>
                     <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  <tr>
-                    <td colSpan="7" className="empty-row">
-                      <div className="empty-state">
-                        <p>🎫 No registrations found</p>
-                        <p style={{fontSize: '0.9rem', color: '#999'}}>
-                          Registrations will appear here once you connect to the backend API
-                        </p>
-                      </div>
-                    </td>
-                  </tr>
+                  {loading ? (
+                    <tr>
+                      <td colSpan="7" className="empty-row">
+                        <div className="empty-state">
+                          <p>⏳ Loading registrations...</p>
+                        </div>
+                      </td>
+                    </tr>
+                  ) : filteredRegistrations.length === 0 ? (
+                    <tr>
+                      <td colSpan="7" className="empty-row">
+                        <div className="empty-state">
+                          <p>🎫 No registrations found</p>
+                          {registrations.length === 0 ? (
+                            <p style={{fontSize: '0.9rem', color: '#999'}}>
+                              There are no registrations in the database yet. Create some registrations to see them here.
+                            </p>
+                          ) : filter !== 'all' ? (
+                            <p style={{fontSize: '0.9rem', color: '#999'}}>
+                              No {filter} registrations match your search criteria
+                            </p>
+                          ) : searchTerm ? (
+                            <p style={{fontSize: '0.9rem', color: '#999'}}>
+                              Try adjusting your search terms
+                            </p>
+                          ) : null}
+                        </div>
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredRegistrations.map((registration) => (
+                      <tr key={registration._id}>
+                        <td>
+                          <div>
+                            <strong>
+                              {registration.user_id ? 
+                                `${registration.user_id.first_name} ${registration.user_id.last_name}` : 
+                                registration.name || 'Unknown User'
+                              }
+                            </strong>
+                            <br/>
+                            <small style={{color: '#666', fontSize: '0.85em'}}>
+                              {registration.user_id?.email || registration.email}
+                            </small>
+                          </div>
+                        </td>
+                        <td>
+                          <div>
+                            <strong>{registration.event_id?.name || 'Unknown Event'}</strong>
+                            <br/>
+                            <small style={{color: '#666', fontSize: '0.85em'}}>
+                              {registration.event_id?.location || 'No location'}
+                            </small>
+                          </div>
+                        </td>
+                        <td>{getEventTypeBadge(registration.event_id?.type || 'Unknown')}</td>
+                        <td>
+                          <div>
+                            <strong>{new Date(registration.createdAt).toLocaleDateString()}</strong>
+                            <br/>
+                            <small style={{color: '#666'}}>
+                              {new Date(registration.createdAt).toLocaleTimeString()}
+                            </small>
+                          </div>
+                        </td>
+                        <td>{getStatusBadge(registration.status)}</td>
+                        <td>
+                          <span style={{
+                            display: 'inline-block',
+                            padding: '2px 6px',
+                            borderRadius: '8px',
+                            fontSize: '0.8em',
+                            fontWeight: '500',
+                            backgroundColor: '#f0f0f0',
+                            color: '#666'
+                          }}>
+                            {registration.role || registration.user_id?.role || 'Unknown'}
+                          </span>
+                        </td>
+                        <td>
+                          <button 
+                            className="btn btn-secondary btn-sm"
+                            onClick={() => alert(`User: ${registration.user_id?.email || registration.email}\nPersonal ID: ${registration.personalId}\nRegistered: ${new Date(registration.createdAt).toLocaleString()}`)}
+                            title="View Registration Details"
+                          >
+                            👁️ View
+                          </button>
+                          <button 
+                            className="btn btn-danger btn-sm"
+                            onClick={() => handleDeleteRegistration(
+                              registration._id, 
+                              registration.user_id ? `${registration.user_id.first_name} ${registration.user_id.last_name}` : registration.name,
+                              registration.event_id?.name || 'Unknown Event'
+                            )}
+                            title="Delete Registration"
+                            style={{marginLeft: '4px'}}
+                          >
+                            🗑️ Delete
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>

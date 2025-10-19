@@ -244,3 +244,39 @@ export const getEventRegistrations = async (req, res) => {
     res.status(500).json({ message: "Server error.", error: error.message });
   }
 };
+
+// Get all registrations from database (Admin only - should be added to admin routes)
+export const getAllRegistrations = async (req, res) => {
+  try {
+    console.log('Fetching all registrations from database...');
+    
+    // Fetch all registrations and populate user and event details
+    const registrations = await Registration.find()
+      .populate('user_id', 'first_name last_name email role id_number')
+      .populate('event_id', 'name type location start_date end_date time capacity')
+      .sort({ createdAt: -1 }); // Sort by newest first
+
+    console.log(`Found ${registrations.length} total registrations in database`);
+
+    // Calculate statistics
+    const stats = {
+      total: registrations.length,
+      registered: registrations.filter(r => r.status === 'registered').length,
+      canceled: registrations.filter(r => r.status === 'canceled').length
+    };
+
+    res.json({
+      message: "All registrations retrieved successfully",
+      registrations,
+      stats,
+      total: registrations.length
+    });
+
+  } catch (error) {
+    console.error('Error fetching all registrations:', error);
+    res.status(500).json({ 
+      message: "Server error while fetching registrations.", 
+      error: error.message 
+    });
+  }
+};

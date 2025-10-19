@@ -49,6 +49,92 @@ const styles = `
     text-align: center;
     padding: 2rem;
   }
+
+  .modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.4);
+    overflow-y: auto;
+  }
+
+  .modal.show {
+    display: block;
+  }
+
+  .modal-content {
+    background-color: #fefefe;
+    margin: 2% auto;
+    padding: 20px;
+    border: 1px solid #888;
+    width: 90%;
+    max-width: 800px;
+    border-radius: 8px;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 10px;
+  }
+
+  .modal-title {
+    margin: 0;
+    color: #333;
+  }
+
+  .close-btn {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: #999;
+  }
+
+  .close-btn:hover {
+    color: #333;
+  }
+
+  .event-details {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .event-detail-item {
+    margin-bottom: 0.5rem;
+  }
+
+  .event-detail-label {
+    font-weight: bold;
+    color: #555;
+    margin-bottom: 4px;
+  }
+
+  .event-detail-value {
+    color: #333;
+  }
+
+  @media (max-width: 768px) {
+    .event-details {
+      grid-template-columns: 1fr;
+    }
+    
+    .modal-content {
+      width: 95%;
+      margin: 5% auto;
+    }
+  }
 `;
 
 // Add styles to head
@@ -64,6 +150,8 @@ export default function AllEventsPage() {
   const [filter, setFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [registrationCounts, setRegistrationCounts] = useState({}); // New state for registration counts
+  const [viewEventModal, setViewEventModal] = useState(false);
+  const [selectedEvent, setSelectedEvent] = useState(null);
   const [stats, setStats] = useState({
     workshops: 0,
     trips: 0,
@@ -235,6 +323,208 @@ export default function AllEventsPage() {
     }
   };
 
+  const handleViewEvent = (event) => {
+    setSelectedEvent(event);
+    setViewEventModal(true);
+  };
+
+  const EventDetailsModal = ({ isOpen, onClose, event }) => {
+    if (!event) return null;
+
+    const formatDate = (dateString) => {
+      return new Date(dateString).toLocaleDateString('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+    };
+
+    const renderEventSpecificDetails = () => {
+      switch(event.type) {
+        case 'Workshop':
+          return (
+            <div style={{marginTop: '1rem', padding: '1rem', backgroundColor: '#f8f9fa', borderRadius: '8px'}}>
+              <h4>Workshop Details</h4>
+              <div className="event-details">
+                {event.workshop?.faculty_responsible && (
+                  <div className="event-detail-item">
+                    <div className="event-detail-label">Faculty Responsible:</div>
+                    <div className="event-detail-value">{event.workshop.faculty_responsible}</div>
+                  </div>
+                )}
+                {event.workshop?.professors_participating && (
+                  <div className="event-detail-item">
+                    <div className="event-detail-label">Professors:</div>
+                    <div className="event-detail-value">{event.workshop.professors_participating.join(', ')}</div>
+                  </div>
+                )}
+                {event.workshop?.required_budget && (
+                  <div className="event-detail-item">
+                    <div className="event-detail-label">Budget:</div>
+                    <div className="event-detail-value">${event.workshop.required_budget}</div>
+                  </div>
+                )}
+                {event.workshop?.funding_source && (
+                  <div className="event-detail-item">
+                    <div className="event-detail-label">Funding:</div>
+                    <div className="event-detail-value">{event.workshop.funding_source}</div>
+                  </div>
+                )}
+              </div>
+              {event.workshop?.full_agenda && (
+                <div className="event-detail-item">
+                  <div className="event-detail-label">Agenda:</div>
+                  <div className="event-detail-value">{event.workshop.full_agenda}</div>
+                </div>
+              )}
+            </div>
+          );
+        case 'Trip':
+          return (
+            <div style={{marginTop: '1rem', padding: '1rem', backgroundColor: '#f8f9fa', borderRadius: '8px'}}>
+              <h4>Trip Details</h4>
+              <div className="event-details">
+                {event.trip?.price && (
+                  <div className="event-detail-item">
+                    <div className="event-detail-label">Price:</div>
+                    <div className="event-detail-value">${event.trip.price}</div>
+                  </div>
+                )}
+                {event.trip?.registration_deadline && (
+                  <div className="event-detail-item">
+                    <div className="event-detail-label">Registration Deadline:</div>
+                    <div className="event-detail-value">{formatDate(event.trip.registration_deadline)}</div>
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        case 'Conference':
+          return (
+            <div style={{marginTop: '1rem', padding: '1rem', backgroundColor: '#f8f9fa', borderRadius: '8px'}}>
+              <h4>Conference Details</h4>
+              <div className="event-details">
+                {event.conference?.campus && (
+                  <div className="event-detail-item">
+                    <div className="event-detail-label">Campus:</div>
+                    <div className="event-detail-value">{event.conference.campus}</div>
+                  </div>
+                )}
+                {event.conference?.conference_website && (
+                  <div className="event-detail-item">
+                    <div className="event-detail-label">Website:</div>
+                    <div className="event-detail-value">
+                      <a href={event.conference.conference_website} target="_blank" rel="noopener noreferrer">
+                        {event.conference.conference_website}
+                      </a>
+                    </div>
+                  </div>
+                )}
+                {event.conference?.required_budget && (
+                  <div className="event-detail-item">
+                    <div className="event-detail-label">Budget:</div>
+                    <div className="event-detail-value">${event.conference.required_budget}</div>
+                  </div>
+                )}
+              </div>
+              {event.conference?.full_agenda && (
+                <div className="event-detail-item">
+                  <div className="event-detail-label">Agenda:</div>
+                  <div className="event-detail-value">{event.conference.full_agenda}</div>
+                </div>
+              )}
+            </div>
+          );
+        default:
+          return null;
+      }
+    };
+
+    return (
+      <div className={`modal ${isOpen ? 'show' : ''}`} onClick={onClose}>
+        <div className="modal-content" onClick={e => e.stopPropagation()}>
+          <div className="modal-header">
+            <h3 className="modal-title">{event.name}</h3>
+            <button className="close-btn" onClick={onClose}>&times;</button>
+          </div>
+          
+          <div className="event-details">
+            <div className="event-detail-item">
+              <div className="event-detail-label">Type:</div>
+              <div className="event-detail-value">
+                <span style={{
+                  padding: '4px 8px',
+                  borderRadius: '12px',
+                  fontSize: '0.85em',
+                  fontWeight: '500',
+                  backgroundColor: 
+                    event.type === 'Workshop' ? '#e3f2fd' :
+                    event.type === 'Trip' ? '#f3e5f5' :
+                    event.type === 'Bazaar' ? '#fff3e0' :
+                    event.type === 'Booth' ? '#e8f5e8' :
+                    event.type === 'Conference' ? '#fce4ec' : '#f5f5f5',
+                  color:
+                    event.type === 'Workshop' ? '#1976d2' :
+                    event.type === 'Trip' ? '#7b1fa2' :
+                    event.type === 'Bazaar' ? '#ef6c00' :
+                    event.type === 'Booth' ? '#388e3c' :
+                    event.type === 'Conference' ? '#c2185b' : '#666'
+                }}>
+                  {event.type}
+                </span>
+              </div>
+            </div>
+            
+            <div className="event-detail-item">
+              <div className="event-detail-label">Status:</div>
+              <div className="event-detail-value">{getStatusBadge(event)}</div>
+            </div>
+
+            <div className="event-detail-item">
+              <div className="event-detail-label">Start Date:</div>
+              <div className="event-detail-value">{formatDate(event.start_date)}</div>
+            </div>
+
+            <div className="event-detail-item">
+              <div className="event-detail-label">End Date:</div>
+              <div className="event-detail-value">{formatDate(event.end_date)}</div>
+            </div>
+
+            <div className="event-detail-item">
+              <div className="event-detail-label">Time:</div>
+              <div className="event-detail-value">{event.time}</div>
+            </div>
+
+            <div className="event-detail-item">
+              <div className="event-detail-label">Location:</div>
+              <div className="event-detail-value">{event.location}</div>
+            </div>
+
+            <div className="event-detail-item">
+              <div className="event-detail-label">Capacity:</div>
+              <div className="event-detail-value">{getEventCapacity(event)}</div>
+            </div>
+
+            <div className="event-detail-item">
+              <div className="event-detail-label">Registered:</div>
+              <div className="event-detail-value">{getRegistrationCount(event._id)}</div>
+            </div>
+          </div>
+
+          {event.short_description && (
+            <div className="event-detail-item" style={{marginTop: '1rem'}}>
+              <div className="event-detail-label">Description:</div>
+              <div className="event-detail-value">{event.short_description}</div>
+            </div>
+          )}
+
+          {renderEventSpecificDetails()}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="dashboard">
       <nav className="dashboard-nav">
@@ -248,6 +538,17 @@ export default function AllEventsPage() {
       </nav>
 
       <div className="dashboard-content">
+        {viewEventModal && selectedEvent && (
+          <EventDetailsModal
+            isOpen={viewEventModal}
+            onClose={() => {
+              setViewEventModal(false);
+              setSelectedEvent(null);
+            }}
+            event={selectedEvent}
+          />
+        )}
+        
         <aside className="sidebar">
           <ul className="sidebar-menu">
             <li><Link href="/admin">🏠 Dashboard</Link></li>
@@ -454,7 +755,7 @@ export default function AllEventsPage() {
                         <td>
                           <button 
                             className="btn btn-secondary btn-sm"
-                            onClick={() => window.open(`/admin/events/${event._id}`, '_blank')}
+                            onClick={() => handleViewEvent(event)}
                             title="View Event Details"
                           >
                             👁️ View
