@@ -1,6 +1,7 @@
 import express from "express";
 import {
   getUpcomingEvents,
+  getAllEvents,
   filterEvents,
   sortEventsByDate,
   deleteEvent,
@@ -10,6 +11,9 @@ import {
 import {auth, requireStudentOrAbove, requireAdminOrEventsOffice} from "../middleware/auth.js";
 
 const router = express.Router();
+
+// GET all events
+router.get("/all", auth, requireAdminOrEventsOffice, getAllEvents);
 
 // GET all upcoming events
 router.get("/upcoming", auth, requireStudentOrAbove, getUpcomingEvents);

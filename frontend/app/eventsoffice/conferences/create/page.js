@@ -9,7 +9,7 @@ import '@/app/dashboard.css';
 export default function CreateConferencePage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [message, setMessage] = useState({ text: '', type: '' });
   const [formData, setFormData] = useState({
     name: '',
     location: '',
@@ -28,15 +28,17 @@ export default function CreateConferencePage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
+    setMessage({ text: '', type: '' });
     setLoading(true);
 
     try {
       await conferenceAPI.create(formData);
-      alert('Conference created successfully!');
-      router.push('/eventsoffice/conferences');
+      setMessage({ text: 'Conference created successfully!', type: 'success' });
+      setTimeout(() => {
+        router.push('/eventsoffice/conferences');
+      }, 1500);
     } catch (err) {
-      setError(err.message || 'Failed to create conference');
+      setMessage({ text: err.message || 'Failed to create conference', type: 'error' });
     } finally {
       setLoading(false);
     }
@@ -73,9 +75,9 @@ export default function CreateConferencePage() {
         <main className="main-content">
           <h1>Create New Conference 🎓</h1>
 
-          {error && (
-            <div className="alert alert-error">
-              {error}
+          {message.text && (
+            <div className={`alert alert-${message.type}`}>
+              {message.text}
             </div>
           )}
 

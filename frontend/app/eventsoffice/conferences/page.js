@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
-import { conferenceAPI } from '@/utils/api';
+import { conferenceAPI, eventAPI } from '@/utils/api';
 import '@/app/dashboard.css';
 
 export default function ConferencesPage() {
@@ -30,7 +30,24 @@ export default function ConferencesPage() {
     }
   };
 
+  const canEdit = (conference) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const startDate = new Date(conference.start_date);
+    startDate.setHours(0, 0, 0, 0);
+    return startDate >= today;
+  };
+
+  const canDelete = (conference) => {
+    return !conference.registrations || conference.registrations.length === 0;
+  };
+
   const handleEdit = (conference) => {
+    if (!canEdit(conference)) {
+      setMessage({ text: 'Cannot edit a conference that has already started', type: 'error' });
+      return;
+    }
+    
     setEditingConference(conference._id);
     setEditFormData({
       name: conference.name,
@@ -47,6 +64,25 @@ export default function ConferencesPage() {
       funding_source: conference.conference?.funding_source || '',
       extra_required_sources: conference.conference?.extra_required_sources || ''
     });
+  };
+
+  const handleDelete = async (conference) => {
+    if (!canDelete(conference)) {
+      setMessage({ text: 'Cannot delete: Conference has registrations', type: 'error' });
+      return;
+    }
+
+    if (!confirm(`Are you sure you want to delete "${conference.name}"?`)) {
+      return;
+    }
+
+    try {
+      await eventAPI.delete(conference._id);
+      setMessage({ text: 'Conference deleted successfully!', type: 'success' });
+      fetchConferences();
+    } catch (err) {
+      setMessage({ text: err.message || 'Failed to delete conference', type: 'error' });
+    }
   };
 
   const handleUpdate = async (e) => {
@@ -144,6 +180,7 @@ export default function ConferencesPage() {
                       <th>Conference Name</th>
                       <th>Campus</th>
                       <th>Date</th>
+                      <th>Website</th>
                       <th>Budget</th>
                       <th>Status</th>
                       <th>Actions</th>
@@ -168,6 +205,20 @@ export default function ConferencesPage() {
                           <br />
                           <small>{conference.time}</small>
                         </td>
+                        <td>
+                          {conference.conference?.conference_website ? (
+                            <a 
+                              href={conference.conference.conference_website} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              style={{ color: '#007bff', textDecoration: 'none' }}
+                            >
+                              🔗 Visit Site
+                            </a>
+                          ) : (
+                            'N/A'
+                          )}
+                        </td>
                         <td>${conference.conference?.required_budget || 0}</td>
                         <td>
                           <span className={`status-badge status-${conference.status}`}>
@@ -177,10 +228,33 @@ export default function ConferencesPage() {
                         <td>
                           <button
                             onClick={() => handleEdit(conference)}
-                            className="btn-icon"
-                            title="Edit"
+                            className="btn-secondary"
+                            title={canEdit(conference) ? "Edit" : "Cannot edit past conferences"}
+                            disabled={!canEdit(conference)}
+                            style={{ 
+                              marginRight: '5px',
+                              padding: '5px 10px',
+                              fontSize: '12px',
+                              minWidth: '70px'
+                            }}
                           >
-                            ✏️
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => handleDelete(conference)}
+                            className="btn-secondary"
+                            title={canDelete(conference) ? "Delete" : "Cannot delete: has registrations"}
+                            disabled={!canDelete(conference)}
+                            style={{
+                              backgroundColor: canDelete(conference) ? '#dc3545' : '#6c757d',
+                              borderColor: canDelete(conference) ? '#dc3545' : '#6c757d',
+                              color: '#fff',
+                              padding: '5px 10px',
+                              fontSize: '12px',
+                              minWidth: '70px'
+                            }}
+                          >
+                            Delete
                           </button>
                         </td>
                       </tr>
@@ -271,6 +345,75 @@ export default function ConferencesPage() {
                         onChange={(e) => setEditFormData({...editFormData, time: e.target.value})}
                       />
                     </div>
+                  </div>
+
+                  <div className="form-group">
+                    <label>Full Agenda *</label>
+                    <textarea
+                      rows="5"
+                      required
+                      value={editFormData.full_agenda}
+                      onChange={(e) => setEditFormData({...editFormData, full_agenda: e.target.value})}
+                      placeholder="Detailed agenda for the conference"
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label>Participating Professors *</label>
+                    <textarea
+                      rows="3"
+                      required
+                      value={editFormData.professors_participating}
+                      onChange={(e) => setEditFormData({...editFormData, professors_participating: e.target.value})}
+                      placeholder="List of professors participating"
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label>Conference Website *</label>
+                    <input
+                      type="url"
+                      required
+                      value={editFormData.conference_website}
+                      onChange={(e) => setEditFormData({...editFormData, conference_website: e.target.value})}
+                      placeholder="https://conference-website.com"
+                    />
+                  </div>
+
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>Required Budget *</label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        required
+                        value={editFormData.required_budget}
+                        onChange={(e) => setEditFormData({...editFormData, required_budget: e.target.value})}
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>Funding Source *</label>
+                      <select
+                        required
+                        value={editFormData.funding_source}
+                        onChange={(e) => setEditFormData({...editFormData, funding_source: e.target.value})}
+                      >
+                        <option value="">Select Funding Source</option>
+                        <option value="GUC">GUC</option>
+                        <option value="EXTERNAL">External</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="form-group">
+                    <label>Extra Required Resources</label>
+                    <textarea
+                      rows="3"
+                      value={editFormData.extra_required_sources}
+                      onChange={(e) => setEditFormData({...editFormData, extra_required_sources: e.target.value})}
+                      placeholder="Any additional resources needed (optional)"
+                    />
                   </div>
 
                   <div className="form-actions">

@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
-import { tripAPI } from '@/utils/api';
+import { tripAPI, eventAPI } from '@/utils/api';
 import '@/app/dashboard.css';
 
 export default function TripsPage() {
@@ -30,18 +30,20 @@ export default function TripsPage() {
   };
 
   const handleEdit = (trip) => {
+    if (!canEdit(trip)) return;
     setEditingTrip(trip._id);
     setEditFormData({
       name: trip.name,
       location: trip.location,
-      price: trip.price,
+      price: trip.trip?.price || '',
       start_date: trip.start_date?.split('T')[0] || '',
       end_date: trip.end_date?.split('T')[0] || '',
       time: trip.time,
       short_description: trip.short_description,
-      capacity: trip.capacity,
-      registration_deadline: trip.registration_deadline?.split('T')[0] || '',
+      capacity: trip.trip?.capacity || '',
+      registration_deadline: trip.trip?.registration_deadline?.split('T')[0] || '',
     });
+    setMessage({ text: '', type: '' });
   };
 
   const handleUpdate = async (e) => {
@@ -52,6 +54,7 @@ export default function TripsPage() {
       await tripAPI.edit(editingTrip, editFormData);
       setMessage({ text: 'Trip updated successfully!', type: 'success' });
       setEditingTrip(null);
+      setEditFormData({});
       fetchTrips();
     } catch (err) {
       setMessage({ text: err.message || 'Failed to update trip', type: 'error' });
@@ -65,6 +68,32 @@ export default function TripsPage() {
       month: 'short',
       day: 'numeric'
     });
+  };
+
+  const canEdit = (trip) => {
+    // Check if trip start date hasn't passed yet
+    const tripStartDate = new Date(trip.start_date);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return tripStartDate >= today;
+  };
+
+  const handleDelete = async (tripId, tripName) => {
+    if (!confirm(`Are you sure you want to delete "${tripName}"? This action cannot be undone.`)) return;
+    setMessage({ text: '', type: '' });
+
+    try {
+      await eventAPI.delete(tripId);
+      setMessage({ text: 'Trip deleted successfully!', type: 'success' });
+      fetchTrips();
+    } catch (err) {
+      setMessage({ text: err.message || 'Failed to delete trip', type: 'error' });
+    }
+  };
+
+  const canDelete = (trip) => {
+    // Can delete only if no one has registered
+    return (trip.registrations?.length || 0) === 0;
   };
 
   const upcomingTrips = trips.filter(trip => new Date(trip.start_date) > new Date()).length;
@@ -178,8 +207,8 @@ export default function TripsPage() {
                         <td>{trip.name}</td>
                         <td>{trip.location}</td>
                         <td>{formatDate(trip.start_date)}</td>
-                        <td>{trip.price} EGP</td>
-                        <td>{trip.registrations?.length || 0}/{trip.capacity}</td>
+                        <td>{trip.trip?.price || 'N/A'} EGP</td>
+                        <td>{trip.registrations?.length || 0}/{trip.trip?.capacity || 0}</td>
                         <td>
                           <span className={`badge ${
                             new Date(trip.start_date) > new Date() ? 'badge-success' : 'badge-secondary'
@@ -191,8 +220,20 @@ export default function TripsPage() {
                           <button
                             onClick={() => handleEdit(trip)}
                             className="btn-secondary btn-sm"
+                            disabled={!canEdit(trip)}
+                            title={!canEdit(trip) ? 'Cannot edit a trip that has already started' : 'Edit trip'}
+                            style={{ marginRight: '0.5rem' }}
                           >
                             Edit
+                          </button>
+                          <button
+                            onClick={() => handleDelete(trip._id, trip.name)}
+                            className="btn-secondary btn-sm"
+                            disabled={!canDelete(trip)}
+                            title={!canDelete(trip) ? 'Cannot delete: users have registered' : 'Delete trip'}
+                            style={{ backgroundColor: canDelete(trip) ? '#dc3545' : undefined, borderColor: canDelete(trip) ? '#dc3545' : undefined, color: canDelete(trip) ? 'white' : undefined }}
+                          >
+                            Delete
                           </button>
                         </td>
                       </tr>
