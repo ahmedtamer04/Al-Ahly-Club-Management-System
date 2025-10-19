@@ -343,41 +343,54 @@ export const registrationAPI = {
 export const vendorAPI = {
   // GET /api/vendor/upcoming/bazaars
   // Auth: requireVendor
+  // Returns upcoming bazaars with registration status
   getUpcomingBazaars: () => api.get('/vendor/upcoming/bazaars'),
-
-  // GET /api/vendor/upcoming/booths
-  // Auth: requireVendor
-  getUpcomingBooths: () => api.get('/vendor/upcoming/booths'),
 
   // POST /api/vendor/apply/bazaar
   // Auth: requireVendor
-  // Required: { event_id, application: { business_description, products, previous_experience, ... } }
+  // Required: { bazaar_id, booth_size, bazaar_staff: [{ name, email }] }
   applyToBazaar: (applicationData) => api.post('/vendor/apply/bazaar', applicationData),
 
-  // POST /api/vendor/apply/booth
+  // POST /api/vendor/apply/booth-event
   // Auth: requireVendor
-  // Required: { event_id, application: { business_description, products, previous_experience, ... } }
-  applyToBooth: (applicationData) => api.post('/vendor/apply/booth', applicationData),
+  // Required: { booth_size, setup_duration_weeks, booth_location: { zone, x_coordinate?, y_coordinate?, description? }, booth_staff: [{ name, email }], preferred_start_date?, notes? }
+  applyToBoothEvent: (applicationData) => api.post('/vendor/apply/booth-event', applicationData),
 
   // GET /api/vendor/applications/accepted
   // Auth: requireVendor
+  // Returns accepted applications for upcoming events
   getAcceptedApplications: () => api.get('/vendor/applications/accepted'),
 
   // GET /api/vendor/applications/pending-rejected
   // Auth: requireVendor
-  getPendingAndRejected: () => api.get('/vendor/applications/pending-rejected'),
+  // Query params: status (optional: 'pending' or 'rejected')
+  getPendingAndRejected: (status = null) => {
+    const queryString = status ? `?status=${status}` : '';
+    return api.get(`/vendor/applications/pending-rejected${queryString}`);
+  },
 
   // GET /api/vendor/applications/my-applications
   // Auth: requireVendor
+  // Returns all applications grouped by status
   getMyApplications: () => api.get('/vendor/applications/my-applications'),
 
   // GET /api/vendor/applications/:applicationId
   // Auth: requireVendor
+  // Returns detailed application information
   getApplicationById: (id) => api.get(`/vendor/applications/${id}`),
 
   // PATCH /api/vendor/applications/:applicationId/cancel
   // Auth: requireVendor
+  // Cancels pending unpaid application
   cancelApplication: (id) => api.patch(`/vendor/applications/${id}/cancel`, {}),
+
+  // GET /api/vendor/booth-availability
+  // Auth: requireVendor
+  // Query params: start_date (YYYY-MM-DD), duration_weeks (1-4)
+  // Returns occupied booth positions
+  getBoothAvailability: (startDate, durationWeeks) => {
+    return api.get(`/vendor/booth-availability?start_date=${startDate}&duration_weeks=${durationWeeks}`);
+  },
 };
 
 // ================================

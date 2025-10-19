@@ -18,6 +18,32 @@ const vendorAppSchema = new mongoose.Schema({
     enum: ["bazaar", "booth_event"], 
     required: true 
   },
+  // Business information (for booth_event applications)
+  business_name: {
+    type: String,
+    trim: true
+  },
+  business_type: {
+    type: String,
+    trim: true
+  },
+  business_description: {
+    type: String,
+    trim: true
+  },
+  products_offered: {
+    type: String,
+    trim: true
+  },
+  contact_phone: {
+    type: String,
+    trim: true
+  },
+  contact_email: {
+    type: String,
+    trim: true,
+    lowercase: true
+  },
   application: {
     // For bazaar applications - names and emails with booth size selection
     bazaar_staff: {
@@ -147,6 +173,34 @@ const vendorAppSchema = new mongoose.Schema({
       maxlength: [500, 'Notes cannot exceed 500 characters']
     }
   },
+  // Platform position for booth (4 walls: north/south/east/west, slot 1-6 per wall)
+  platform_position: {
+    wall: {
+      type: String,
+      enum: ["north", "south", "east", "west"],
+      required: function() {
+        return this.kind === 'booth_event';
+      }
+    },
+    slot: {
+      type: Number,
+      min: 1,
+      max: 6,
+      required: function() {
+        return this.kind === 'booth_event';
+      }
+    }
+  },
+  // Duration in weeks (flattened from application object for easier querying)
+  duration_weeks: {
+    type: Number,
+    min: 1,
+    max: 4
+  },
+  // Preferred start date (flattened from application object for easier querying)
+  preferred_start_date: {
+    type: Date
+  },
   status: { 
     type: String, 
     enum: ["pending", "accepted", "rejected", "cancelled"], 
@@ -178,11 +232,11 @@ vendorAppSchema.index({ bazaar_id: 1, status: 1 });
 vendorAppSchema.pre('save', function(next) {
   // Validate booth_event specific fields
   if (this.kind === 'booth_event') {
-    if (!this.application.setup_duration_weeks) {
-      return next(new Error('Setup duration in weeks is required for booth event applications'));
+    if (!this.duration_weeks) {
+      return next(new Error('Duration in weeks is required for booth event applications'));
     }
-    if (!this.application.booth_location || !this.application.booth_location.zone) {
-      return next(new Error('Booth location is required for booth event applications'));
+    if (!this.platform_position || !this.platform_position.wall || !this.platform_position.slot) {
+      return next(new Error('Platform position (wall and slot) is required for booth event applications'));
     }
     if (!this.application.booth_staff || this.application.booth_staff.length === 0) {
       return next(new Error('Booth staff with names and emails is required for booth event applications'));

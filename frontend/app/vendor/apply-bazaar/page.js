@@ -1,10 +1,13 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import '@/app/dashboard.css';
 
 export default function ApplyBazaarPage() {
+  // Initialize as null to match server-side rendering
+  const [user, setUser] = useState(null);
+  const [isClient, setIsClient] = useState(false);
   const [bazaars, setBazaars] = useState([]);
   const [selectedBazaar, setSelectedBazaar] = useState('');
   const [formData, setFormData] = useState({
@@ -16,6 +19,17 @@ export default function ApplyBazaarPage() {
     contactPhone: '',
     contactEmail: ''
   });
+
+  // Load user data on client side only
+  useEffect(() => {
+    setIsClient(true);
+    if (typeof window !== 'undefined') {
+      const userData = localStorage.getItem('user');
+      if (userData) {
+        setUser(JSON.parse(userData));
+      }
+    }
+  }, []);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -29,7 +43,7 @@ export default function ApplyBazaarPage() {
         <div className="nav-container">
           <h1 className="nav-brand">Al-Ahly Events</h1>
           <div className="nav-links">
-            <span className="nav-user">🏪 Vendor Dashboard</span>
+            <span className="nav-user">🏪 {user?.vendor_info?.company_name || 'Vendor'}</span>
             <Link href="/">Logout</Link>
           </div>
         </div>
@@ -39,10 +53,9 @@ export default function ApplyBazaarPage() {
         <aside className="sidebar">
           <ul className="sidebar-menu">
             <li><Link href="/vendor">🏠 Dashboard</Link></li>
-            <li><Link href="/vendor/bazaars">🏪 Available Bazaars</Link></li>
-            <li><Link href="/vendor/apply-bazaar">📝 Apply to Bazaar</Link></li>
-            <li><Link href="/vendor/apply-booth">🎪 Apply for Booth</Link></li>
             <li><Link href="/vendor/applications">📋 My Applications</Link></li>
+            <li><Link href="/vendor/bazaars">🎪 Browse Bazaars</Link></li>
+            <li><Link href="/vendor/booths">� My Booths</Link></li>
             <li><Link href="/vendor/profile">👤 Profile</Link></li>
           </ul>
         </aside>
