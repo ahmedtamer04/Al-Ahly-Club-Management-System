@@ -791,6 +791,7 @@ export default function ProfessorEvents() {
                       >
                         <option value="all">All Types</option>
                         <option value="Workshop">Workshops</option>
+                        <option value="Trip">Trips</option>
                         <option value="Bazaar">Bazaars</option>
                         <option value="Conference">Conferences</option>
                         <option value="Booth">Booths</option>
