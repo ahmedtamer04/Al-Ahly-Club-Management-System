@@ -6,6 +6,7 @@ import {
   sortEventsByDate,
   deleteEvent,
   getEventComments
+  getEventById
 } from "../controllers/eventController.js";
 
 import {auth, requireStudentOrAbove, requireAdminOrEventsOffice} from "../middleware/auth.js";
@@ -27,7 +28,7 @@ router.get("/sort/date/:order", auth, requireStudentOrAbove, sortEventsByDate);
 router.delete("/delete/:eventId", auth, requireAdminOrEventsOffice, deleteEvent);
 
 // GET event by ID
-// router.get("/:id", getEventById);
+router.get("/:id", auth, requireStudentOrAbove, getEventById);
 
 // GET event comments by ID
 router.get("/:event_id/comments", auth, requireStudentOrAbove, getEventComments);

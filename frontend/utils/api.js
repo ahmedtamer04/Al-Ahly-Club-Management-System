@@ -328,6 +328,8 @@ export const eventAPI = {
   // Auth: requireAdminOrEventsOffice
   // Can only delete if no registrations exist
   delete: (eventId) => api.delete(`/events/delete/${eventId}`),
+  // GET /api/events/:id
+  getById: (id) => api.get(`/events/${id}`),
 };
 
 // ================================
