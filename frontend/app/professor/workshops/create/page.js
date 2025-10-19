@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { workshopAPI } from '@/utils/api';
 import '@/app/dashboard.css';
+import '@/app/utils/forms.css';
 
 export default function CreateWorkshopPage() {
   const router = useRouter();
@@ -78,8 +79,8 @@ export default function CreateWorkshopPage() {
         <aside className="sidebar">
           <ul className="sidebar-menu">
             <li><Link href="/professor">🏠 Dashboard</Link></li>
+            <li><Link href="/professor/events">📅 Events</Link></li>
             <li><Link href="/professor/workshops" className="active">🎨 My Workshops</Link></li>
-            <li><Link href="/professor/workshops/create">➕ Create Workshop</Link></li>
             <li><Link href="/professor/profile">👤 Profile</Link></li>
           </ul>
         </aside>
@@ -110,14 +111,16 @@ export default function CreateWorkshopPage() {
               <div className="form-row">
                 <div className="form-group">
                   <label htmlFor="location">Location *</label>
-                  <input
-                    type="text"
+                  <select
                     id="location"
                     required
-                    placeholder="e.g., Engineering Building, Room 301"
                     value={formData.location}
                     onChange={(e) => setFormData({...formData, location: e.target.value})}
-                  />
+                  >
+                    <option value="">Select Location</option>
+                    <option value="GUC Berlin">GUC Berlin</option>
+                    <option value="GUC Cairo">GUC Cairo</option>
+                  </select>
                 </div>
                 <div className="form-group">
                   <label htmlFor="capacity">Capacity *</label>
@@ -203,14 +206,25 @@ export default function CreateWorkshopPage() {
               <div className="form-row">
                 <div className="form-group">
                   <label htmlFor="faculty_responsible">Faculty Responsible *</label>
-                  <input
-                    type="text"
+                  <select
                     id="faculty_responsible"
                     required
-                    placeholder="e.g., Faculty of Engineering"
                     value={formData.faculty_responsible}
                     onChange={(e) => setFormData({...formData, faculty_responsible: e.target.value})}
-                  />
+                  >
+                    <option value="">Select Faculty</option>
+                    <option value="MET">MET</option>
+                    <option value="IET">IET</option>
+                    <option value="BI">BI</option>
+                    <option value="Management">Management</option>
+                    <option value="Pharmacy">Pharmacy</option>
+                    <option value="Law">Law</option>
+                    <option value="Dentistry">Dentistry</option>
+                    <option value="Architecture">Architecture</option>
+                    <option value="Production">Production</option>
+                    <option value="Civil">Civil</option>
+                    <option value="Mechatronics">Mechatronics</option>
+                  </select>
                 </div>
                 <div className="form-group">
                   <label htmlFor="professors_participating">Professors Participating *</label>

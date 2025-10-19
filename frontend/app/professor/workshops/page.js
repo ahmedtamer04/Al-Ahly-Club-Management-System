@@ -1,7 +1,7 @@
 'use client';
 
-import Link from 'next/link';
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { workshopAPI } from '@/utils/api';
 import '@/app/dashboard.css';
 
@@ -32,12 +32,12 @@ export default function MyWorkshopsPage() {
   const handleEdit = (workshop) => {
     setEditingWorkshop(workshop._id);
     setEditFormData({
-      name: workshop.name,
-      location: workshop.location,
-      short_description: workshop.short_description,
+      name: workshop.name || '',
+      location: workshop.location || '',
+      short_description: workshop.short_description || '',
       start_date: workshop.start_date?.split('T')[0] || '',
       end_date: workshop.end_date?.split('T')[0] || '',
-      time: workshop.time,
+      time: workshop.time || '',
       full_agenda: workshop.workshop?.full_agenda || '',
       faculty_responsible: workshop.workshop?.faculty_responsible || '',
       professors_participating: workshop.workshop?.professors_participating || '',
@@ -72,14 +72,6 @@ export default function MyWorkshopsPage() {
     });
   };
 
-  if (loading) {
-    return (
-      <div className="dashboard">
-        <div className="loading">Loading workshops...</div>
-      </div>
-    );
-  }
-
   return (
     <div className="dashboard">
       <nav className="dashboard-nav">
@@ -96,8 +88,9 @@ export default function MyWorkshopsPage() {
         <aside className="sidebar">
           <ul className="sidebar-menu">
             <li><Link href="/professor">🏠 Dashboard</Link></li>
+            <li><Link href="/professor/events">📅 Events</Link></li>
             <li><Link href="/professor/workshops" className="active">🎨 My Workshops</Link></li>
-            <li><Link href="/professor/workshops/create">➕ Create Workshop</Link></li>
+            <li><Link href="/professor/gym">💪 Gym Schedule</Link></li>
             <li><Link href="/professor/profile">👤 Profile</Link></li>
           </ul>
         </aside>
@@ -123,7 +116,12 @@ export default function MyWorkshopsPage() {
           )}
 
           <section className="section">
-            {workshops.length === 0 ? (
+            {loading ? (
+              <div className="loading-container">
+                <div className="loading-spinner"></div>
+                <p>Loading workshops...</p>
+              </div>
+            ) : workshops.length === 0 ? (
               <div className="empty-state">
                 <p>🎨 You haven't created any workshops yet</p>
                 <Link href="/professor/workshops/create" className="btn-primary">
@@ -206,38 +204,41 @@ export default function MyWorkshopsPage() {
                     />
                   </div>
 
-                  <div className="form-row">
-                    <div className="form-group">
-                      <label>Location *</label>
-                      <input
-                        type="text"
-                        required
-                        value={editFormData.location}
-                        onChange={(e) => setEditFormData({...editFormData, location: e.target.value})}
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label>Capacity *</label>
-                      <input
-                        type="number"
-                        required
-                        value={editFormData.capacity}
-                        onChange={(e) => setEditFormData({...editFormData, capacity: e.target.value})}
-                      />
-                    </div>
-                  </div>
-
                   <div className="form-group">
                     <label>Short Description *</label>
                     <textarea
-                      rows="3"
                       required
+                      rows="3"
                       value={editFormData.short_description}
                       onChange={(e) => setEditFormData({...editFormData, short_description: e.target.value})}
+                      placeholder="Brief overview of the workshop"
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label>Full Agenda *</label>
+                    <textarea
+                      required
+                      rows="4"
+                      value={editFormData.full_agenda}
+                      onChange={(e) => setEditFormData({...editFormData, full_agenda: e.target.value})}
+                      placeholder="Detailed workshop schedule and content"
                     />
                   </div>
 
                   <div className="form-row">
+                    <div className="form-group">
+                      <label>Location *</label>
+                      <select
+                        required
+                        value={editFormData.location}
+                        onChange={(e) => setEditFormData({...editFormData, location: e.target.value})}
+                      >
+                        <option value="">Select Location</option>
+                        <option value="GUC Berlin">GUC Berlin</option>
+                        <option value="GUC Cairo">GUC Cairo</option>
+                      </select>
+                    </div>
                     <div className="form-group">
                       <label>Start Date *</label>
                       <input
@@ -263,6 +264,85 @@ export default function MyWorkshopsPage() {
                         required
                         value={editFormData.time}
                         onChange={(e) => setEditFormData({...editFormData, time: e.target.value})}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>Faculty Responsible *</label>
+                      <input
+                        type="text"
+                        required
+                        value={editFormData.faculty_responsible}
+                        onChange={(e) => setEditFormData({...editFormData, faculty_responsible: e.target.value})}
+                        placeholder="e.g., Faculty of Engineering"
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>Professors Participating *</label>
+                      <input
+                        type="text"
+                        required
+                        value={editFormData.professors_participating}
+                        onChange={(e) => setEditFormData({...editFormData, professors_participating: e.target.value})}
+                        placeholder="e.g., Dr. Ahmed, Dr. Sara"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>Required Budget *</label>
+                      <input
+                        type="number"
+                        required
+                        min="0"
+                        value={editFormData.required_budget}
+                        onChange={(e) => setEditFormData({...editFormData, required_budget: e.target.value})}
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>Funding Source *</label>
+                      <select
+                        required
+                        value={editFormData.funding_source}
+                        onChange={(e) => setEditFormData({...editFormData, funding_source: e.target.value})}
+                      >
+                        <option value="">Select Funding Source</option>
+                        <option value="GUC">GUC</option>
+                        <option value="EXTERNAL">External</option>
+                      </select>
+                    </div>
+                    <div className="form-group">
+                      <label>Capacity *</label>
+                      <input
+                        type="number"
+                        required
+                        min="1"
+                        value={editFormData.capacity}
+                        onChange={(e) => setEditFormData({...editFormData, capacity: e.target.value})}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>Extra Resources</label>
+                      <textarea
+                        rows="2"
+                        value={editFormData.extra_resources}
+                        onChange={(e) => setEditFormData({...editFormData, extra_resources: e.target.value})}
+                        placeholder="Any additional resources needed"
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>Registration Deadline *</label>
+                      <input
+                        type="date"
+                        required
+                        value={editFormData.registration_deadline}
+                        onChange={(e) => setEditFormData({...editFormData, registration_deadline: e.target.value})}
                       />
                     </div>
                   </div>
