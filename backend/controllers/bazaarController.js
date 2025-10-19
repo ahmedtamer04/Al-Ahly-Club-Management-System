@@ -134,6 +134,7 @@ export const getAllBazaars = async (req, res) => {
 
     const bazaars = await Event.find(filter)
       .populate('created_by', 'first_name last_name email role')
+      .populate('bazaar.vendors_participating.vendor_id', 'first_name last_name email vendor_info')
       .sort({ start_date: 1 });
 
     res.json({
@@ -153,7 +154,8 @@ export const getBazaarById = async (req, res) => {
     const { id } = req.params;
 
     const bazaar = await Event.findById(id)
-      .populate('created_by', 'first_name last_name email role');
+      .populate('created_by', 'first_name last_name email role')
+      .populate('bazaar.vendors_participating.vendor_id', 'first_name last_name email vendor_info');
 
     if (!bazaar) {
       return res.status(404).json({ message: "Bazaar not found" });
