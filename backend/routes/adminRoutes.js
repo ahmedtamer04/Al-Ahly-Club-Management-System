@@ -15,7 +15,10 @@ import {
   getVendorRequestById,
   acceptVendorRequest,
   rejectVendorRequest,
-  getVendorRequestsStats
+  getVendorRequestsStats,
+  getAllRegistrations,
+  getEventRegistrationCount,
+  getAllEventRegistrationCounts
 } from "../controllers/adminController.js";
 import { auth, requireAdmin, requireAdminOrEventsOffice } from "../middleware/auth.js";
 
@@ -53,6 +56,10 @@ router.get("/pending-users", getPendingUsers);
 router.post("/approve/:userId", approveUser);
 router.post("/resend-verification/:userId", resendVerificationEmail);
 
+// Registration management
+router.get("/registrations", getAllRegistrations);
+router.get("/registrations/counts", getAllEventRegistrationCounts);
+router.get("/registrations/event/:eventId/count", getEventRegistrationCount);
 
 export default router;
 

@@ -1,9 +1,7 @@
 {
-  "/auth/login/page": "app/auth/login/page.js",
-  "/student/facilities/page": "app/student/facilities/page.js",
-  "/student/profile/page": "app/student/profile/page.js",
-  "/student/my-registrations/page": "app/student/my-registrations/page.js",
-  "/student/events/page": "app/student/events/page.js",
-  "/student/gym/schedule/page": "app/student/gym/schedule/page.js",
-  "/student/page": "app/student/page.js"
+  "/admin/users/page": "app/admin/users/page.js",
+  "/admin/events/page": "app/admin/events/page.js",
+  "/admin/facilities/page": "app/admin/facilities/page.js",
+  "/admin/vendors/page": "app/admin/vendors/page.js",
+  "/admin/registrations/page": "app/admin/registrations/page.js"
 }

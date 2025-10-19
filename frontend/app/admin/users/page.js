@@ -176,6 +176,107 @@ const ConfirmationModal = ({ isOpen, onClose, onConfirm, userName }) => {
   );
 };
 
+const UserDetailsModal = ({ isOpen, onClose, userDetails }) => {
+  if (!userDetails) return null;
+
+  return (
+    <div className={`modal ${isOpen ? 'show' : ''}`} onClick={onClose}>
+      <div className="modal-content" onClick={e => e.stopPropagation()}>
+        <div className="modal-header">
+          <h4 className="modal-title">User Details</h4>
+        </div>
+        <div className="modal-body">
+          <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem'}}>
+            <div>
+              <strong>Name:</strong><br/>
+              {userDetails.first_name} {userDetails.last_name}
+            </div>
+            <div>
+              <strong>Email:</strong><br/>
+              {userDetails.email}
+            </div>
+            <div>
+              <strong>Role:</strong><br/>
+              <span className="role-badge">{userDetails.role}</span>
+            </div>
+            <div>
+              <strong>Status:</strong><br/>
+              <span style={{
+                color: userDetails.status === 'active' ? '#4caf50' : 
+                      userDetails.status === 'blocked' ? '#f44336' : '#666',
+                fontWeight: 'bold'
+              }}>
+                {userDetails.status || 'Active'}
+              </span>
+            </div>
+            {userDetails.id_number && (
+              <div>
+                <strong>ID Number:</strong><br/>
+                {userDetails.id_number}
+              </div>
+            )}
+            {userDetails.phone && (
+              <div>
+                <strong>Phone:</strong><br/>
+                {userDetails.phone}
+              </div>
+            )}
+            <div>
+              <strong>Email Verified:</strong><br/>
+              {userDetails.is_verified ? '✅ Yes' : '❌ No'}
+            </div>
+            <div>
+              <strong>Joined Date:</strong><br/>
+              {new Date(userDetails.created_at || userDetails.createdAt).toLocaleDateString()}
+            </div>
+            {userDetails.last_login && (
+              <div>
+                <strong>Last Login:</strong><br/>
+                {new Date(userDetails.last_login).toLocaleDateString()}
+              </div>
+            )}
+            {userDetails.major && (
+              <div>
+                <strong>Major:</strong><br/>
+                {userDetails.major}
+              </div>
+            )}
+          </div>
+          
+          {userDetails.vendor_info && (
+            <div style={{marginTop: '1rem', padding: '1rem', backgroundColor: '#f5f5f5', borderRadius: '8px'}}>
+              <h5>Vendor Information</h5>
+              <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', marginTop: '0.5rem'}}>
+                {userDetails.vendor_info.company_name && (
+                  <div>
+                    <strong>Company:</strong><br/>
+                    {userDetails.vendor_info.company_name}
+                  </div>
+                )}
+                {userDetails.vendor_info.business_type && (
+                  <div>
+                    <strong>Business Type:</strong><br/>
+                    {userDetails.vendor_info.business_type}
+                  </div>
+                )}
+              </div>
+              {userDetails.vendor_info.business_description && (
+                <div style={{marginTop: '0.5rem'}}>
+                  <strong>Description:</strong><br/>
+                  {userDetails.vendor_info.business_description}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+        <div className="modal-footer">
+          <button className="btn btn-secondary" onClick={onClose}>Close</button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export default function ManageUsersPage() {
   const [users, setUsers] = useState([]);
   const [pendingUsers, setPendingUsers] = useState([]);
@@ -184,6 +285,8 @@ export default function ManageUsersPage() {
   const [showCreateAdmin, setShowCreateAdmin] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
+  const [viewUserModal, setViewUserModal] = useState(false);
+  const [userDetails, setUserDetails] = useState(null);
   const [adminFormData, setAdminFormData] = useState({
     name: '',
     email: '',
@@ -193,7 +296,14 @@ export default function ManageUsersPage() {
   useEffect(() => {
     const fetchUsers = async () => {
       try {
+        console.log('Fetching users...');
         const { users: allUsers } = await api.get('/admin/users');
+        console.log('Fetched users:', allUsers);
+        console.log('First user example:', allUsers[0]);
+        if (allUsers[0]) {
+          console.log('First user _id:', allUsers[0]._id);
+          console.log('First user _id type:', typeof allUsers[0]._id);
+        }
         setUsers(allUsers);
         
         const { users: pendingUsersData } = await api.get('/admin/pending-users');
@@ -294,14 +404,51 @@ export default function ManageUsersPage() {
 
   const handleBlockUser = async (userId) => {
     try {
-      const userToBlock = users.find(u => u.id === userId);
+      console.log('=== HANDLE BLOCK USER DEBUG ===');
+      console.log('Received userId:', userId);
+      console.log('typeof userId:', typeof userId);
+      console.log('userId === undefined:', userId === undefined);
+      console.log('userId === null:', userId === null);
+      console.log('userId === "undefined":', userId === 'undefined');
+      
+      // Validate userId parameter - convert to string if it's an object
+      const userIdStr = userId ? userId.toString() : null;
+      console.log('userIdStr after conversion:', userIdStr);
+      console.log('typeof userIdStr:', typeof userIdStr);
+      
+      if (!userIdStr || userIdStr === 'undefined' || userIdStr === 'null') {
+        console.error('=== VALIDATION FAILED ===');
+        console.error('Invalid userId passed to handleBlockUser. Original:', userId, 'Converted:', userIdStr);
+        alert('Error: Invalid user ID. Please refresh the page and try again.');
+        return;
+      }
+
+      console.log('=== VALIDATION PASSED ===');
+      console.log('Using userIdStr:', userIdStr);
+
+      const userToBlock = users.find(u => u._id === userId || u._id === userIdStr);
       if (!userToBlock) {
+        console.error('User not found with ID:', userIdStr);
         throw new Error('User not found');
       }
       
       const action = userToBlock.status === 'blocked' ? 'unblock' : 'block';
       
-      await api.post(`/admin/user/${userId}/block`, { action });
+      console.log('Blocking/unblocking user:', { userId: userIdStr, action, userToBlock });
+      
+      // Try different API endpoint formats
+      let response;
+      try {
+        response = await api.post(`/admin/user/${userIdStr}/block`, { action });
+      } catch (error) {
+        console.log('First endpoint failed, trying alternative...');
+        // Try alternative endpoint
+        response = await api.patch(`/admin/users/${userIdStr}/status`, { 
+          status: action === 'block' ? 'blocked' : 'active' 
+        });
+      }
+
+      console.log('Block/unblock response:', response);
 
       // Refresh the users list
       const { users: updatedUsers } = await api.get('/admin/users');
@@ -310,7 +457,8 @@ export default function ManageUsersPage() {
       alert(`User ${action}ed successfully!`);
     } catch (error) {
       console.error('Error toggling user block status:', error);
-      alert('Failed to update user status: ' + error.message);
+      console.error('Error details:', error.response);
+      alert('Failed to update user status: ' + (error.response?.data?.message || error.message));
     }
   };
 
@@ -358,9 +506,25 @@ export default function ManageUsersPage() {
     }
   };
 
-  const handleViewUser = (userId) => {
-    // TODO: GET /api/admin/user/:userId
-    console.log('View user details:', userId);
+  const handleViewUser = async (userId) => {
+    try {
+      console.log('Fetching user details for:', userId);
+      
+      // Find user in current users list first
+      const user = users.find(u => u._id === userId);
+      if (user) {
+        setUserDetails(user);
+        setViewUserModal(true);
+      } else {
+        // If not found, try to fetch from API
+        const userResponse = await api.get(`/admin/user/${userId}`);
+        setUserDetails(userResponse.user || userResponse);
+        setViewUserModal(true);
+      }
+    } catch (error) {
+      console.error('Error fetching user details:', error);
+      alert('Failed to fetch user details: ' + error.message);
+    }
   };
 
   return (
@@ -385,6 +549,17 @@ export default function ManageUsersPage() {
             }}
             onConfirm={confirmDelete}
             userName={`${selectedUser.first_name} ${selectedUser.last_name}`}
+          />
+        )}
+        
+        {viewUserModal && userDetails && (
+          <UserDetailsModal
+            isOpen={viewUserModal}
+            onClose={() => {
+              setViewUserModal(false);
+              setUserDetails(null);
+            }}
+            userDetails={userDetails}
           />
         )}
         <aside className="sidebar">
@@ -715,10 +890,20 @@ export default function ManageUsersPage() {
                             >
                               View
                             </button>
-                            {user.role !== 'Admin' && (
+                            {/* Allow admins to block/unblock non-admin users, but prevent blocking other admins */}
+                            {user.role !== 'Admin' && user.role !== 'EventsOffice' && (
                               <button 
                                 className={`btn ${user.status === 'blocked' ? 'btn-success' : 'btn-warning'} btn-sm`}
-                                onClick={() => handleBlockUser(user._id)}
+                                onClick={() => {
+                                  console.log('=== BLOCK BUTTON DEBUG ===');
+                                  console.log('Full user object:', user);
+                                  console.log('user._id:', user._id);
+                                  console.log('user.id:', user.id);
+                                  console.log('typeof user._id:', typeof user._id);
+                                  console.log('user._id toString():', user._id ? user._id.toString() : 'null');
+                                  console.log('========================');
+                                  handleBlockUser(user._id);
+                                }}
                                 title={user.status === 'blocked' ? 'Unblock User' : 'Block User'}
                               >
                                 {user.status === 'blocked' ? '🔓 Unblock' : '🔒 Block'}

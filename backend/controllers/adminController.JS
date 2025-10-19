@@ -1,6 +1,7 @@
 import User from "../models/User.js";
 import VendorApplication from "../models/VendorApplication.js";
 import Comment from "../models/Comment.js";
+import Registration from "../models/Registration.js";
 import bcrypt from "bcryptjs";
 import { generateVerificationToken, sendVerificationEmail } from "../services/emailService.js";
 
@@ -297,18 +298,28 @@ export const toggleUserBlock = async (req, res) => {
     const { userId } = req.params;
     const { action } = req.body; // action should be either "block" or "unblock"
 
+    console.log('toggleUserBlock called with:', { userId, action });
+
+    // Validate userId parameter
+    if (!userId || userId === 'undefined' || userId === 'null') {
+      console.error('Invalid userId received:', userId);
+      return res.status(400).json({ message: "Invalid user ID provided" });
+    }
+
+    // Validate action parameter
     if (!["block", "unblock"].includes(action)) {
       return res.status(400).json({ message: "Invalid action. Use 'block' or 'unblock'" });
     }
 
     const user = await User.findById(userId);
     if (!user) {
+      console.error('User not found with ID:', userId);
       return res.status(404).json({ message: "User not found" });
     }
 
-    // Prevent blocking other admins
-    if (user.role === "Admin") {
-      return res.status(403).json({ message: "Cannot block admin users" });
+    // Prevent blocking other admins and events office users
+    if (user.role === "Admin" || user.role === "EventsOffice") {
+      return res.status(403).json({ message: `Cannot block ${user.role} users` });
     }
 
     // Update user status
@@ -763,6 +774,80 @@ export const getVendorRequestsStats = async (req, res) => {
 
   } catch (err) {
     console.error('Error fetching vendor application statistics:', err);
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// Get all registrations with event details (Admin only)
+export const getAllRegistrations = async (req, res) => {
+  try {
+    const registrations = await Registration.find()
+      .populate('event_id', 'name type start_date end_date location')
+      .populate('user_id', 'first_name last_name email role')
+      .sort({ createdAt: -1 });
+
+    res.json({
+      message: "All registrations retrieved successfully",
+      registrations,
+      total: registrations.length
+    });
+
+  } catch (err) {
+    console.error('Error fetching all registrations:', err);
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// Get registration count for a specific event (Admin only)
+export const getEventRegistrationCount = async (req, res) => {
+  try {
+    const { eventId } = req.params;
+    
+    const count = await Registration.countDocuments({ 
+      event_id: eventId,
+      status: { $ne: 'canceled' } // Don't count canceled registrations
+    });
+
+    res.json({
+      message: "Registration count retrieved successfully",
+      eventId,
+      count
+    });
+
+  } catch (err) {
+    console.error('Error fetching registration count:', err);
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// Get registration counts for all events (Admin only)
+export const getAllEventRegistrationCounts = async (req, res) => {
+  try {
+    const counts = await Registration.aggregate([
+      {
+        $match: { status: { $ne: 'canceled' } } // Don't count canceled registrations
+      },
+      {
+        $group: {
+          _id: '$event_id',
+          count: { $sum: 1 }
+        }
+      }
+    ]);
+
+    // Convert to object format
+    const countsObj = {};
+    counts.forEach(item => {
+      countsObj[item._id] = item.count;
+    });
+
+    res.json({
+      message: "All registration counts retrieved successfully",
+      counts: countsObj
+    });
+
+  } catch (err) {
+    console.error('Error fetching all registration counts:', err);
     res.status(500).json({ message: err.message });
   }
 };
