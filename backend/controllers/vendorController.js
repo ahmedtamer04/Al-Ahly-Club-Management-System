@@ -688,3 +688,150 @@ export const getBoothAvailability = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+// Get all vendor applications (Admin only - should be added to admin routes)
+export const getAllVendorApplications = async (req, res) => {
+  try {
+    console.log('Fetching all vendor applications from database...');
+    
+    const { status, kind, page = 1, limit = 50 } = req.query;
+    
+    // Build filter object
+    let filter = {};
+    
+    if (status && ['pending', 'accepted', 'rejected', 'cancelled'].includes(status)) {
+      filter.status = status;
+    }
+    
+    if (kind && ['bazaar', 'booth_event'].includes(kind)) {
+      filter.kind = kind;
+    }
+
+    // Calculate pagination
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    // Fetch all vendor applications with populated vendor and bazaar details
+    const applications = await VendorApplication.find(filter)
+      .populate('vendor_user_id', 'first_name last_name email vendor_info role contact_phone')
+      .populate('bazaar_id', 'name type location start_date end_date time status')
+      .populate('approved_by', 'first_name last_name email role')
+      .sort({ createdAt: -1 }) // Sort by newest first
+      .skip(skip)
+      .limit(parseInt(limit));
+
+    // Get total count for pagination
+    const totalCount = await VendorApplication.countDocuments(filter);
+
+    console.log(`Found ${applications.length} vendor applications (${totalCount} total)`);
+
+    // Format the applications with full details
+    const formattedApplications = applications.map(app => {
+      const vendor = app.vendor_user_id ? {
+        _id: app.vendor_user_id._id,
+        name: `${app.vendor_user_id.first_name || 'Unknown'} ${app.vendor_user_id.last_name || 'Vendor'}`,
+        email: app.vendor_user_id.email || 'N/A',
+        company_name: app.vendor_user_id.vendor_info?.company_name || 'N/A',
+        role: app.vendor_user_id.role || 'Vendor',
+        contact_phone: app.vendor_user_id.contact_phone || 'N/A'
+      } : {
+        _id: null,
+        name: 'Unknown Vendor',
+        email: 'N/A',
+        company_name: 'N/A',
+        role: 'Vendor',
+        contact_phone: 'N/A'
+      };
+
+      let daysUntilStart = null;
+      if (app.bazaar_id) {
+        daysUntilStart = Math.ceil((app.bazaar_id.start_date - new Date()) / (1000 * 60 * 60 * 24));
+      } else if (app.preferred_start_date) {
+        daysUntilStart = Math.ceil((app.preferred_start_date - new Date()) / (1000 * 60 * 60 * 24));
+      }
+
+      return {
+        _id: app._id,
+        vendor,
+        kind: app.kind,
+        status: app.status,
+        payment_status: app.payment_status,
+        // Business information (for booth events)
+        business_name: app.business_name,
+        business_type: app.business_type,
+        business_description: app.business_description,
+        products_offered: app.products_offered,
+        contact_phone: app.contact_phone,
+        contact_email: app.contact_email,
+        // Booth details
+        booth_size: app.application?.booth_size,
+        setup_duration_weeks: app.application?.setup_duration_weeks,
+        booth_location: app.application?.booth_location,
+        // Platform position (for booth events)
+        platform_position: app.platform_position,
+        duration_weeks: app.duration_weeks,
+        preferred_start_date: app.preferred_start_date,
+        // Staff/attendees
+        staff: app.application?.bazaar_staff || app.application?.booth_staff || [],
+        staff_count: (app.application?.bazaar_staff || app.application?.booth_staff || []).length,
+        notes: app.application?.notes,
+        // Bazaar details (if applicable)
+        bazaar: app.bazaar_id ? {
+          _id: app.bazaar_id._id,
+          name: app.bazaar_id.name,
+          type: app.bazaar_id.type,
+          start_date: app.bazaar_id.start_date,
+          end_date: app.bazaar_id.end_date,
+          location: app.bazaar_id.location,
+          time: app.bazaar_id.time,
+          status: app.bazaar_id.status,
+          days_until_start: daysUntilStart
+        } : null,
+        // Status info
+        rejection_reason: app.rejection_reason,
+        approved_by: app.approved_by ? {
+          name: `${app.approved_by.first_name} ${app.approved_by.last_name}`,
+          email: app.approved_by.email,
+          role: app.approved_by.role
+        } : null,
+        approved_at: app.approved_at,
+        applied_at: app.createdAt,
+        updated_at: app.updatedAt,
+        days_until_start: daysUntilStart
+      };
+    });
+
+    // Calculate statistics
+    const stats = {
+      total: totalCount,
+      pending: await VendorApplication.countDocuments({ ...filter, status: 'pending' }),
+      accepted: await VendorApplication.countDocuments({ ...filter, status: 'accepted' }),
+      rejected: await VendorApplication.countDocuments({ ...filter, status: 'rejected' }),
+      cancelled: await VendorApplication.countDocuments({ ...filter, status: 'cancelled' }),
+      bazaar_applications: await VendorApplication.countDocuments({ ...filter, kind: 'bazaar' }),
+      booth_applications: await VendorApplication.countDocuments({ ...filter, kind: 'booth_event' })
+    };
+
+    res.json({
+      message: "All vendor applications retrieved successfully",
+      applications: formattedApplications,
+      stats,
+      pagination: {
+        current_page: parseInt(page),
+        total_pages: Math.ceil(totalCount / parseInt(limit)),
+        total_count: totalCount,
+        limit: parseInt(limit)
+      },
+      filters_applied: {
+        status: status || 'all',
+        kind: kind || 'all'
+      }
+    });
+
+  } catch (error) {
+    console.error('Error fetching all vendor applications:', error);
+    res.status(500).json({ 
+      message: "Server error while fetching vendor applications.", 
+      error: error.message 
+    });
+  }
+};

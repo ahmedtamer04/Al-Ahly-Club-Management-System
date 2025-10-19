@@ -1,5 +1,5 @@
 import express from "express";
-import { auth, requireVendor } from "../middleware/auth.js";
+import { auth, requireVendor, requireAdmin } from "../middleware/auth.js";
 import {
   getUpcomingBazaars,
   applyToBazaar,
@@ -9,7 +9,8 @@ import {
   getApplicationById,
   getMyApplications,
   cancelApplication,
-  getBoothAvailability
+  getBoothAvailability,
+  getAllVendorApplications
 } from "../controllers/vendorController.js";
 
 const router = express.Router();
@@ -44,5 +45,12 @@ router.patch("/applications/:applicationId/cancel", auth, requireVendor, cancelA
 
 // 9. Get booth availability for platform map
 router.get("/booth-availability", auth, requireVendor, getBoothAvailability);
+
+// ========================================
+// ADMIN ROUTES (Get all vendor applications)
+// ========================================
+
+// 10. Get all vendor applications (Admin only)
+router.get("/applications/all", auth, requireAdmin, getAllVendorApplications);
 
 export default router;
