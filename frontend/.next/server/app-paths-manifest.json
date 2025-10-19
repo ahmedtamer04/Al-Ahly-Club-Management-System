@@ -1,7 +1,7 @@
 {
-  "/auth/login/page": "app/auth/login/page.js",
+  "/student/profile/page": "app/student/profile/page.js",
   "/student/page": "app/student/page.js",
   "/student/events/page": "app/student/events/page.js",
-  "/student/my-registrations/page": "app/student/my-registrations/page.js",
-  "/student/gym/schedule/page": "app/student/gym/schedule/page.js"
+  "/student/gym/schedule/page": "app/student/gym/schedule/page.js",
+  "/student/my-registrations/page": "app/student/my-registrations/page.js"
 }

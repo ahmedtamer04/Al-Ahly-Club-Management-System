@@ -67,51 +67,51 @@ export const viewRegisteredEvents = async (req, res) => {
   try {
     const user_id = req.user._id; // Get from auth middleware
     
+    console.log('Fetching registrations for user:', user_id);
+    console.log('User object from auth:', req.user);
+    
+    // Debug: Check total registrations in database
+    const totalRegistrations = await Registration.countDocuments();
+    console.log('Total registrations in database:', totalRegistrations);
+    
     if (!user_id) {
       return res.status(400).json({ message: "User ID is required." });
     }
 
-    // Find all registrations for the user
+    // Find ALL registrations for the user (including canceled ones)
     const registrations = await Registration.find({ 
-      user_id, 
-      status: "registered" 
+      user_id
     }).populate('event_id');
 
-    // Filter out registrations where event doesn't exist
-    const validRegistrations = registrations.filter(reg => reg.event_id);
+    console.log('Raw registrations from DB:', registrations.map(r => ({
+      id: r._id,
+      status: r.status,
+      event_id: r.event_id ? r.event_id._id : 'NO EVENT',
+      event_name: r.event_id ? r.event_id.name : 'NO EVENT NAME'
+    })));
 
-    const now = new Date();
-    const upcoming = [];
-    const past = [];
+    console.log('Found registrations:', registrations.length);
 
-    validRegistrations.forEach(registration => {
-      const event = registration.event_id;
-      
-      // ✅ FIXED: Use correct field names
-      if (event.end_date >= now) {
-        upcoming.push({
-          registration_id: registration._id,
-          registration_date: registration.createdAt,
-          ...event.toObject()
-        });
-      } else {
-        past.push({
-          registration_id: registration._id,
-          registration_date: registration.createdAt,
-          ...event.toObject()
-        });
-      }
-    });
+    // Filter out registrations where event doesn't exist and format the response
+    const validRegistrations = registrations
+      .filter(reg => reg.event_id)
+      .map(registration => ({
+        _id: registration._id,
+        status: registration.status,
+        name: registration.name,
+        email: registration.email,
+        personalId: registration.personalId,
+        role: registration.role,
+        createdAt: registration.createdAt,
+        event: registration.event_id.toObject()
+      }));
+
+    console.log('Valid registrations:', validRegistrations.length);
 
     res.json({ 
       message: "Registered events retrieved successfully",
-      upcoming, 
-      past,
-      totals: {
-        upcoming: upcoming.length,
-        past: past.length,
-        total: validRegistrations.length
-      }
+      registrations: validRegistrations,
+      count: validRegistrations.length
     });
     
   } catch (error) {

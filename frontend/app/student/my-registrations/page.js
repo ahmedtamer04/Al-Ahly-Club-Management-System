@@ -27,22 +27,30 @@ export default function MyRegistrationsPage() {
       setError('');
       
       const user = getUser();
+      console.log('Current user:', user);
+      
       if (!user || !user._id) {
         setError('Please log in to view registrations');
         return;
       }
 
+      console.log('Fetching registrations for user ID:', user._id);
       const response = await registrationAPI.getMyRegistrations(user._id);
-      console.log('My registrations response:', response);
+      console.log('Raw API response:', response);
       
       // Handle different response formats
       let registrationData = [];
       if (response && response.registrations) {
         registrationData = response.registrations;
+        console.log('Using response.registrations:', registrationData);
       } else if (Array.isArray(response)) {
         registrationData = response;
+        console.log('Using response as array:', registrationData);
+      } else {
+        console.log('Unknown response format, using empty array');
       }
       
+      console.log('Final registration data:', registrationData);
       setRegistrations(registrationData);
       calculateStats(registrationData);
       

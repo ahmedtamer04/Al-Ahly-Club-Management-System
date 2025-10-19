@@ -23,6 +23,18 @@
       "static/css/app/student/page.css",
       "static/chunks/app/student/page.js"
     ],
+    "/student/facilities/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/css/app/student/facilities/page.css",
+      "static/chunks/app/student/facilities/page.js"
+    ],
+    "/student/gym/schedule/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/css/app/student/gym/schedule/page.css",
+      "static/chunks/app/student/gym/schedule/page.js"
+    ],
     "/student/events/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
@@ -35,11 +47,17 @@
       "static/css/app/student/my-registrations/page.css",
       "static/chunks/app/student/my-registrations/page.js"
     ],
-    "/student/gym/schedule/page": [
+    "/auth/register/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/css/app/student/gym/schedule/page.css",
-      "static/chunks/app/student/gym/schedule/page.js"
+      "static/css/app/auth/register/page.css",
+      "static/chunks/app/auth/register/page.js"
+    ],
+    "/student/profile/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/css/app/student/profile/page.css",
+      "static/chunks/app/student/profile/page.js"
     ]
   }
 }
