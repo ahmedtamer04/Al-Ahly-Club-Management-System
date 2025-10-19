@@ -19,6 +19,7 @@ export default function VendorApplicationsPage() {
     rejected: 0
   });
   const [cancelling, setCancelling] = useState(null);
+  const [activeFilter, setActiveFilter] = useState('all'); // 'all', 'approved', 'pending-rejected'
 
   // Load user data on client side only
   useEffect(() => {
@@ -127,6 +128,14 @@ export default function VendorApplicationsPage() {
     return app.status === 'pending' && app.payment_status !== 'paid';
   };
 
+  // Filter applications based on active filter
+  const filteredApplications = applications.filter(app => {
+    if (activeFilter === 'all') return true;
+    if (activeFilter === 'approved') return app.status === 'accepted';
+    if (activeFilter === 'pending-rejected') return app.status === 'pending' || app.status === 'rejected';
+    return true;
+  });
+
   return (
     <div className="dashboard">
       <nav className="dashboard-nav">
@@ -154,32 +163,37 @@ export default function VendorApplicationsPage() {
           <h1>My Applications 📋</h1>
 
           <div className="stats-grid">
-            <div className="stat-card">
+            <div 
+              className={`stat-card ${activeFilter === 'all' ? 'stat-card-active' : ''}`}
+              onClick={() => setActiveFilter('all')}
+              style={{ cursor: 'pointer' }}
+            >
               <div className="stat-icon">📋</div>
               <div className="stat-info">
                 <h3>{stats.total}</h3>
                 <p>Total Applications</p>
               </div>
             </div>
-            <div className="stat-card">
+            <div 
+              className={`stat-card ${activeFilter === 'pending-rejected' ? 'stat-card-active' : ''}`}
+              onClick={() => setActiveFilter('pending-rejected')}
+              style={{ cursor: 'pointer' }}
+            >
               <div className="stat-icon">⏳</div>
               <div className="stat-info">
-                <h3>{stats.pending}</h3>
-                <p>Pending</p>
+                <h3>{stats.pending + stats.rejected}</h3>
+                <p>Pending/Rejected</p>
               </div>
             </div>
-            <div className="stat-card">
+            <div 
+              className={`stat-card ${activeFilter === 'approved' ? 'stat-card-active' : ''}`}
+              onClick={() => setActiveFilter('approved')}
+              style={{ cursor: 'pointer' }}
+            >
               <div className="stat-icon">✅</div>
               <div className="stat-info">
                 <h3>{stats.approved}</h3>
                 <p>Approved</p>
-              </div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-icon">❌</div>
-              <div className="stat-info">
-                <h3>{stats.rejected}</h3>
-                <p>Rejected</p>
               </div>
             </div>
           </div>
@@ -198,21 +212,29 @@ export default function VendorApplicationsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {applications.length === 0 ? (
+                  {loading ? (
+                    <tr>
+                      <td colSpan="6" className="empty-row">
+                        <div className="loading">Loading applications...</div>
+                      </td>
+                    </tr>
+                  ) : filteredApplications.length === 0 ? (
                     <tr>
                       <td colSpan="6" className="empty-row">
                         <div className="empty-state">
-                          <p>📋 No applications yet</p>
-                          <Link href="/vendor/bazaars" className="btn-primary">Browse Bazaars</Link>
+                          <p>📋 {activeFilter === 'all' ? 'No applications yet' : 'No applications found for this filter'}</p>
+                          {activeFilter === 'all' && (
+                            <Link href="/vendor/bazaars" className="btn-primary">Browse Bazaars</Link>
+                          )}
                         </div>
                       </td>
                     </tr>
                   ) : (
-                    applications.map((app) => (
+                    filteredApplications.map((app) => (
                       <tr key={app._id}>
                         <td>
-                          {app.kind === 'bazaar' && app.bazaar_id 
-                            ? app.bazaar_id.name 
+                          {app.kind === 'bazaar' && app.bazaar 
+                            ? app.bazaar.name 
                             : app.kind === 'booth_event' 
                             ? 'Booth Event Application'
                             : 'N/A'}
@@ -229,7 +251,9 @@ export default function VendorApplicationsPage() {
                             {app.kind === 'bazaar' ? '🎪 Bazaar' : '🏪 Booth'}
                           </span>
                         </td>
-                        <td>{app.business_name}</td>
+                        <td>
+                          {app.business_name || user?.vendor_info?.company_name || 'N/A'}
+                        </td>
                         <td>{formatDate(app.applied_at)}</td>
                         <td>
                           <span style={{
@@ -279,6 +303,22 @@ export default function VendorApplicationsPage() {
           </section>
         </main>
       </div>
+
+      <style jsx>{`
+        .stat-card {
+          transition: all 0.3s ease;
+        }
+        
+        .stat-card:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        
+        .stat-card-active {
+          border: 2px solid #c41e3a;
+          box-shadow: 0 4px 12px rgba(196, 30, 58, 0.2);
+        }
+      `}</style>
     </div>
   );
 }
