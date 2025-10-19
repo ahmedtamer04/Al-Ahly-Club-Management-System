@@ -75,15 +75,25 @@ export default function RegistrationsPage() {
     const fetchRegistrations = async () => {
       try {
         setLoading(true);
-        console.log('Fetching ALL registrations from database...');
+        console.log('===== FETCHING REGISTRATIONS =====');
         console.log('API endpoint: /registration/all');
+        console.log('Token exists:', !!localStorage.getItem('token'));
+        console.log('User:', localStorage.getItem('user'));
         
         const response = await api.get('/registration/all');
-        console.log('Registrations API response:', response);
-        console.log('Total registrations found:', response.registrations?.length || 0);
+        console.log('===== API RESPONSE =====');
+        console.log('Full response:', response);
+        console.log('Response.registrations:', response.registrations);
+        console.log('Response.registrations length:', response.registrations?.length);
+        console.log('Response.stats:', response.stats);
         
         if (response.registrations && response.registrations.length > 0) {
-          console.log('Sample registration data:', response.registrations[0]);
+          console.log('===== SAMPLE DATA =====');
+          console.log('First registration:', response.registrations[0]);
+          console.log('User ID populated?', response.registrations[0].user_id);
+          console.log('Event ID populated?', response.registrations[0].event_id);
+        } else {
+          console.warn('⚠️ No registrations found in response');
         }
         
         setRegistrations(response.registrations || []);
@@ -97,15 +107,19 @@ export default function RegistrationsPage() {
           cancelled: registrationsData.filter(r => r.status === 'canceled').length
         };
         
-        console.log('Calculated registration stats:', registrationStats);
+        console.log('===== CALCULATED STATS =====');
+        console.log('Stats:', registrationStats);
         setStats(registrationStats);
         
       } catch (error) {
-        console.error('Error fetching registrations:', error);
-        console.error('Error details:', error.message);
+        console.error('===== ERROR FETCHING REGISTRATIONS =====');
+        console.error('Error object:', error);
+        console.error('Error message:', error.message);
+        console.error('Error stack:', error.stack);
         setRegistrations([]);
       } finally {
         setLoading(false);
+        console.log('===== FETCH COMPLETE =====');
       }
     };
 
@@ -343,16 +357,19 @@ export default function RegistrationsPage() {
                       <td colSpan="7" className="empty-row">
                         <div className="empty-state">
                           <p>🎫 No registrations found</p>
-                          {filter !== 'all' && (
+                          {registrations.length === 0 ? (
+                            <p style={{fontSize: '0.9rem', color: '#999'}}>
+                              There are no registrations in the database yet. Create some registrations to see them here.
+                            </p>
+                          ) : filter !== 'all' ? (
                             <p style={{fontSize: '0.9rem', color: '#999'}}>
                               No {filter} registrations match your search criteria
                             </p>
-                          )}
-                          {searchTerm && (
+                          ) : searchTerm ? (
                             <p style={{fontSize: '0.9rem', color: '#999'}}>
                               Try adjusting your search terms
                             </p>
-                          )}
+                          ) : null}
                         </div>
                       </td>
                     </tr>
