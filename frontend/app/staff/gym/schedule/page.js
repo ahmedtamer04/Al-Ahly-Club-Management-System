@@ -52,6 +52,8 @@ export default function StaffGymSchedulePage() {
       'Kick-Boxing': '#F44336',
       'Cardio': '#2196F3',
       'Strength': '#607D8B',
+      'Trip': '#00BCD4',
+      'Trips': '#00BCD4',
       'Other': '#9E9E9E'
     };
     return colors[type] || '#9E9E9E';
@@ -109,6 +111,8 @@ export default function StaffGymSchedulePage() {
                   <option value="Kick-Boxing">Kick-Boxing</option>
                   <option value="Cardio">Cardio</option>
                   <option value="Strength">Strength</option>
+                  <option value="Trip">Trip</option>
+                  <option value="Trips">Trips</option>
                   <option value="Other">Other</option>
                 </select>
               </div>
@@ -116,7 +120,7 @@ export default function StaffGymSchedulePage() {
 
             {/* Session Type Legend */}
             <div style={{display: 'flex', flexWrap: 'wrap', gap: '1rem', marginTop: '1rem', padding: '1rem', background: '#f9f9f9', borderRadius: '8px'}}>
-              {['Yoga', 'Pilates', 'Aerobics', 'Zumba', 'Cross Circuit', 'Kick-Boxing', 'Cardio', 'Strength'].map(type => (
+              {['Yoga', 'Pilates', 'Aerobics', 'Zumba', 'Cross Circuit', 'Kick-Boxing', 'Cardio', 'Strength', 'Trips'].map(type => (
                 <div key={type} style={{display: 'flex', alignItems: 'center', gap: '0.5rem'}}>
                   <div style={{width: '16px', height: '16px', borderRadius: '4px', background: getSessionTypeColor(type)}}></div>
                   <span style={{fontSize: '0.9rem'}}>{type}</span>
