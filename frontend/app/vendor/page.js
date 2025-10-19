@@ -2,106 +2,117 @@
 
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
-import { adminAPI } from '@/utils/api';
+import { useRouter } from 'next/navigation';
+import { vendorAPI, getUser } from '@/utils/api';
 import '@/app/dashboard.css';
 
-export default function VendorRequestsPage() {
-  const [applications, setApplications] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [filterStatus, setFilterStatus] = useState('all');
-  const [message, setMessage] = useState({ text: '', type: '' });
+export default function VendorDashboard() {
+  const router = useRouter();
+  // Initialize as null to match server-side rendering
+  const [user, setUser] = useState(null);
+  const [isClient, setIsClient] = useState(false);
   const [stats, setStats] = useState({
-    total: 0,
-    pending: 0,
-    accepted: 0,
-    rejected: 0
+    pendingApplications: 0,
+    approvedBooths: 0,
+    availableBazaars: 0
   });
-  const [selectedApp, setSelectedApp] = useState(null);
-  const [showRejectModal, setShowRejectModal] = useState(false);
-  const [rejectionReason, setRejectionReason] = useState('');
+  const [bazaars, setBazaars] = useState([]);
+  const [recentApplications, setRecentApplications] = useState([]);
+  const [acceptedApplications, setAcceptedApplications] = useState([]);
+  const [pendingRejectedApplications, setPendingRejectedApplications] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  // Load user data on client side only
+  useEffect(() => {
+    setIsClient(true);
+    if (typeof window !== 'undefined') {
+      const userData = localStorage.getItem('user');
+      if (userData) {
+        setUser(JSON.parse(userData));
+      }
+    }
+  }, []);
 
   useEffect(() => {
-    fetchApplications();
-    fetchStats();
-  }, [filterStatus]);
+    if (isClient) {
+      fetchDashboardData();
+    }
+  }, [isClient]);
 
-  const fetchApplications = async () => {
-    setLoading(true);
+  const fetchDashboardData = async () => {
     try {
-      const params = filterStatus !== 'all' ? { status: filterStatus } : {};
-      const response = await adminAPI.getVendorRequests(params);
-      setApplications(response.applications || []);
-    } catch (err) {
-      setMessage({ text: err.message || 'Failed to load applications', type: 'error' });
+      setLoading(true);
+      setError('');
+      
+      // Fetch applications
+      const appsData = await vendorAPI.getMyApplications();
+      console.log('Applications data:', appsData);
+      const applications = appsData.applications || [];
+      console.log('Applications array:', applications);
+      
+      // Fetch bazaars
+      const bazaarsData = await vendorAPI.getUpcomingBazaars();
+      console.log('Bazaars data:', bazaarsData);
+      const allBazaars = bazaarsData.bazaars || [];
+      console.log('Bazaars array:', allBazaars);
+      
+      // Calculate stats
+      const pendingCount = applications.filter(app => app.status === 'pending').length;
+      const approvedCount = applications.filter(app => app.status === 'accepted').length;
+      
+      setStats({
+        pendingApplications: pendingCount,
+        approvedBooths: approvedCount,
+        availableBazaars: allBazaars.length
+      });
+      
+      // Get first 3 bazaars
+      setBazaars(allBazaars.slice(0, 3));
+      
+      // Get 3 most recent applications
+      setRecentApplications(applications.slice(0, 3));
+      console.log('Recent applications set:', applications.slice(0, 3));
+      
+      // Filter accepted applications (upcoming events only)
+      const accepted = applications.filter(app => 
+        app.status === 'accepted' && 
+        (app.bazaar_id?.start_date ? new Date(app.bazaar_id.start_date) >= new Date() : true)
+      );
+      setAcceptedApplications(accepted);
+      
+      // Filter pending and rejected applications
+      const pendingRejected = applications.filter(app => 
+        app.status === 'pending' || app.status === 'rejected'
+      );
+      setPendingRejectedApplications(pendingRejected);
+      
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error);
+      console.error('Error details:', error.message);
+      setError(`Failed to load dashboard data: ${error.message}`);
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchStats = async () => {
-    try {
-      const response = await adminAPI.getVendorRequestsStats();
-      // Backend returns: { statistics: { overall: { total_requests, pending_requests, ... } } }
-      const overallStats = response.statistics?.overall || {};
-      setStats({
-        total: overallStats.total_requests || 0,
-        pending: overallStats.pending_requests || 0,
-        accepted: overallStats.accepted_requests || 0,
-        rejected: overallStats.rejected_requests || 0
-      });
-    } catch (err) {
-      console.error('Failed to load stats:', err);
-    }
-  };
-
-  const handleAccept = async (applicationId) => {
-    if (!confirm('Are you sure you want to accept this vendor application?')) {
-      return;
-    }
-
-    try {
-      await adminAPI.acceptVendorRequest(applicationId);
-      setMessage({ text: 'Vendor application accepted successfully!', type: 'success' });
-      fetchApplications();
-      fetchStats();
-    } catch (err) {
-      setMessage({ text: err.message || 'Failed to accept application', type: 'error' });
-    }
-  };
-
-  const handleReject = async (applicationId) => {
-    if (!rejectionReason.trim()) {
-      setMessage({ text: 'Please provide a rejection reason', type: 'error' });
-      return;
-    }
-
-    try {
-      await adminAPI.rejectVendorRequest(applicationId, rejectionReason);
-      setMessage({ text: 'Vendor application rejected successfully!', type: 'success' });
-      setSelectedApp(null);
-      setShowRejectModal(false);
-      setRejectionReason('');
-      fetchApplications();
-      fetchStats();
-    } catch (err) {
-      setMessage({ text: err.message || 'Failed to reject application', type: 'error' });
-    }
-  };
-
-  const openRejectModal = (app) => {
-    setSelectedApp(app);
-    setShowRejectModal(true);
-    setRejectionReason('');
-    setMessage({ text: '', type: '' });
-  };
-
   const formatDate = (dateString) => {
-    if (!dateString) return 'N/A';
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
       month: 'short',
-      day: 'numeric'
+      day: 'numeric',
+      year: 'numeric'
     });
+  };
+
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'pending': return '#ffc107';
+      case 'accepted': return '#28a745';
+      case 'rejected': return '#dc3545';
+      case 'cancelled': return '#6c757d';
+      default: return '#6c757d';
+    }
   };
 
   return (
@@ -110,7 +121,7 @@ export default function VendorRequestsPage() {
         <div className="nav-container">
           <h1 className="nav-brand">Al-Ahly Events</h1>
           <div className="nav-links">
-            <span className="nav-user">🎯 Events Office Dashboard</span>
+            <span className="nav-user">🏪 {user?.vendor_info?.company_name || 'Vendor Dashboard'}</span>
             <Link href="/">Logout</Link>
           </div>
         </div>
@@ -119,338 +130,421 @@ export default function VendorRequestsPage() {
       <div className="dashboard-content">
         <aside className="sidebar">
           <ul className="sidebar-menu">
-            <li><Link href="/eventsoffice">🏠 Dashboard</Link></li>
-            <li><Link href="/eventsoffice/create">➕ Create Event</Link></li>
-            <li><Link href="/eventsoffice/workshops">🎨 Workshops</Link></li>
-            <li><Link href="/eventsoffice/trips">🚌 Trips</Link></li>
-            <li><Link href="/eventsoffice/bazaars">🎪 Bazaars</Link></li>
-            <li><Link href="/eventsoffice/gym">🏋️ Gym Sessions</Link></li>
-            <li><Link href="/eventsoffice/vendors">🏪 Vendor Requests</Link></li>
-            <li><Link href="/eventsoffice/facilities">🏟️ Facilities</Link></li>
-            <li><Link href="/eventsoffice/registrations">🎫 Registrations</Link></li>
-            <li><Link href="/eventsoffice/profile">👤 Profile</Link></li>
+            <li><Link href="/vendor" className="active">🏠 Dashboard</Link></li>
+            <li><Link href="/vendor/applications">📋 My Applications</Link></li>
+            <li><Link href="/vendor/bazaars">🎪 Browse Bazaars</Link></li>
+            <li><Link href="/vendor/booths">🏪 My Booths</Link></li>
+            <li><Link href="/vendor/profile">👤 Profile</Link></li>
           </ul>
         </aside>
 
         <main className="main-content">
-          <h1>Vendor Requests 🏪</h1>
+          <h1>Welcome, {user?.vendor_info?.company_name || 'Vendor'}! 👋</h1>
+          
+          {loading ? (
+            <div className="loading">Loading dashboard...</div>
+          ) : (
+            <>
+              <div className="stats-grid">
+                <div className="stat-card">
+                  <div className="stat-icon">📋</div>
+                  <div className="stat-info">
+                    <h3>{stats.pendingApplications}</h3>
+                    <p>Pending Applications</p>
+                  </div>
+                </div>
+                <div className="stat-card">
+                  <div className="stat-icon">✅</div>
+                  <div className="stat-info">
+                    <h3>{stats.approvedBooths}</h3>
+                    <p>Approved Booths</p>
+                  </div>
+                </div>
+                <div className="stat-card">
+                  <div className="stat-icon">🎪</div>
+                  <div className="stat-info">
+                    <h3>{stats.availableBazaars}</h3>
+                    <p>Available Bazaars</p>
+                  </div>
+                </div>
+              </div>
 
-          {message.text && (
-            <div className={`alert alert-${message.type}`}>
-              {message.text}
-            </div>
-          )}
-
-          <div className="stats-grid">
-            <div className="stat-card">
-              <div className="stat-icon">📋</div>
-              <div className="stat-info">
-                <h3>{stats.total}</h3>
-                <p>Total Requests</p>
-              </div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-icon">⏳</div>
-              <div className="stat-info">
-                <h3>{stats.pending}</h3>
-                <p>Pending Review</p>
-              </div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-icon">✅</div>
-              <div className="stat-info">
-                <h3>{stats.accepted}</h3>
-                <p>Accepted</p>
-              </div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-icon">❌</div>
-              <div className="stat-info">
-                <h3>{stats.rejected}</h3>
-                <p>Rejected</p>
-              </div>
-            </div>
-          </div>
-
-          <section className="section">
-            <div className="section-header">
-              <h2>Vendor Applications</h2>
-              <div className="filter-buttons">
-                <button 
-                  className={`filter-btn ${filterStatus === 'all' ? 'active' : ''}`}
-                  onClick={() => setFilterStatus('all')}
-                >
-                  All
-                </button>
-                <button 
-                  className={`filter-btn ${filterStatus === 'pending' ? 'active' : ''}`}
-                  onClick={() => setFilterStatus('pending')}
-                >
-                  ⏳ Pending
-                </button>
-                <button 
-                  className={`filter-btn ${filterStatus === 'accepted' ? 'active' : ''}`}
-                  onClick={() => setFilterStatus('accepted')}
-                >
-                  ✅ Accepted
-                </button>
-                <button 
-                  className={`filter-btn ${filterStatus === 'rejected' ? 'active' : ''}`}
-                  onClick={() => setFilterStatus('rejected')}
-                >
-                  ❌ Rejected
-                </button>
-              </div>
-            </div>
-
-            <div className="table-container">
-              <table className="data-table">
-                <thead>
-                  <tr>
-                    <th>Vendor Name</th>
-                    <th>Company</th>
-                    <th>Bazaar</th>
-                    <th>Type</th>
-                    <th>Booth Size</th>
-                    <th>Applied Date</th>
-                    <th>Status</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {loading ? (
-                    <tr>
-                      <td colSpan="8" className="empty-row">
-                        <div className="loading">Loading applications...</div>
-                      </td>
-                    </tr>
-                  ) : applications.length === 0 ? (
-                    <tr>
-                      <td colSpan="8" className="empty-row">
-                        <div className="empty-state">
-                          <p>🏪 No vendor applications found</p>
-                        </div>
-                      </td>
-                    </tr>
-                  ) : (
-                    applications.map((app) => {
-                      // Safely extract vendor information
-                      const vendorName = app.vendor?.name || 'Unknown Vendor';
-                      const vendorEmail = app.vendor?.email || 'N/A';
-                      const vendorCompany = app.vendor?.company_name || 'N/A';
-                      const bazaarName = app.bazaar?.name || 'N/A';
-                      const appKind = app.application?.kind || app.kind || 'N/A';
-                      
-                      return (
-                      <tr key={app._id}>
-                        <td>
-                          <strong>{vendorName}</strong>
-                          <br />
-                          <small style={{ color: '#666' }}>{vendorEmail}</small>
-                        </td>
-                        <td>{vendorCompany}</td>
-                        <td>
-                          <strong>{bazaarName}</strong>
-                          <br />
-                          <small>{formatDate(app.bazaar?.start_date)}</small>
-                        </td>
-                        <td>
-                          <span className="status-badge" style={{ 
-                            backgroundColor: appKind === 'bazaar' ? '#17a2b8' : '#6f42c1',
-                            color: '#fff'
-                          }}>
-                            {appKind === 'bazaar' ? 'Bazaar' : 'Booth Platform'}
+              <section className="section">
+                <div className="section-header">
+                  <h2>Available Bazaars</h2>
+                  <Link href="/vendor/bazaars" className="btn-primary">Browse All</Link>
+                </div>
+                
+                {bazaars.length === 0 ? (
+                  <div className="empty-state">
+                    <p>🎪 No bazaars available for applications</p>
+                  </div>
+                ) : (
+                  <div className="bazaars-preview">
+                    {bazaars.map((bazaar) => (
+                      <div key={bazaar._id} className="preview-card">
+                        <div className="preview-header">
+                          <h3>{bazaar.name}</h3>
+                          <span className={`badge badge-${bazaar.status}`}>
+                            {bazaar.registration_open ? '🟢 Open' : '🔴 Closed'}
                           </span>
-                        </td>
-                        <td>{app.application?.booth_size || 'N/A'}</td>
-                        <td>{formatDate(app.submitted_at)}</td>
-                        <td>
-                          <span className={`status-badge status-${app.status}`}>
+                        </div>
+                        <div className="preview-details">
+                          <p>📍 {bazaar.location}</p>
+                          <p>📅 {formatDate(bazaar.start_date)}</p>
+                          <p>⏰ {bazaar.days_until_start} days until start</p>
+                        </div>
+                        <button 
+                          className="btn-secondary"
+                          onClick={() => router.push(`/vendor/apply-bazaar?bazaar_id=${bazaar._id}`)}
+                          disabled={!bazaar.registration_open}
+                        >
+                          {bazaar.registration_open ? 'Apply Now' : 'Registration Closed'}
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </section>
+
+              <section className="section">
+                <div className="section-header">
+                  <h2>My Upcoming Events (Accepted)</h2>
+                  <Link href="/vendor/applications" className="btn-primary">View All Applications</Link>
+                </div>
+                
+                {acceptedApplications.length === 0 ? (
+                  <div className="empty-state">
+                    <p>✅ No accepted applications yet</p>
+                    <Link href="/vendor/bazaars" className="btn-primary" style={{marginTop: '1rem', display: 'inline-block'}}>
+                      Browse Bazaars
+                    </Link>
+                  </div>
+                ) : (
+                  <div className="applications-preview">
+                    {acceptedApplications.map((app) => (
+                      <div key={app._id} className="preview-card accepted-card">
+                        <div className="preview-header">
+                          <h3>{app.bazaar_id?.name || 'Booth Event Application'}</h3>
+                          <span 
+                            className="status-badge"
+                            style={{ backgroundColor: '#28a745' }}
+                          >
+                            ✅ Accepted
+                          </span>
+                        </div>
+                        <div className="preview-details">
+                          <p>🏢 {app.business_name}</p>
+                          <p>📦 Booth Size: {app.booth_size}</p>
+                          <p>🏷️ Type: {app.kind === 'bazaar' ? 'Bazaar' : 'Booth Event'}</p>
+                          {app.bazaar_id?.start_date && (
+                            <p>🗓️ Event Date: {formatDate(app.bazaar_id.start_date)}</p>
+                          )}
+                          {app.bazaar_id?.location && (
+                            <p>📍 Location: {app.bazaar_id.location}</p>
+                          )}
+                        </div>
+                        <button 
+                          className="btn-secondary"
+                          onClick={() => router.push('/vendor/applications')}
+                        >
+                          View Details
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </section>
+
+              <section className="section">
+                <div className="section-header">
+                  <h2>Pending & Rejected Requests</h2>
+                  <Link href="/vendor/applications" className="btn-primary">View All</Link>
+                </div>
+                
+                {pendingRejectedApplications.length === 0 ? (
+                  <div className="empty-state">
+                    <p>📋 No pending or rejected applications</p>
+                  </div>
+                ) : (
+                  <div className="applications-preview">
+                    {pendingRejectedApplications.map((app) => (
+                      <div key={app._id} className="preview-card">
+                        <div className="preview-header">
+                          <h3>{app.bazaar_id?.name || 'Booth Event Application'}</h3>
+                          <span 
+                            className="status-badge"
+                            style={{ backgroundColor: getStatusColor(app.status) }}
+                          >
+                            {app.status === 'pending' ? '⏳ Pending' : '❌ Rejected'}
+                          </span>
+                        </div>
+                        <div className="preview-details">
+                          <p>🏢 {app.business_name}</p>
+                          <p>📦 Booth Size: {app.booth_size}</p>
+                          <p>🏷️ Type: {app.kind === 'bazaar' ? 'Bazaar' : 'Booth Event'}</p>
+                          <p>📅 Applied: {formatDate(app.applied_at)}</p>
+                          {app.bazaar_id?.start_date && (
+                            <p>🗓️ Event: {formatDate(app.bazaar_id.start_date)}</p>
+                          )}
+                        </div>
+                        <button 
+                          className="btn-secondary"
+                          onClick={() => router.push('/vendor/applications')}
+                        >
+                          View Details
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </section>
+
+              <section className="section">
+                <div className="section-header">
+                  <h2>My Recent Applications</h2>
+                  <Link href="/vendor/applications" className="btn-primary">View All</Link>
+                </div>
+                
+                {recentApplications.length === 0 ? (
+                  <div className="empty-state">
+                    <p>📋 You haven't submitted any booth applications yet</p>
+                    <Link href="/vendor/bazaars" className="btn-primary" style={{marginTop: '1rem', display: 'inline-block'}}>
+                      Browse Bazaars
+                    </Link>
+                  </div>
+                ) : (
+                  <div className="applications-preview">
+                    {recentApplications.map((app) => (
+                      <div key={app._id} className="preview-card">
+                        <div className="preview-header">
+                          <h3>{app.bazaar_id?.name || 'Booth Event Application'}</h3>
+                          <span 
+                            className="status-badge"
+                            style={{ backgroundColor: getStatusColor(app.status) }}
+                          >
                             {app.status}
                           </span>
-                        </td>
-                        <td>
-                          {app.status === 'pending' ? (
-                            <>
-                              <button
-                                onClick={() => handleAccept(app._id)}
-                                className="btn-secondary"
-                                style={{
-                                  backgroundColor: '#28a745',
-                                  borderColor: '#28a745',
-                                  color: '#fff',
-                                  padding: '5px 10px',
-                                  fontSize: '12px',
-                                  marginRight: '5px',
-                                  minWidth: '70px'
-                                }}
-                              >
-                                Accept
-                              </button>
-                              <button
-                                onClick={() => openRejectModal(app)}
-                                className="btn-secondary"
-                                style={{
-                                  backgroundColor: '#dc3545',
-                                  borderColor: '#dc3545',
-                                  color: '#fff',
-                                  padding: '5px 10px',
-                                  fontSize: '12px',
-                                  minWidth: '70px'
-                                }}
-                              >
-                                Reject
-                              </button>
-                              <button
-                                onClick={() => setSelectedApp(app)}
-                                className="btn-secondary"
-                                style={{
-                                  padding: '5px 10px',
-                                  fontSize: '12px',
-                                  marginLeft: '5px',
-                                  minWidth: '70px'
-                                }}
-                              >
-                                Details
-                              </button>
-                            </>
-                          ) : (
-                            <button
-                              onClick={() => setSelectedApp(app)}
-                              className="btn-secondary"
-                              style={{
-                                padding: '5px 10px',
-                                fontSize: '12px',
-                                minWidth: '70px'
-                              }}
-                            >
-                              View Details
-                            </button>
+                        </div>
+                        <div className="preview-details">
+                          <p>📦 Booth Size: {app.booth_size}</p>
+                          <p>🏷️ Type: {app.kind === 'bazaar' ? 'Bazaar' : 'Booth Event'}</p>
+                          <p>📅 Applied: {formatDate(app.applied_at)}</p>
+                          {app.bazaar_id?.start_date && (
+                            <p>🗓️ Event: {formatDate(app.bazaar_id.start_date)}</p>
                           )}
-                        </td>
-                      </tr>
-                    );
-                    })
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </section>
-
-          {/* Details Modal */}
-          {selectedApp && !showRejectModal && (
-            <div className="modal-overlay" onClick={() => setSelectedApp(null)}>
-              <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '700px' }}>
-                <div className="modal-header">
-                  <h2>Application Details</h2>
-                  <button onClick={() => setSelectedApp(null)} className="btn-close">
-                    ✕
-                  </button>
-                </div>
-                <div className="form" style={{ padding: '20px' }}>
-                  <div style={{ marginBottom: '20px' }}>
-                    <h3 style={{ marginBottom: '10px', borderBottom: '2px solid #007bff', paddingBottom: '5px' }}>Vendor Information</h3>
-                    <p><strong>Name:</strong> {selectedApp.vendor?.name || 'Unknown Vendor'}</p>
-                    <p><strong>Email:</strong> {selectedApp.vendor?.email || 'N/A'}</p>
-                    <p><strong>Company:</strong> {selectedApp.vendor?.company_name || 'N/A'}</p>
+                        </div>
+                        <button 
+                          className="btn-secondary"
+                          onClick={() => router.push('/vendor/applications')}
+                        >
+                          View Details
+                        </button>
+                      </div>
+                    ))}
                   </div>
-
-                  <div style={{ marginBottom: '20px' }}>
-                    <h3 style={{ marginBottom: '10px', borderBottom: '2px solid #007bff', paddingBottom: '5px' }}>Bazaar Information</h3>
-                    <p><strong>Event:</strong> {selectedApp.bazaar?.name || 'N/A'}</p>
-                    <p><strong>Location:</strong> {selectedApp.bazaar?.location || 'N/A'}</p>
-                    <p><strong>Date:</strong> {formatDate(selectedApp.bazaar?.start_date)} - {formatDate(selectedApp.bazaar?.end_date)}</p>
-                    <p><strong>Time:</strong> {selectedApp.bazaar?.time || 'N/A'}</p>
-                  </div>
-
-                  <div style={{ marginBottom: '20px' }}>
-                    <h3 style={{ marginBottom: '10px', borderBottom: '2px solid #007bff', paddingBottom: '5px' }}>Application Details</h3>
-                    <p><strong>Type:</strong> {(selectedApp.application?.kind || selectedApp.kind) === 'bazaar' ? 'Bazaar' : 'Booth Platform'}</p>
-                    <p><strong>Booth Size:</strong> {selectedApp.application?.booth_size || 'N/A'}</p>
-                    {(selectedApp.application?.kind || selectedApp.kind) === 'booth_platform' && (
-                      <>
-                        <p><strong>Setup Duration:</strong> {selectedApp.application?.setup_duration_weeks || 'N/A'} weeks</p>
-                        <p><strong>Booth Location Zone:</strong> {selectedApp.application?.booth_location?.zone || 'N/A'}</p>
-                      </>
-                    )}
-                    <p><strong>Staff Members:</strong></p>
-                    <ul style={{ marginLeft: '20px' }}>
-                      {(selectedApp.application?.staff && selectedApp.application.staff.length > 0) ? (
-                        selectedApp.application.staff.map((member, idx) => (
-                          <li key={idx}>{member?.name || 'N/A'} - {member?.email || 'N/A'}</li>
-                        ))
-                      ) : (
-                        <li>No staff information available</li>
-                      )}
-                    </ul>
-                  </div>
-
-                  <div style={{ marginBottom: '20px' }}>
-                    <h3 style={{ marginBottom: '10px', borderBottom: '2px solid #007bff', paddingBottom: '5px' }}>Status Information</h3>
-                    <p><strong>Status:</strong> <span className={`status-badge status-${selectedApp.status}`}>{selectedApp.status}</span></p>
-                    <p><strong>Submitted:</strong> {formatDate(selectedApp.submitted_at)}</p>
-                    {selectedApp.status === 'rejected' && selectedApp.rejection_reason && (
-                      <p><strong>Rejection Reason:</strong> {selectedApp.rejection_reason}</p>
-                    )}
-                    {selectedApp.approved_by && (
-                      <>
-                        <p><strong>Reviewed By:</strong> {selectedApp.approved_by?.name || 'N/A'}</p>
-                        <p><strong>Reviewed At:</strong> {formatDate(selectedApp.approved_at)}</p>
-                      </>
-                    )}
-                  </div>
-
-                  <div className="form-actions">
-                    <button onClick={() => setSelectedApp(null)} className="btn-secondary">
-                      Close
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Rejection Modal */}
-          {showRejectModal && selectedApp && (
-            <div className="modal-overlay" onClick={() => { setShowRejectModal(false); setSelectedApp(null); setRejectionReason(''); }}>
-              <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-                <div className="modal-header">
-                  <h2>Reject Application</h2>
-                  <button onClick={() => { setShowRejectModal(false); setSelectedApp(null); setRejectionReason(''); }} className="btn-close">
-                    ✕
-                  </button>
-                </div>
-                <form onSubmit={(e) => { e.preventDefault(); handleReject(selectedApp._id); }} className="form">
-                  <div className="form-group">
-                    <label>Vendor: {selectedApp.vendor?.name || 'Unknown Vendor'}</label>
-                    <label>Event: {selectedApp.bazaar?.name || 'N/A'}</label>
-                  </div>
-
-                  <div className="form-group">
-                    <label>Rejection Reason *</label>
-                    <textarea
-                      rows="4"
-                      required
-                      value={rejectionReason}
-                      onChange={(e) => setRejectionReason(e.target.value)}
-                      placeholder="Please provide a reason for rejecting this application..."
-                    />
-                  </div>
-
-                  <div className="form-actions">
-                    <button type="button" onClick={() => { setShowRejectModal(false); setSelectedApp(null); setRejectionReason(''); }} className="btn-secondary">
-                      Cancel
-                    </button>
-                    <button type="submit" className="btn-primary" style={{ backgroundColor: '#dc3545', borderColor: '#dc3545' }}>
-                      Reject Application
-                    </button>
-                  </div>
-                </form>
-              </div>
-            </div>
+                )}
+              </section>
+            </>
           )}
         </main>
       </div>
+
+      <style jsx>{`
+        .loading {
+          text-align: center;
+          padding: 3rem;
+          color: #666;
+          font-size: 1.1rem;
+        }
+
+        .stats-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+          gap: 1.5rem;
+          margin-bottom: 2rem;
+        }
+
+        .stat-card {
+          background: white;
+          padding: 1.5rem;
+          border-radius: 12px;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+          display: flex;
+          align-items: center;
+          gap: 1rem;
+          transition: transform 0.2s;
+        }
+
+        .stat-card:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        .stat-icon {
+          font-size: 2.5rem;
+        }
+
+        .stat-info h3 {
+          margin: 0;
+          font-size: 2rem;
+          color: #c41e3a;
+        }
+
+        .stat-info p {
+          margin: 0.25rem 0 0 0;
+          color: #666;
+          font-size: 0.9rem;
+        }
+
+        .section {
+          background: white;
+          padding: 2rem;
+          border-radius: 12px;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+          margin-bottom: 2rem;
+        }
+
+        .section-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 1.5rem;
+        }
+
+        .section-header h2 {
+          margin: 0;
+          color: #c41e3a;
+        }
+
+        .bazaars-preview,
+        .applications-preview {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+          gap: 1.5rem;
+        }
+
+        .preview-card {
+          border: 2px solid #f0f0f0;
+          border-radius: 8px;
+          padding: 1.5rem;
+          transition: border-color 0.2s;
+        }
+
+        .preview-card:hover {
+          border-color: #c41e3a;
+        }
+
+        .accepted-card {
+          border-left: 4px solid #28a745;
+          background: linear-gradient(to right, #f0fff4 0%, white 100%);
+        }
+
+        .accepted-card:hover {
+          border-color: #28a745;
+        }
+
+        .preview-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: start;
+          margin-bottom: 1rem;
+          padding-bottom: 1rem;
+          border-bottom: 1px solid #eee;
+        }
+
+        .preview-header h3 {
+          margin: 0;
+          font-size: 1.1rem;
+          color: #333;
+          flex: 1;
+        }
+
+        .badge {
+          padding: 0.25rem 0.75rem;
+          border-radius: 12px;
+          font-size: 0.85rem;
+          font-weight: 600;
+          white-space: nowrap;
+        }
+
+        .badge-upcoming {
+          background: #e3f2fd;
+          color: #1976d2;
+        }
+
+        .badge-active {
+          background: #e8f5e9;
+          color: #388e3c;
+        }
+
+        .status-badge {
+          padding: 0.25rem 0.75rem;
+          border-radius: 12px;
+          font-size: 0.85rem;
+          font-weight: 600;
+          color: white;
+          text-transform: capitalize;
+          white-space: nowrap;
+        }
+
+        .preview-details {
+          margin-bottom: 1rem;
+        }
+
+        .preview-details p {
+          margin: 0.5rem 0;
+          color: #666;
+          font-size: 0.9rem;
+        }
+
+        .btn-primary,
+        .btn-secondary {
+          padding: 0.5rem 1rem;
+          border: none;
+          border-radius: 6px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: background-color 0.2s;
+          text-decoration: none;
+          display: inline-block;
+        }
+
+        .btn-primary {
+          background-color: #c41e3a;
+          color: white;
+        }
+
+        .btn-primary:hover {
+          background-color: #a01729;
+        }
+
+        .btn-secondary {
+          background-color: #6c757d;
+          color: white;
+          width: 100%;
+        }
+
+        .btn-secondary:hover:not(:disabled) {
+          background-color: #5a6268;
+        }
+
+        .btn-secondary:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
+        }
+
+        .empty-state {
+          text-align: center;
+          padding: 3rem 2rem;
+          color: #666;
+        }
+
+        .empty-state p {
+          margin: 0;
+          font-size: 1.1rem;
+        }
+      `}</style>
     </div>
   );
 }
