@@ -353,10 +353,18 @@ export const registrationAPI = {
   // Returns { upcoming: [], past: [] }
   getMyRegistrations: (userId) => api.get(`/registration/${userId}/events`),
 
+  // GET /api/registration/user - Get current user's registrations
+  // Auth: requireRegistering
+  // Returns array of registrations with populated event data
+  getUserRegistrations: () => api.get('/registration/user'),
+
   // PATCH /api/registration/cancel/:registrationId
   // Auth: requireRegistering
   // Cancels a registration
   cancel: (registrationId) => api.patch(`/registration/cancel/${registrationId}`, {}),
+  
+  // Alias for cancel method
+  cancelRegistration: (registrationId) => api.patch(`/registration/cancel/${registrationId}`, {}),
 };
 
 // ================================

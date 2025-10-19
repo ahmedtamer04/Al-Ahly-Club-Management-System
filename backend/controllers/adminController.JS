@@ -2,6 +2,7 @@ import User from "../models/User.js";
 import VendorApplication from "../models/VendorApplication.js";
 import Comment from "../models/Comment.js";
 import Registration from "../models/Registration.js";
+import Event from "../models/Events.js";
 import bcrypt from "bcryptjs";
 import { generateVerificationToken, sendVerificationEmail } from "../services/emailService.js";
 
@@ -433,7 +434,7 @@ export const getAllVendorRequests = async (req, res) => {
       filter.bazaar_id = bazaar_id;
     }
     
-    if (kind && ['bazaar', 'booth_platform'].includes(kind)) {
+    if (kind && ['bazaar', 'booth_event'].includes(kind)) {
       filter.kind = kind;
     }
 
@@ -479,6 +480,7 @@ export const getAllVendorRequests = async (req, res) => {
       return {
         _id: app._id,
         vendor: vendor,
+        kind: app.kind, // Add kind at top level for easier access
         bazaar: app.bazaar_id ? {
           _id: app.bazaar_id._id,
           name: app.bazaar_id.name,
@@ -489,12 +491,15 @@ export const getAllVendorRequests = async (req, res) => {
           status: app.bazaar_id.status,
           registration_deadline: app.bazaar_id.registration_deadline
         } : null,
+        duration_weeks: app.duration_weeks, // Add duration_weeks at top level
+        platform_position: app.platform_position, // Add platform_position at top level
         application: {
           kind: app.kind,
           staff: app.application.staff,
           booth_size: app.application.booth_size,
           setup_duration_weeks: app.application.setup_duration_weeks,
-          booth_location: app.application.booth_location
+          booth_location: app.application.booth_location,
+          notes: app.application.notes
         },
         status: app.status,
         rejection_reason: app.rejection_reason,
@@ -505,7 +510,8 @@ export const getAllVendorRequests = async (req, res) => {
         } : null,
         approved_at: app.approved_at,
         submitted_at: app.createdAt,
-        updated_at: app.updatedAt
+        updated_at: app.updatedAt,
+        applied_at: app.createdAt // Add alias for consistency
       };
     });
 
@@ -573,13 +579,19 @@ export const getVendorRequestById = async (req, res) => {
     const formattedApplication = {
       _id: application._id,
       vendor: vendor,
+      kind: application.kind, // Add kind at top level
       bazaar: application.bazaar_id,
+      duration_weeks: application.duration_weeks, // Add duration_weeks at top level
+      platform_position: application.platform_position, // Add platform_position at top level
+      booth_size: application.application?.booth_size, // Add booth_size at top level for easier access
+      staff: application.kind === 'bazaar' ? application.application?.bazaar_staff : application.application?.booth_staff, // Flatten staff based on kind
       application: {
         kind: application.kind,
-        staff: application.application.staff,
-        booth_size: application.application.booth_size,
-        setup_duration_weeks: application.application.setup_duration_weeks,
-        booth_location: application.application.booth_location
+        staff: application.kind === 'bazaar' ? application.application?.bazaar_staff : application.application?.booth_staff,
+        booth_size: application.application?.booth_size,
+        setup_duration_weeks: application.application?.setup_duration_weeks,
+        booth_location: application.application?.booth_location,
+        notes: application.application?.notes
       },
       status: application.status,
       rejection_reason: application.rejection_reason,
@@ -589,6 +601,7 @@ export const getVendorRequestById = async (req, res) => {
         role: application.approved_by.role
       } : null,
       approved_at: application.approved_at,
+      applied_at: application.createdAt, // Add alias
       submitted_at: application.createdAt,
       updated_at: application.updatedAt
     };
@@ -626,16 +639,59 @@ export const acceptVendorRequest = async (req, res) => {
     // Use the model's approve method
     await application.approve(req.user._id);
 
+    // If this is a booth_event application, create an Event entry
+    let createdEvent = null;
+    if (application.kind === 'booth_event') {
+      // Calculate end date based on duration
+      const startDate = application.preferred_start_date || new Date();
+      const endDate = new Date(startDate);
+      endDate.setDate(endDate.getDate() + (application.duration_weeks * 7));
+
+      // Prepare vendor information
+      const vendorData = {
+        vendor_id: application.vendor_user_id._id,
+        vendor_name: `${application.vendor_user_id.first_name} ${application.vendor_user_id.last_name}`,
+        company_name: application.business_name || '',
+        contact_info: {
+          phone: application.contact_phone || '',
+          email: application.contact_email || application.vendor_user_id.email
+        },
+        booth_assignment: `${application.platform_position.wall}-${application.platform_position.slot} (${application.application.booth_size})`,
+        setup_time: `${application.duration_weeks} week(s)`,
+        assigned_date: new Date()
+      };
+
+      // Create the Event
+      createdEvent = await Event.create({
+        name: application.business_name || `${application.vendor_user_id.first_name}'s Booth`,
+        type: 'Booth',
+        location: application.application.booth_location?.description || 
+                  `Zone ${application.application.booth_location?.zone || 'N/A'} - ${application.platform_position.wall} Wall, Slot ${application.platform_position.slot}`,
+        short_description: application.business_description || 
+                          `${application.business_type || 'Business'} booth offering ${application.products_offered || 'various products'}`,
+        start_date: startDate,
+        end_date: endDate,
+        time: 'All Day',
+        status: 'upcoming',
+        created_by: req.user._id,
+        booth: {
+          vendors: [vendorData]
+        }
+      });
+    }
+
     res.json({
       message: "Vendor application accepted successfully",
       application: {
         _id: application._id,
         vendor_name: `${application.vendor_user_id.first_name} ${application.vendor_user_id.last_name}`,
         vendor_email: application.vendor_user_id.email,
-        bazaar_name: application.bazaar_id.name,
+        bazaar_name: application.bazaar_id?.name || 'N/A',
         status: application.status,
         approved_by: `${req.user.first_name} ${req.user.last_name}`,
-        approved_at: application.approved_at
+        approved_at: application.approved_at,
+        event_created: createdEvent ? true : false,
+        event_id: createdEvent?._id
       }
     });
 

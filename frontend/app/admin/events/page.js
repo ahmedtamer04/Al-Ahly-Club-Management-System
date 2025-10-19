@@ -162,7 +162,7 @@ export default function AllEventsPage() {
     conferences: 0
   });
 
-  // Fetch events data
+  // Fetch events data and accepted booth applications
   useEffect(() => {
     const fetchEvents = async () => {
       try {
@@ -178,24 +178,72 @@ export default function AllEventsPage() {
           eventsData = JSON.parse(response);
         }
         
-        console.log('Parsed events data:', eventsData);
-        setEvents(eventsData || []);
+        // Filter out Booth type events - we'll get those from vendor applications
+        const nonBoothEvents = eventsData?.filter(e => e.type !== 'Booth') || [];
+        console.log('Non-booth events:', nonBoothEvents);
+        
+        // Fetch accepted booth applications
+        console.log('Fetching accepted booth applications...');
+        const boothResponse = await api.get('/admin/vendor-requests?status=accepted&kind=booth_event');
+        console.log('Booth applications response:', boothResponse);
+        
+        // Transform booth applications to event format
+        const boothEvents = (boothResponse.applications || []).map(app => {
+          // Calculate end date based on duration
+          const startDate = app.preferred_start_date ? new Date(app.preferred_start_date) : new Date(app.applied_at);
+          const endDate = new Date(startDate);
+          endDate.setDate(endDate.getDate() + ((app.duration_weeks || 1) * 7));
+          
+          return {
+            _id: app._id,
+            name: app.vendor?.company_name || `${app.vendor?.name}'s Booth`,
+            type: 'Booth',
+            location: app.application?.booth_location?.description || 
+                     `Zone ${app.application?.booth_location?.zone || 'N/A'} - ${app.platform_position?.wall || 'N/A'} Wall, Slot ${app.platform_position?.slot || 'N/A'}`,
+            short_description: `${app.duration_weeks || 1} week booth - ${app.application?.booth_size || 'Standard size'}`,
+            start_date: startDate,
+            end_date: endDate,
+            time: 'All Day',
+            status: 'active',
+            booth: {
+              vendors: [{
+                vendor_name: app.vendor?.name,
+                company_name: app.vendor?.company_name,
+                contact_info: {
+                  email: app.vendor?.email
+                },
+                booth_assignment: `${app.platform_position?.wall || 'N/A'}-${app.platform_position?.slot || 'N/A'} (${app.application?.booth_size || 'N/A'})`,
+                setup_time: `${app.duration_weeks || 1} week(s)`
+              }]
+            },
+            // Store original application data for reference
+            _isBoothApplication: true,
+            _applicationData: app
+          };
+        });
+        
+        console.log('Transformed booth events:', boothEvents);
+        
+        // Combine events and booth applications
+        const allEvents = [...nonBoothEvents, ...boothEvents];
+        console.log('All events combined:', allEvents);
+        setEvents(allEvents);
         
         // Calculate stats
         const eventStats = {
-          workshops: eventsData?.filter(e => e.type === 'Workshop').length || 0,
-          trips: eventsData?.filter(e => e.type === 'Trip').length || 0,
-          bazaars: eventsData?.filter(e => e.type === 'Bazaar').length || 0,
-          booths: eventsData?.filter(e => e.type === 'Booth').length || 0,
-          conferences: eventsData?.filter(e => e.type === 'Conference').length || 0
+          workshops: nonBoothEvents.filter(e => e.type === 'Workshop').length || 0,
+          trips: nonBoothEvents.filter(e => e.type === 'Trip').length || 0,
+          bazaars: nonBoothEvents.filter(e => e.type === 'Bazaar').length || 0,
+          booths: boothEvents.length || 0,
+          conferences: nonBoothEvents.filter(e => e.type === 'Conference').length || 0
         };
         
         console.log('Calculated stats:', eventStats);
         setStats(eventStats);
         
-        // Fetch registration counts for each event
-        if (eventsData && eventsData.length > 0) {
-          await fetchRegistrationCounts(eventsData);
+        // Fetch registration counts for each event (only for non-booth events)
+        if (nonBoothEvents && nonBoothEvents.length > 0) {
+          await fetchRegistrationCounts(nonBoothEvents);
         }
         
       } catch (error) {
@@ -298,30 +346,91 @@ export default function AllEventsPage() {
     return true;
   });
 
-  const handleDeleteEvent = async (eventId, eventName) => {
-    if (!confirm(`Are you sure you want to delete the event "${eventName}"? This action cannot be undone.`)) {
+  const handleDeleteEvent = async (eventId, eventName, isBooth = false) => {
+    const message = isBooth 
+      ? `Are you sure you want to cancel this booth application "${eventName}"? This will reject the vendor's booth.`
+      : `Are you sure you want to delete the event "${eventName}"? This action cannot be undone.`;
+    
+    if (!confirm(message)) {
       return;
     }
     
     try {
-      await api.delete(`/events/delete/${eventId}`);
+      if (isBooth) {
+        // For booth applications, we should reject them instead of deleting
+        const reason = prompt('Enter reason for canceling this booth:');
+        if (!reason || reason.trim() === '') {
+          alert('Cancellation reason is required');
+          return;
+        }
+        
+        await api.post(`/admin/vendor-requests/${eventId}/reject`, {
+          rejection_reason: reason.trim()
+        });
+        alert('Booth application cancelled successfully!');
+      } else {
+        // For regular events, delete normally
+        await api.delete(`/events/delete/${eventId}`);
+        alert('Event deleted successfully!');
+      }
+      
       // Refresh events list
       const response = await api.get('/events/all');
       let eventsData = response;
       if (typeof response === 'string') {
         eventsData = JSON.parse(response);
       }
-      setEvents(eventsData || []);
+      
+      // Filter out Booth type events
+      const nonBoothEvents = eventsData?.filter(e => e.type !== 'Booth') || [];
+      
+      // Fetch accepted booth applications
+      const boothResponse = await api.get('/admin/vendor-requests?status=accepted&kind=booth_event');
+      
+      // Transform booth applications to event format (same as in useEffect)
+      const boothEvents = (boothResponse.applications || []).map(app => {
+        const startDate = app.preferred_start_date ? new Date(app.preferred_start_date) : new Date(app.applied_at);
+        const endDate = new Date(startDate);
+        endDate.setDate(endDate.getDate() + ((app.duration_weeks || 1) * 7));
+        
+        return {
+          _id: app._id,
+          name: app.vendor?.company_name || `${app.vendor?.name}'s Booth`,
+          type: 'Booth',
+          location: app.application?.booth_location?.description || 
+                   `Zone ${app.application?.booth_location?.zone || 'N/A'} - ${app.platform_position?.wall || 'N/A'} Wall, Slot ${app.platform_position?.slot || 'N/A'}`,
+          short_description: `${app.duration_weeks || 1} week booth - ${app.application?.booth_size || 'Standard size'}`,
+          start_date: startDate,
+          end_date: endDate,
+          time: 'All Day',
+          status: 'active',
+          booth: {
+            vendors: [{
+              vendor_name: app.vendor?.name,
+              company_name: app.vendor?.company_name,
+              contact_info: {
+                email: app.vendor?.email
+              },
+              booth_assignment: `${app.platform_position?.wall || 'N/A'}-${app.platform_position?.slot || 'N/A'} (${app.application?.booth_size || 'N/A'})`,
+              setup_time: `${app.duration_weeks || 1} week(s)`
+            }]
+          },
+          _isBoothApplication: true,
+          _applicationData: app
+        };
+      });
+      
+      const allEvents = [...nonBoothEvents, ...boothEvents];
+      setEvents(allEvents);
       
       // Refresh registration counts for the updated events list
-      if (eventsData && eventsData.length > 0) {
-        await fetchRegistrationCounts(eventsData);
+      if (nonBoothEvents && nonBoothEvents.length > 0) {
+        await fetchRegistrationCounts(nonBoothEvents);
       }
       
-      alert('Event deleted successfully!');
     } catch (error) {
-      console.error('Error deleting event:', error);
-      alert('Failed to delete event: ' + (error.response?.data?.message || error.message));
+      console.error('Error deleting/cancelling:', error);
+      alert('Failed to process request: ' + (error.response?.data?.message || error.message));
     }
   };
 
@@ -436,6 +545,90 @@ export default function AllEventsPage() {
                   </div>
                 )}
               </div>
+            </div>
+          );
+        case 'Booth':
+          // Show booth application details if this is a booth application
+          if (event._isBoothApplication && event._applicationData) {
+            const app = event._applicationData;
+            return (
+              <div style={{marginTop: '1rem', padding: '1rem', backgroundColor: '#e8f5e8', borderRadius: '8px', border: '1px solid #4caf50'}}>
+                <h4>🏪 Booth Application Details</h4>
+                <div className="event-details">
+                  <div className="event-detail-item">
+                    <div className="event-detail-label">Vendor:</div>
+                    <div className="event-detail-value">{app.vendor?.name}</div>
+                  </div>
+                  <div className="event-detail-item">
+                    <div className="event-detail-label">Company:</div>
+                    <div className="event-detail-value">{app.vendor?.company_name || 'N/A'}</div>
+                  </div>
+                  <div className="event-detail-item">
+                    <div className="event-detail-label">Email:</div>
+                    <div className="event-detail-value">{app.vendor?.email}</div>
+                  </div>
+                  <div className="event-detail-item">
+                    <div className="event-detail-label">Booth Size:</div>
+                    <div className="event-detail-value">{app.application?.booth_size || 'N/A'}</div>
+                  </div>
+                  <div className="event-detail-item">
+                    <div className="event-detail-label">Duration:</div>
+                    <div className="event-detail-value">{app.duration_weeks || 1} week(s)</div>
+                  </div>
+                  <div className="event-detail-item">
+                    <div className="event-detail-label">Platform Position:</div>
+                    <div className="event-detail-value">
+                      {app.platform_position?.wall || 'N/A'} wall, Slot {app.platform_position?.slot || 'N/A'}
+                    </div>
+                  </div>
+                  {app.application?.booth_location?.zone && (
+                    <div className="event-detail-item">
+                      <div className="event-detail-label">Zone:</div>
+                      <div className="event-detail-value">Zone {app.application.booth_location.zone}</div>
+                    </div>
+                  )}
+                  <div className="event-detail-item">
+                    <div className="event-detail-label">Status:</div>
+                    <div className="event-detail-value">
+                      <span style={{color: '#4caf50', fontWeight: 'bold'}}>✅ Accepted</span>
+                    </div>
+                  </div>
+                  {app.approved_by && (
+                    <div className="event-detail-item">
+                      <div className="event-detail-label">Approved By:</div>
+                      <div className="event-detail-value">{app.approved_by.name}</div>
+                    </div>
+                  )}
+                  {app.approved_at && (
+                    <div className="event-detail-item">
+                      <div className="event-detail-label">Approved On:</div>
+                      <div className="event-detail-value">{formatDate(app.approved_at)}</div>
+                    </div>
+                  )}
+                </div>
+                {app.application?.notes && (
+                  <div className="event-detail-item" style={{marginTop: '1rem'}}>
+                    <div className="event-detail-label">Notes:</div>
+                    <div className="event-detail-value">{app.application.notes}</div>
+                  </div>
+                )}
+              </div>
+            );
+          }
+          // Fallback for regular booth events
+          return (
+            <div style={{marginTop: '1rem', padding: '1rem', backgroundColor: '#f8f9fa', borderRadius: '8px'}}>
+              <h4>Booth Details</h4>
+              {event.booth?.vendors && event.booth.vendors.length > 0 && (
+                <div className="event-detail-item">
+                  <div className="event-detail-label">Vendors:</div>
+                  <div className="event-detail-value">
+                    {event.booth.vendors.map((v, i) => (
+                      <div key={i}>{v.vendor_name} - {v.booth_assignment}</div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           );
         case 'Conference':
@@ -889,11 +1082,11 @@ export default function AllEventsPage() {
                           </button>
                           <button 
                             className="btn btn-danger btn-sm"
-                            onClick={() => handleDeleteEvent(event._id, event.name)}
-                            title="Delete Event"
+                            onClick={() => handleDeleteEvent(event._id, event.name, event._isBoothApplication)}
+                            title={event._isBoothApplication ? "Cancel Booth" : "Delete Event"}
                             style={{marginLeft: '4px'}}
                           >
-                            🗑️ Delete
+                            {event._isBoothApplication ? '❌ Cancel' : '🗑️ Delete'}
                           </button>
                         </td>
                       </tr>

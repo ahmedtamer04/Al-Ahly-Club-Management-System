@@ -9,6 +9,9 @@ const router = express.Router();
 // POST /register - Register for a workshop/trip
 router.post("/register", auth, requireRegistering, registerForEvent);
 
+// GET /user - Get current user's registrations
+router.get("/user", auth, requireRegistering, viewRegisteredEvents);
+
 // GET /:user_id/events - View registered events (upcoming & past)
 router.get("/:user_id/events", auth, requireRegistering, viewRegisteredEvents);
 

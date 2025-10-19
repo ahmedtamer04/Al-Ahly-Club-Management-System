@@ -167,11 +167,13 @@ export const viewRegisteredEvents = async (req, res) => {
       const registrationData = {
         _id: registration._id,
         registration_date: registration.createdAt,
+        created_at: registration.createdAt, // Add this for compatibility
         name: registration.name,
         email: registration.email,
         personalId: registration.personalId,
         status: registration.status,
-        event: event  // Use 'event' instead of 'event_id' to match frontend expectations
+        event_id: event,  // Keep event_id for staff page compatibility
+        event: event  // Also keep 'event' for other pages
       };
       
       formattedRegistrations.push(registrationData);
@@ -185,13 +187,7 @@ export const viewRegisteredEvents = async (req, res) => {
 
     console.log('Returning registrations:', formattedRegistrations.length);
     
-    res.json({ 
-      message: "Registered events retrieved successfully",
-      registrations: formattedRegistrations,  // Add this for frontend compatibility
-      upcoming, 
-      past,
-      total: validRegistrations.length
-    });
+    res.json(formattedRegistrations);  // Return array directly for /user endpoint
     
   } catch (error) {
     console.error('Error in viewRegisteredEvents:', error);

@@ -1,15 +1,21 @@
 {
   "pages": {
+    "/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/css/app/page.css",
+      "static/chunks/app/page.js"
+    ],
     "/layout": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/app/layout.js"
     ],
-    "/vendor/page": [
+    "/auth/register/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/css/app/vendor/page.css",
-      "static/chunks/app/vendor/page.js"
+      "static/css/app/auth/register/page.css",
+      "static/chunks/app/auth/register/page.js"
     ],
     "/auth/login/page": [
       "static/chunks/webpack.js",
@@ -17,11 +23,71 @@
       "static/css/app/auth/login/page.css",
       "static/chunks/app/auth/login/page.js"
     ],
-    "/page": [
+    "/admin/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/css/app/page.css",
-      "static/chunks/app/page.js"
+      "static/css/app/admin/page.css",
+      "static/chunks/app/admin/page.js"
+    ],
+    "/admin/vendors/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/css/app/admin/vendors/page.css",
+      "static/chunks/app/admin/vendors/page.js"
+    ],
+    "/admin/users/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/css/app/admin/users/page.css",
+      "static/chunks/app/admin/users/page.js"
+    ],
+    "/admin/events/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/css/app/admin/events/page.css",
+      "static/chunks/app/admin/events/page.js"
+    ],
+    "/admin/registrations/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/css/app/admin/registrations/page.css",
+      "static/chunks/app/admin/registrations/page.js"
+    ],
+    "/ta/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/css/app/ta/page.css",
+      "static/chunks/app/ta/page.js"
+    ],
+    "/ta/events/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/css/app/ta/events/page.css",
+      "static/chunks/app/ta/events/page.js"
+    ],
+    "/ta/gym/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/css/app/ta/gym/page.css",
+      "static/chunks/app/ta/gym/page.js"
+    ],
+    "/ta/my-events/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/css/app/ta/my-events/page.css",
+      "static/chunks/app/ta/my-events/page.js"
+    ],
+    "/ta/favorites/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/css/app/ta/favorites/page.css",
+      "static/chunks/app/ta/favorites/page.js"
+    ],
+    "/ta/profile/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/css/app/ta/profile/page.css",
+      "static/chunks/app/ta/profile/page.js"
     ],
     "/eventsoffice/page": [
       "static/chunks/webpack.js",
@@ -29,29 +95,59 @@
       "static/css/app/eventsoffice/page.css",
       "static/chunks/app/eventsoffice/page.js"
     ],
-    "/vendor/applications/page": [
+    "/eventsoffice/profile/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/css/app/vendor/applications/page.css",
-      "static/chunks/app/vendor/applications/page.js"
+      "static/css/app/eventsoffice/profile/page.css",
+      "static/chunks/app/eventsoffice/profile/page.js"
     ],
-    "/vendor/bazaars/page": [
+    "/student/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/css/app/vendor/bazaars/page.css",
-      "static/chunks/app/vendor/bazaars/page.js"
+      "static/css/app/student/page.css",
+      "static/chunks/app/student/page.js"
     ],
-    "/vendor/apply-bazaar/page": [
+    "/student/events/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/css/app/vendor/apply-bazaar/page.css",
-      "static/chunks/app/vendor/apply-bazaar/page.js"
+      "static/css/app/student/events/page.css",
+      "static/chunks/app/student/events/page.js"
     ],
-    "/vendor/booths/page": [
+    "/student/my-registrations/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/css/app/vendor/booths/page.css",
-      "static/chunks/app/vendor/booths/page.js"
+      "static/css/app/student/my-registrations/page.css",
+      "static/chunks/app/student/my-registrations/page.js"
+    ],
+    "/student/facilities/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/css/app/student/facilities/page.css",
+      "static/chunks/app/student/facilities/page.js"
+    ],
+    "/student/gym/schedule/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/css/app/student/gym/schedule/page.css",
+      "static/chunks/app/student/gym/schedule/page.js"
+    ],
+    "/staff/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/css/app/staff/page.css",
+      "static/chunks/app/staff/page.js"
+    ],
+    "/staff/events/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/css/app/staff/events/page.css",
+      "static/chunks/app/staff/events/page.js"
+    ],
+    "/staff/events/[id]/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/css/app/staff/events/[id]/page.css",
+      "static/chunks/app/staff/events/[id]/page.js"
     ]
   }
 }

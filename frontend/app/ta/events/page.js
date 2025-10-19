@@ -29,7 +29,9 @@ export default function TAEventsPage() {
   const [filterType, setFilterType] = useState('all');
   const [filterLocation, setFilterLocation] = useState('');
   const [filterProfessor, setFilterProfessor] = useState('');
-  const [sortOrder, setSortOrder] = useState('asc');
+  const [filterDate, setFilterDate] = useState('');
+  const [sortOrder, setSortOrder] = useState('desc'); // 'desc' for newest first
+  const [showFilters, setShowFilters] = useState(false);
 
   useEffect(() => {
     const fetchEvents = async () => {
@@ -295,6 +297,14 @@ export default function TAEventsPage() {
       });
     }
 
+    // Filter by date
+    if (filterDate) {
+      result = result.filter(event => {
+        const eventDate = new Date(event.start_date).toISOString().split('T')[0];
+        return eventDate === filterDate;
+      });
+    }
+
     result.sort((a, b) => {
       const dateA = new Date(a.start_date);
       const dateB = new Date(b.start_date);
@@ -302,7 +312,21 @@ export default function TAEventsPage() {
     });
 
     setFilteredEvents(result);
-  }, [events, searchTerm, filterType, filterLocation, filterProfessor, sortOrder]);
+  }, [events, searchTerm, filterType, filterLocation, filterProfessor, filterDate, sortOrder]);
+
+  // Handle sort order change
+  const handleSortChange = () => {
+    setSortOrder(sortOrder === 'desc' ? 'asc' : 'desc');
+  };
+
+  // Handle clear filters
+  const handleClearFilters = () => {
+    setSearchTerm('');
+    setFilterType('all');
+    setFilterLocation('');
+    setFilterProfessor('');
+    setFilterDate('');
+  };
 
   const formatDate = (dateString) => {
     if (!dateString) return 'Date TBA';
