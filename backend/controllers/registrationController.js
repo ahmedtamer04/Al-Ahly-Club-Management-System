@@ -5,30 +5,55 @@ import mongoose from "mongoose";
 // Register for a workshop or trip
 export const registerForEvent = async (req, res) => {
   try {
+    console.log('Registration request body:', req.body);
+    console.log('User from auth middleware:', req.user);
+    
     const { event_id, name, email, personalId, role } = req.body;
     const user_id = req.user._id;
     
+    console.log('Extracted fields:', { event_id, name, email, personalId, role, user_id });
+    
     if (!event_id || !name || !email || !personalId || !role) {
+      console.log('Missing required fields:', { event_id: !!event_id, name: !!name, email: !!email, personalId: !!personalId, role: !!role });
       return res.status(400).json({ message: "All fields are required." });
     }
     
-    // Normalize role for validation (accept 'Staff' or 'staff', 'TA' or 'ta')
+    // Normalize and validate role (match the Registration model enum)
+    let normalizedRole;
     const roleLower = role ? role.toString().toLowerCase() : '';
-    if (!["student", "staff", "ta", "professor"].includes(roleLower)) {
-      return res.status(400).json({ message: "Invalid role." });
+    
+    switch(roleLower) {
+      case 'student':
+        normalizedRole = 'student';
+        break;
+      case 'staff':
+        normalizedRole = 'staff';
+        break;
+      case 'ta':
+        normalizedRole = 'TA';  // Use uppercase as per model
+        break;
+      case 'professor':
+        normalizedRole = 'professor';
+        break;
+      default:
+        console.log('Invalid role provided:', role);
+        return res.status(400).json({ message: `Invalid role: "${role}". Valid roles are: student, staff, TA, professor` });
     }
+    
+    console.log('Role validation:', { originalRole: role, normalizedRole });
 
+    console.log('Looking up event with ID:', event_id);
     const event = await Event.findById(event_id);
+    
     if (!event) {
+      console.log('Event not found for ID:', event_id);
       return res.status(404).json({ message: "Event not found." });
     }
 
-    // CHECK: Only Workshop and Trip can be registered
-    if (event.type !== 'Workshop' && event.type !== 'Trip') {
-      return res.status(400).json({ 
-        message: "Only Workshops and Trips are available for registration." 
-      });
-    }
+    console.log('Found event:', { id: event._id, name: event.name, type: event.type });
+
+    // CHECK: Allow registration for all event types (removing restriction)
+    console.log('Event type check - Type:', event.type);
 
     if (!event.registration_open) {
       return res.status(400).json({ message: "Registration is closed for this event." });
@@ -44,7 +69,16 @@ export const registerForEvent = async (req, res) => {
       name,
       email,
       personalId,
-      role
+      role: normalizedRole  // Use the normalized role
+    });
+    
+    console.log('Creating registration with data:', {
+      event_id,
+      user_id,
+      name,
+      email,
+      personalId,
+      role: normalizedRole
     });
     
     await registration.save();
@@ -67,22 +101,29 @@ export const registerForEvent = async (req, res) => {
 // View registered events (upcoming & past)
 export const viewRegisteredEvents = async (req, res) => {
   try {
-    const user_id = req.user._id;
+    const user_id = req.params.user_id || req.user._id;
+    
+    console.log('ViewRegisteredEvents - user_id:', user_id);
+    console.log('Params:', req.params);
+    console.log('Auth user:', req.user._id);
     
     if (!user_id) {
       return res.status(400).json({ message: "User ID is required." });
     }
 
+    // Get all registrations (including cancelled ones)
     const registrations = await Registration.find({ 
-      user_id, 
-      status: "registered" 
+      user_id
     }).populate('event_id');
+    
+    console.log('Found registrations:', registrations.length);
 
     const validRegistrations = registrations.filter(reg => reg.event_id);
 
     const now = new Date();
     const upcoming = [];
     const past = [];
+    const formattedRegistrations = [];
 
     validRegistrations.forEach(registration => {
       const event = registration.event_id;
@@ -94,8 +135,10 @@ export const viewRegisteredEvents = async (req, res) => {
         email: registration.email,
         personalId: registration.personalId,
         status: registration.status,
-        event_id: event
+        event: event  // Use 'event' instead of 'event_id' to match frontend expectations
       };
+      
+      formattedRegistrations.push(registrationData);
       
       if (event.end_date >= now) {
         upcoming.push(registrationData);
@@ -104,8 +147,11 @@ export const viewRegisteredEvents = async (req, res) => {
       }
     });
 
+    console.log('Returning registrations:', formattedRegistrations.length);
+    
     res.json({ 
       message: "Registered events retrieved successfully",
+      registrations: formattedRegistrations,  // Add this for frontend compatibility
       upcoming, 
       past,
       total: validRegistrations.length
@@ -119,30 +165,38 @@ export const viewRegisteredEvents = async (req, res) => {
 
 export const cancelRegistration = async (req, res) => {
   try {
-    const { event_id } = req.params;
+    const { registrationId } = req.params;
     const user_id = req.user._id;
 
+    console.log('Cancel registration request:', { registrationId, user_id });
+
     const registration = await Registration.findOne({
-      event_id,
+      _id: registrationId,
       user_id,
       status: "registered"
     });
 
+    console.log('Found registration:', registration);
+
     if (!registration) {
+      console.log('Registration not found for cancellation');
       return res.status(404).json({ message: "Registration not found." });
     }
 
-    // Check if event has started
-    const event = await Event.findById(event_id);
+    // Check if event has started (get event from registration)
+    const event = await Event.findById(registration.event_id);
     if (event && event.start_date <= new Date()) {
+      console.log('Event has already started, cannot cancel');
       return res.status(400).json({ 
         message: "Cannot cancel registration for events that have already started." 
       });
     }
 
+    console.log('Cancelling registration');
     registration.status = "canceled";
     await registration.save();
 
+    console.log('Registration cancelled successfully');
     res.json({ message: "Registration canceled successfully." });
 
   } catch (error) {

@@ -1,7 +1,7 @@
 {
-  "/student/gym/schedule/page": "app/student/gym/schedule/page.js",
-  "/student/my-registrations/page": "app/student/my-registrations/page.js",
   "/student/facilities/page": "app/student/facilities/page.js",
-  "/student/register/page": "app/student/register/page.js",
-  "/student/events/page": "app/student/events/page.js"
+  "/student/gym/schedule/page": "app/student/gym/schedule/page.js",
+  "/student/page": "app/student/page.js",
+  "/student/events/page": "app/student/events/page.js",
+  "/student/events/search/page": "app/student/events/search/page.js"
 }

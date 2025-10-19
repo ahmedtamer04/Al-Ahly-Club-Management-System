@@ -288,15 +288,15 @@ export const gymAPI = {
 // ================================
 
 export const facilityAPI = {
-  // GET /api/facility/getAll
+  // GET /api/facilities/getAll
   // Auth: requireStudent (any authenticated user)
-  getAll: () => api.get('/facility/getAll'),
+  getAll: () => api.get('/facilities/getAll'),
 
-  // POST /api/facility/add
+  // POST /api/facilities/add
   // Auth: requireAdminOrEventsOffice
   // Required: { type, capacity, hourly_rate, status }
   // type: "Football" | "Basketball" | "Tennis" | "Volleyball" | "Squash" | "Gym" | "Pool"
-  add: (facilityData) => api.post('/facility/add', facilityData),
+  add: (facilityData) => api.post('/facilities/add', facilityData),
 };
 
 // ================================

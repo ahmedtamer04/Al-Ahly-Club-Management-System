@@ -7,7 +7,7 @@ const registrationSchema = new mongoose.Schema({
   name: { type: String, required: true },
   email: { type: String, required: true },
   personalId: { type: String, required: true },
-  role: { type: String, enum: ["student", "staff", "TA", "professor"], required: true },
+  role: { type: String, enum: ["student", "staff", "TA", "professor", "Student", "Staff", "Professor"], required: true },
   status: { type: String, enum: ["registered","canceled"], default: "registered" }
 }, { timestamps: true });
 

@@ -1,12 +1,77 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { facilityAPI, getUser } from '@/utils/api';
 import '@/app/dashboard.css';
 
 export default function FacilitiesPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('all');
+  const [facilities, setFacilities] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    fetchFacilities();
+  }, []);
+
+  const fetchFacilities = async () => {
+    try {
+      setLoading(true);
+      setError('');
+      
+      const user = getUser();
+      if (!user) {
+        setError('Please log in to view facilities.');
+        return;
+      }
+
+      console.log('Fetching facilities...');
+      const response = await facilityAPI.getAll();
+      console.log('Facilities response:', response);
+      
+      if (Array.isArray(response)) {
+        setFacilities(response);
+      } else if (response && Array.isArray(response.data)) {
+        setFacilities(response.data);
+      } else {
+        console.error('Unexpected response format:', response);
+        setFacilities([]);
+      }
+    } catch (err) {
+      console.error('Failed to fetch facilities:', err);
+      setError(err.response?.data?.message || err.message || 'Failed to load facilities.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getFilteredFacilities = () => {
+    return facilities.filter(facility => {
+      const matchesSearch = facility.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          facility.location?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          facility.attributes?.sport?.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      if (filterType === 'all') return matchesSearch;
+      if (filterType === 'court') return matchesSearch && facility.type === 'court';
+      if (filterType === 'field') return matchesSearch && facility.type === 'field';  
+      if (filterType === 'hall') return matchesSearch && facility.type === 'hall';
+      return matchesSearch;
+    });
+  };
+
+  const getFacilityCounts = () => {
+    return {
+      basketball: facilities.filter(f => f.attributes?.sport === 'Basketball').length,
+      football: facilities.filter(f => f.attributes?.sport === 'Football').length,
+      tennis: facilities.filter(f => f.attributes?.sport === 'Tennis').length,
+      halls: facilities.filter(f => f.type === 'hall').length,
+    };
+  };
+
+  const filteredFacilities = getFilteredFacilities();
+  const counts = getFacilityCounts();
 
   return (
     <div className="dashboard">
@@ -28,9 +93,7 @@ export default function FacilitiesPage() {
             <li><Link href="/student/my-registrations">🎫 My Registrations</Link></li>
             <li><Link href="/student/facilities">🏢 Facilities</Link></li>
             <li><Link href="/student/gym/schedule">💪 Gym Schedule</Link></li>
-            <li><Link href="/student/workshops">🔧 Workshops</Link></li>
             <li><Link href="/student/trips">🚌 Trips</Link></li>
-            <li><Link href="/student/register">📝 Event Registration</Link></li>
             <li><Link href="/student/profile">👤 Profile</Link></li>
           </ul>
         </aside>
@@ -77,12 +140,55 @@ export default function FacilitiesPage() {
             </div>
 
             <div className="admin-grid" style={{marginTop: '1.5rem'}}>
-              <div className="empty-state">
-                <p>🏟️ No facilities available</p>
-                <p style={{fontSize: '0.9rem', color: '#999'}}>
-                  API: GET /api/facilities/getAll
-                </p>
-              </div>
+              {loading && (
+                <div className="empty-state">
+                  <p>🔄 Loading facilities...</p>
+                </div>
+              )}
+
+              {error && (
+                <div className="empty-state">
+                  <p>❌ {error}</p>
+                  <button className="btn-primary" onClick={fetchFacilities} style={{marginTop: '1rem'}}>
+                    Try Again
+                  </button>
+                </div>
+              )}
+
+              {!loading && !error && filteredFacilities.length === 0 && (
+                <div className="empty-state">
+                  <p>🏟️ No facilities found</p>
+                  {searchTerm || filterType !== 'all' ? (
+                    <p style={{fontSize: '0.9rem', color: '#666'}}>
+                      Try adjusting your search or filter
+                    </p>
+                  ) : (
+                    <p style={{fontSize: '0.9rem', color: '#666'}}>
+                      No facilities have been added yet
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {!loading && !error && filteredFacilities.map(facility => (
+                <div key={facility._id} className="admin-card">
+                  <div className="card-header">
+                    <h3>{facility.name}</h3>
+                    <span className={`status ${facility.status === 'available' ? 'active' : 'inactive'}`}>
+                      {facility.status === 'available' ? '✅ Available' : '❌ Unavailable'}
+                    </span>
+                  </div>
+                  <div className="card-content">
+                    <p><strong>Type:</strong> {facility.type}</p>
+                    <p><strong>Sport:</strong> {facility.attributes?.sport || 'N/A'}</p>
+                    {facility.location && <p><strong>Location:</strong> {facility.location}</p>}
+                    <p><strong>Indoor:</strong> {facility.attributes?.indoor ? 'Yes' : 'No'}</p>
+                    {facility.availability && facility.availability.length > 0 && (
+                      <p><strong>Available Dates:</strong> {facility.availability.length} scheduled</p>
+                    )}
+                  </div>
+                </div>
+              ))}
             </div>
           </section>
 
@@ -92,28 +198,28 @@ export default function FacilitiesPage() {
               <div className="stat-card">
                 <div className="stat-icon">🏀</div>
                 <div className="stat-info">
-                  <h3>0</h3>
+                  <h3>{counts.basketball}</h3>
                   <p>Basketball Courts</p>
                 </div>
               </div>
               <div className="stat-card">
                 <div className="stat-icon">⚽</div>
                 <div className="stat-info">
-                  <h3>0</h3>
+                  <h3>{counts.football}</h3>
                   <p>Football Fields</p>
                 </div>
               </div>
               <div className="stat-card">
                 <div className="stat-icon">🎾</div>
                 <div className="stat-info">
-                  <h3>0</h3>
+                  <h3>{counts.tennis}</h3>
                   <p>Tennis Courts</p>
                 </div>
               </div>
               <div className="stat-card">
                 <div className="stat-icon">🏛️</div>
                 <div className="stat-info">
-                  <h3>0</h3>
+                  <h3>{counts.halls}</h3>
                   <p>Multi-purpose Halls</p>
                 </div>
               </div>

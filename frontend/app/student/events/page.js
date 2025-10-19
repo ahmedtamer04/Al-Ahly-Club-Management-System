@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useState, useEffect, useCallback } from 'react';
-import { eventAPI, registrationAPI } from '@/utils/api';
+import { eventAPI, registrationAPI, getUser } from '@/utils/api';
 import '@/app/dashboard.css';
 
 export default function BrowseEventsPage() {
@@ -76,24 +76,44 @@ export default function BrowseEventsPage() {
 
     try {
       setRegistering(event._id);
-      const user = JSON.parse(localStorage.getItem('user'));
+      const user = getUser();
       const token = localStorage.getItem('token');
+      
+      console.log('Registration attempt - User data:', user);
       
       if (!user || !token) {
         throw new Error('You must be logged in to register for events');
       }
 
-      // Check if user has required fields
-      if (!user.first_name || !user.last_name || !user.email || !user.id_number || !user.role) {
-        throw new Error('Missing required user information. Please complete your profile.');
-      }
+      // Build user name from available fields
+      const userName = user.name || 
+                     (user.first_name && user.last_name ? `${user.first_name} ${user.last_name}` : '') ||
+                     user.username ||
+                     'Student User';
+      
+      // Get personal ID from available fields
+      const userPersonalId = user.personalId || user.id_number || user.student_id || user._id;
+      
+      // Get email from available fields  
+      const userEmail = user.email || `${user.username || user._id}@university.edu`;
+      
+      // Get role from available fields
+      const userRole = user.role || 'Student';
+      
+      console.log('Registration data to send:', {
+        event_id: event._id,
+        name: userName,
+        email: userEmail,
+        personalId: userPersonalId,
+        role: userRole
+      });
 
       await registrationAPI.register({
         event_id: event._id,
-        name: user.first_name + ' ' + user.last_name,
-        email: user.email,
-        personalId: user.id_number,
-        role: user.role
+        name: userName,
+        email: userEmail,
+        personalId: userPersonalId,
+        role: userRole
       });
 
       // Refresh events after registration
@@ -101,15 +121,26 @@ export default function BrowseEventsPage() {
       alert('Successfully registered for the event!');
       
     } catch (err) {
-      console.error('Registration error:', err);
-      if (err.message?.includes('already registered')) {
+      console.error('Registration error details:', {
+        message: err.message,
+        response: err.response?.data,
+        status: err.response?.status,
+        error: err
+      });
+      
+      // Show more specific error messages based on response
+      if (err.response?.data?.message) {
+        alert('Registration failed: ' + err.response.data.message);
+      } else if (err.message?.includes('already registered')) {
         alert('You are already registered for this event.');
-      } else if (err.message?.includes('capacity')) {
+      } else if (err.message?.includes('capacity') || err.message?.includes('full')) {
         alert('Sorry, this event is full.');
-      } else if (err.message?.includes('deadline')) {
+      } else if (err.message?.includes('deadline') || err.message?.includes('closed')) {
         alert('Registration deadline has passed.');
+      } else if (err.message?.includes('role')) {
+        alert('Invalid user role. Please contact support.');
       } else {
-        alert('Failed to register: ' + err.message);
+        alert('Failed to register: ' + (err.message || 'Unknown error occurred'));
       }
     } finally {
       setRegistering(null);
@@ -136,9 +167,7 @@ export default function BrowseEventsPage() {
             <li><Link href="/student/my-registrations">🎫 My Registrations</Link></li>
             <li><Link href="/student/facilities">🏢 Facilities</Link></li>
             <li><Link href="/student/gym/schedule">💪 Gym Schedule</Link></li>
-            <li><Link href="/student/workshops">🔧 Workshops</Link></li>
             <li><Link href="/student/trips">🚌 Trips</Link></li>
-            <li><Link href="/student/register">📝 Event Registration</Link></li>
             <li><Link href="/student/profile">👤 Profile</Link></li>
           </ul>
         </aside>
@@ -156,6 +185,9 @@ export default function BrowseEventsPage() {
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
+                <Link href="/student/events/search" className="btn-secondary" style={{marginLeft: '10px', textDecoration: 'none'}}>
+                  🔍 Advanced Search
+                </Link>
               </div>
               <div className="filter-buttons">
                 <button 
@@ -164,11 +196,12 @@ export default function BrowseEventsPage() {
                 >
                   All Events
                 </button>
+
                 <button 
                   className={filter === 'Workshop' ? 'filter-btn active' : 'filter-btn'}
                   onClick={() => setFilter('Workshop')}
                 >
-                  🎨 Workshops
+                  🎓 Workshops
                 </button>
                 <button 
                   className={filter === 'Trip' ? 'filter-btn active' : 'filter-btn'}
@@ -193,12 +226,6 @@ export default function BrowseEventsPage() {
                   onClick={() => setFilter('Conference')}
                 >
                   🎓 Conferences
-                </button>
-                <button 
-                  className={filter === 'GymSession' ? 'filter-btn active' : 'filter-btn'}
-                  onClick={() => setFilter('GymSession')}
-                >
-                  🏋️ Gym Sessions
                 </button>
               </div>
             </div>

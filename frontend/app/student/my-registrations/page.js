@@ -21,25 +21,59 @@ export default function MyRegistrationsPage() {
       setError('');
       
       const user = getUser();
+      console.log('User from getUser():', user);
+      
       if (!user || !user._id) {
+        console.log('No user or user._id found');
         setError('Please log in to view your registrations.');
         return;
       }
 
+      console.log('Fetching registrations for user ID:', user._id);
       const response = await registrationAPI.getMyRegistrations(user._id);
-      console.log('Registrations response:', response);
+      console.log('Full registrations response:', response);
+      console.log('Response type:', typeof response);
+      console.log('Response keys:', Object.keys(response || {}));
       
       let registrationData = [];
       if (response && response.registrations) {
         registrationData = response.registrations;
+        console.log('Using response.registrations, count:', registrationData.length);
       } else if (Array.isArray(response)) {
         registrationData = response;
+        console.log('Using direct array response, count:', registrationData.length);
+      } else if (response && response.upcoming) {
+        // Handle the backend's upcoming/past format
+        registrationData = [...(response.upcoming || []), ...(response.past || [])];
+        console.log('Using upcoming/past format, count:', registrationData.length);
       }
       
+      console.log('Final registration data:', registrationData);
+      if (registrationData.length > 0) {
+        console.log('Sample registration structure:', registrationData[0]);
+        console.log('Registration ID field:', registrationData[0]._id);
+        console.log('All registration fields:', Object.keys(registrationData[0]));
+      }
       setRegistrations(registrationData);
     } catch (err) {
-      console.error('Failed to fetch registrations:', err);
-      setError('Failed to load your registrations. Please try again.');
+      console.error('Failed to fetch registrations - full error:', err);
+      console.error('Error response:', err.response);
+      console.error('Error message:', err.message);
+      console.error('Error status:', err.response?.status);
+      console.error('Error data:', err.response?.data);
+      
+      let errorMessage = 'Failed to load your registrations. ';
+      if (err.response?.status === 401) {
+        errorMessage += 'Please log in again.';
+      } else if (err.response?.status === 403) {
+        errorMessage += 'Access denied.';
+      } else if (err.response?.data?.message) {
+        errorMessage += err.response.data.message;
+      } else {
+        errorMessage += 'Please try again.';
+      }
+      
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -51,14 +85,27 @@ export default function MyRegistrationsPage() {
     }
 
     try {
-      await registrationAPI.cancel(registrationId);
+      // Check authentication first
+      const user = getUser();
+      console.log('Current user for cancel operation:', user);
+      console.log('User token exists:', !!localStorage.getItem('token'));
+      
+      console.log('Cancelling registration with ID:', registrationId);
+      const response = await registrationAPI.cancel(registrationId);
+      console.log('Cancel response:', response);
+      
       alert('Registration cancelled successfully!');
       
       // Refresh the registrations list
       fetchRegistrations();
     } catch (err) {
-      console.error('Failed to cancel registration:', err);
-      alert('Failed to cancel registration: ' + (err.message || 'Please try again.'));
+      console.error('Failed to cancel registration - full error:', err);
+      console.error('Error response:', err.response);
+      console.error('Error status:', err.response?.status);
+      console.error('Error data:', err.response?.data);
+      
+      const errorMessage = err.response?.data?.message || err.message || 'Please try again.';
+      alert('Failed to cancel registration: ' + errorMessage);
     }
   };
 
@@ -101,15 +148,32 @@ export default function MyRegistrationsPage() {
             <li><Link href="/student/my-registrations">🎫 My Registrations</Link></li>
             <li><Link href="/student/facilities">🏢 Facilities</Link></li>
             <li><Link href="/student/gym/schedule">💪 Gym Schedule</Link></li>
-            <li><Link href="/student/workshops">🔧 Workshops</Link></li>
             <li><Link href="/student/trips">🚌 Trips</Link></li>
-            <li><Link href="/student/register">📝 Event Registration</Link></li>
             <li><Link href="/student/profile">👤 Profile</Link></li>
           </ul>
         </aside>
 
         <main className="main-content">
           <h1>My Registrations 🎫</h1>
+
+          {/* Debug section - temporary */}
+          <div style={{background: '#f0f0f0', padding: '1rem', marginBottom: '1rem', borderRadius: '5px'}}>
+            <h3>Debug Info:</h3>
+            <button onClick={() => {
+              const user = getUser();
+              const token = localStorage.getItem('token');
+              console.log('Current user:', user);
+              console.log('Current token:', token);
+              alert(`User: ${user ? JSON.stringify(user) : 'None'}\nToken: ${token ? 'Present' : 'None'}`);
+            }}>
+              Check Auth Status
+            </button>
+            <button onClick={() => {
+              fetchRegistrations();
+            }} style={{marginLeft: '10px'}}>
+              Retry Fetch
+            </button>
+          </div>
 
           {error && (
             <div className="alert alert-error" style={{marginBottom: '2rem'}}>
@@ -233,14 +297,22 @@ export default function MyRegistrationsPage() {
                             {registration.status === 'registered' && (
                               <button 
                                 className="btn-secondary btn-sm"
-                                onClick={() => handleCancelRegistration(
-                                  registration._id, 
-                                  registration.event?.name || 'Unknown Event'
-                                )}
+                                onClick={() => {
+                                  console.log('Cancel button clicked for registration:', registration);
+                                  console.log('Registration ID:', registration._id);
+                                  handleCancelRegistration(
+                                    registration._id, 
+                                    registration.event?.name || 'Unknown Event'
+                                  );
+                                }}
                               >
                                 Cancel
                               </button>
                             )}
+                            {/* Debug info - temporary */}
+                            <div style={{fontSize: '10px', color: '#666', marginTop: '5px'}}>
+                              ID: {registration._id}
+                            </div>
                           </td>
                         </tr>
                       ))
