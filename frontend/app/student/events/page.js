@@ -167,7 +167,6 @@ export default function BrowseEventsPage() {
             <li><Link href="/student/my-registrations">🎫 My Registrations</Link></li>
             <li><Link href="/student/facilities">🏢 Facilities</Link></li>
             <li><Link href="/student/gym/schedule">💪 Gym Schedule</Link></li>
-            <li><Link href="/student/trips">🚌 Trips</Link></li>
             <li><Link href="/student/profile">👤 Profile</Link></li>
           </ul>
         </aside>

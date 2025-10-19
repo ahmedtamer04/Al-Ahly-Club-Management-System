@@ -1,24 +1,58 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { getUser } from '@/utils/api';
 import '@/app/dashboard.css';
 
 export default function StudentProfilePage() {
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState({
-    name: 'John Doe',
-    email: 'john.doe@university.edu',
-    phone: '+20 123 456 7890',
-    studentId: 'STU-2025-001',
-    major: 'Computer Science',
-    year: 'Junior'
+    name: '',
+    email: '',
+    phone: '',
+    studentId: '',
+    major: '',
+    year: ''
   });
-
   const [isEditing, setIsEditing] = useState(false);
 
-  const handleSave = () => {
-    setIsEditing(false);
-    alert('Profile updated successfully!');
+  // Load user data on component mount
+  useEffect(() => {
+    const userData = getUser();
+    console.log('User data loaded:', userData);
+    
+    if (userData) {
+      setUser(userData);
+      setProfile({
+        name: userData.name || `${userData.first_name || ''} ${userData.last_name || ''}`.trim() || '',
+        email: userData.email || '',
+        phone: userData.phone || '',
+        studentId: userData.id_number || userData.student_id || userData._id || '',
+        major: userData.major || userData.student_info?.major || '',
+        year: userData.year || userData.student_info?.year || 'Freshman'
+      });
+    } else {
+      // Redirect to login if no user data
+      console.log('No user data found, redirecting to login');
+      window.location.href = '/';
+    }
+    setLoading(false);
+  }, []);
+
+  const handleSave = async () => {
+    try {
+      // TODO: Implement API call to update profile
+      // await api.put('/auth/profile', profile);
+      console.log('Saving profile:', profile);
+      
+      setIsEditing(false);
+      alert('Profile updated successfully!');
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      alert('Failed to update profile. Please try again.');
+    }
   };
 
   return (
@@ -41,25 +75,30 @@ export default function StudentProfilePage() {
             <li><Link href="/student/my-registrations">🎫 My Registrations</Link></li>
             <li><Link href="/student/facilities">🏢 Facilities</Link></li>
             <li><Link href="/student/gym/schedule">💪 Gym Schedule</Link></li>
-            <li><Link href="/student/trips">🚌 Trips</Link></li>
             <li><Link href="/student/profile">👤 Profile</Link></li>
           </ul>
         </aside>
 
         <main className="main-content">
-          <div className="page-header">
-            <h1>My Profile 👤</h1>
-            {!isEditing ? (
-              <button className="btn-primary" onClick={() => setIsEditing(true)}>
-                ✏️ Edit Profile
-              </button>
-            ) : (
-              <div style={{display: 'flex', gap: '1rem'}}>
-                <button className="btn-primary" onClick={handleSave}>💾 Save</button>
-                <button className="btn-secondary" onClick={() => setIsEditing(false)}>❌ Cancel</button>
+          {loading ? (
+            <div className="loading-state">
+              <p>🔄 Loading profile...</p>
+            </div>
+          ) : (
+            <>
+              <div className="page-header">
+                <h1>My Profile 👤</h1>
+                {!isEditing ? (
+                  <button className="btn-primary" onClick={() => setIsEditing(true)}>
+                    ✏️ Edit Profile
+                  </button>
+                ) : (
+                  <div style={{display: 'flex', gap: '1rem'}}>
+                    <button className="btn-primary" onClick={handleSave}>💾 Save</button>
+                    <button className="btn-secondary" onClick={() => setIsEditing(false)}>❌ Cancel</button>
+                  </div>
+                )}
               </div>
-            )}
-          </div>
 
           <section className="section">
             <h2>Personal Information</h2>
@@ -97,17 +136,16 @@ export default function StudentProfilePage() {
                 />
               </div>
 
-              <div className="form-group">
-                <label>Student ID</label>
-                <input
-                  type="text"
-                  value={profile.studentId}
-                  disabled
-                  style={{padding: '0.75rem', borderRadius: '8px', border: '2px solid #E5E5E5', width: '100%', background: '#F5F5F5'}}
-                />
-              </div>
-
-              <div className="form-group">
+                <div className="form-group">
+                  <label>Student ID</label>
+                  <input
+                    type="text"
+                    value={profile.studentId}
+                    disabled
+                    style={{padding: '0.75rem', borderRadius: '8px', border: '2px solid #E5E5E5', width: '100%', background: '#F5F5F5', color: '#666'}}
+                  />
+                  <small style={{color: '#666', fontSize: '0.8rem'}}>Student ID cannot be changed</small>
+                </div>              <div className="form-group">
                 <label>Major</label>
                 <input
                   type="text"
@@ -165,6 +203,8 @@ export default function StudentProfilePage() {
               <button className="btn-primary">🔒 Update Password</button>
             </div>
           </section>
+            </>
+          )}
         </main>
       </div>
     </div>
