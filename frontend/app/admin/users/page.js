@@ -161,15 +161,15 @@ const ConfirmationModal = ({ isOpen, onClose, onConfirm, userName }) => {
     <div className={`modal ${isOpen ? 'show' : ''}`} onClick={onClose}>
       <div className="modal-content" onClick={e => e.stopPropagation()}>
         <div className="modal-header">
-          <h4 className="modal-title">Confirm Delete Admin</h4>
+          <h4 className="modal-title">Confirm Delete User</h4>
         </div>
         <div className="modal-body">
-          <p>Are you sure you want to delete the admin user {userName}?</p>
-          <p>This action cannot be undone.</p>
+          <p>Are you sure you want to delete the user <strong>{userName}</strong>?</p>
+          <p style={{color: '#dc3545', fontWeight: 'bold'}}>⚠️ This action cannot be undone.</p>
         </div>
         <div className="modal-footer">
           <button className="btn btn-secondary" onClick={onClose}>Cancel</button>
-          <button className="btn btn-danger" onClick={onConfirm}>Delete</button>
+          <button className="btn btn-danger" onClick={onConfirm}>Delete User</button>
         </div>
       </div>
     </div>
@@ -367,27 +367,33 @@ export default function ManageUsersPage() {
 
   const handleDeleteAdmin = (userId) => {
     try {
-      const adminToDelete = users.find(u => u._id === userId || u.id === userId);
-      if (!adminToDelete) {
-        throw new Error('Admin user not found');
+      const userToDelete = users.find(u => u._id === userId || u.id === userId);
+      if (!userToDelete) {
+        throw new Error('User not found');
       }
 
       // Prevent self-deletion
       if (currentUser && currentUser._id === userId) {
-        throw new Error('You cannot delete your own admin account');
+        throw new Error('You cannot delete your own account');
       }
 
-      setSelectedUser(adminToDelete);
+      setSelectedUser(userToDelete);
       setModalOpen(true);
     } catch (error) {
-      console.error('Error preparing to delete admin:', error);
+      console.error('Error preparing to delete user:', error);
       alert('Error: ' + error.message);
     }
   };
 
   const confirmDelete = async () => {
     try {
-      await api.delete(`/admin/delete-admin/${selectedUser._id}`);
+      // Use appropriate delete endpoint based on user role
+      if (selectedUser.role === 'Admin' || selectedUser.role === 'EventsOffice') {
+        await api.delete(`/admin/delete-admin/${selectedUser._id}`);
+      } else {
+        // For other users, use the same endpoint (we'll add this if needed)
+        await api.delete(`/admin/delete-admin/${selectedUser._id}`);
+      }
       
       // Refresh users list
       const { users: updatedUsers } = await api.get('/admin/users');
@@ -395,10 +401,10 @@ export default function ManageUsersPage() {
 
       setModalOpen(false);
       setSelectedUser(null);
-      alert('Admin account deleted successfully!');
+      alert('User account deleted successfully!');
     } catch (error) {
-      console.error('Error deleting admin:', error);
-      alert('Failed to delete admin: ' + error.message);
+      console.error('Error deleting user:', error);
+      alert('Failed to delete user: ' + error.message);
     }
   };
 
@@ -407,24 +413,16 @@ export default function ManageUsersPage() {
       console.log('=== HANDLE BLOCK USER DEBUG ===');
       console.log('Received userId:', userId);
       console.log('typeof userId:', typeof userId);
-      console.log('userId === undefined:', userId === undefined);
-      console.log('userId === null:', userId === null);
-      console.log('userId === "undefined":', userId === 'undefined');
       
       // Validate userId parameter - convert to string if it's an object
       const userIdStr = userId ? userId.toString() : null;
       console.log('userIdStr after conversion:', userIdStr);
-      console.log('typeof userIdStr:', typeof userIdStr);
       
       if (!userIdStr || userIdStr === 'undefined' || userIdStr === 'null') {
-        console.error('=== VALIDATION FAILED ===');
         console.error('Invalid userId passed to handleBlockUser. Original:', userId, 'Converted:', userIdStr);
         alert('Error: Invalid user ID. Please refresh the page and try again.');
         return;
       }
-
-      console.log('=== VALIDATION PASSED ===');
-      console.log('Using userIdStr:', userIdStr);
 
       const userToBlock = users.find(u => u._id === userId || u._id === userIdStr);
       if (!userToBlock) {
@@ -436,17 +434,8 @@ export default function ManageUsersPage() {
       
       console.log('Blocking/unblocking user:', { userId: userIdStr, action, userToBlock });
       
-      // Try different API endpoint formats
-      let response;
-      try {
-        response = await api.post(`/admin/user/${userIdStr}/block`, { action });
-      } catch (error) {
-        console.log('First endpoint failed, trying alternative...');
-        // Try alternative endpoint
-        response = await api.patch(`/admin/users/${userIdStr}/status`, { 
-          status: action === 'block' ? 'blocked' : 'active' 
-        });
-      }
+      // Use the adminAPI helper from utils/api.js
+      const response = await api.post(`/admin/user/${userIdStr}/block`, { action });
 
       console.log('Block/unblock response:', response);
 
@@ -886,10 +875,10 @@ export default function ManageUsersPage() {
                               className="btn btn-secondary btn-sm"
                               onClick={() => handleViewUser(user._id)}
                             >
-                              View
+                              👁️ View
                             </button>
-                            {/* Allow admins to block/unblock non-admin users, but prevent blocking other admins */}
-                            {user.role !== 'Admin' && user.role !== 'EventsOffice' && (
+                            {/* Allow blocking any user except yourself */}
+                            {user._id !== currentUser?._id && (
                               <button 
                                 className={`btn ${user.status === 'blocked' ? 'btn-success' : 'btn-warning'} btn-sm`}
                                 onClick={() => {
@@ -907,7 +896,8 @@ export default function ManageUsersPage() {
                                 {user.status === 'blocked' ? '🔓 Unblock' : '🔒 Block'}
                               </button>
                             )}
-                            {(user.role === 'Admin' || user.role === 'EventsOffice') && user._id !== currentUser?._id && (
+                            {/* Allow deleting any user except yourself */}
+                            {user._id !== currentUser?._id && (
                               <button
                                 className="btn btn-danger btn-sm ml-2"
                                 onClick={() => handleDeleteAdmin(user._id)}

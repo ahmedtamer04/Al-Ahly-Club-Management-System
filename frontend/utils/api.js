@@ -450,7 +450,8 @@ export const adminAPI = {
 
   // POST /api/admin/user/:userId/block
   // Auth: requireAdmin
-  toggleUserBlock: (userId) => api.post(`/admin/user/${userId}/block`, {}),
+  // Required: { action: "block" | "unblock" }
+  toggleUserBlock: (userId, action) => api.post(`/admin/user/${userId}/block`, { action }),
 
   // GET /api/admin/users
   // Auth: requireAdmin

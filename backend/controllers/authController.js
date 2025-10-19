@@ -16,7 +16,7 @@ export const signupUser = async (req, res) => {
       // Hash password
       const salt = await bcrypt.genSalt(10);
       const hash = await bcrypt.hash(password, salt);
-      // Create user vendor
+      // Create user vendor (auto-approved)
       const user = await User.create({
         first_name: company_name,
         last_name: "Vendor",
@@ -24,6 +24,8 @@ export const signupUser = async (req, res) => {
         id_number: Math.floor(Math.random() * 1000000).toString(), // Generate random 6-digit number
         password_hash: hash,
         role: role,
+        status: "active", // Vendors are auto-approved
+        role_admin_verified: true, // Vendors don't need admin verification
         vendor_info: {
           company_name
         }
