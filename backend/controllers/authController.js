@@ -52,30 +52,52 @@ export const signupUser = async (req, res) => {
     // Hash password
     const salt = await bcrypt.genSalt(10);
     const hash = await bcrypt.hash(password, salt);
-    if(role=="Staff" || role=="TA" || role=="Professor") {
-      // For testing the staff frontend, create these accounts as active
-      // (auto-approve instead of requiring admin approval)
+    
+    // Staff, TA, and Professor require admin approval
+    if(role === "Staff" || role === "TA" || role === "Professor") {
+      console.log("=== CREATING STAFF/TA/PROFESSOR USER ===");
+      console.log("Setting status to: pending");
+      console.log("Setting role_admin_verified to: false");
+      
       const user = await User.create({
-      first_name,
-      last_name,
-      email,
-      id_number,
-      status: "active",
-      password_hash: hash,
-      role,
-      role_admin_verified: true
-    });
-    return res.status(201).json({ message: "Staff/TA/Professor account created", user });
-  }
+        first_name,
+        last_name,
+        email,
+        id_number,
+        status: "pending", // Requires admin approval
+        password_hash: hash,
+        role,
+        role_admin_verified: false // Must be verified by admin
+      });
+      
+      console.log("User created with status:", user.status);
+      console.log("User created with role_admin_verified:", user.role_admin_verified);
+      console.log("=======================================");
+      
+      return res.status(201).json({ 
+        message: "Registration submitted. Please wait for admin approval.", 
+        user: {
+          id: user._id,
+          first_name: user.first_name,
+          last_name: user.last_name,
+          email: user.email,
+          role: user.role,
+          status: user.status,
+          role_admin_verified: user.role_admin_verified
+        }
+      });
+    }
 
-    // Create user
+    // Create regular user (Student, Vendor, Admin, EventsOffice - no approval needed)
     const user = await User.create({
       first_name,
       last_name,
       email,
       id_number,
       password_hash: hash,
-      role
+      role,
+      status: "active", // Auto-approved roles
+      role_admin_verified: true // These roles don't need admin verification
     });
 
     res.status(201).json({ message: "User created", user });
@@ -91,22 +113,37 @@ export const loginUser = async (req, res) => {
     const user = await User.findOne({ email });
     if (!user) return res.status(400).json({ message: "Invalid credentials" });
 
-    // Check user status
-    if (user.status === "blocked") {
-      return res.status(403).json({ message: "You are blocked" });
-    }
-    
-    if (user.status === "pending") {
-      return res.status(403).json({ message: "Waiting for approval" });
-    }
-    
-    if (user.status !== "active") {
-      return res.status(403).json({ message: "Account is not active" });
-    }
+    // Debug logging
+    console.log("=== LOGIN ATTEMPT ===");
+    console.log("Email:", email);
+    console.log("User Status:", user.status);
+    console.log("User Role:", user.role);
+    console.log("Role Admin Verified:", user.role_admin_verified);
+    console.log("==================");
 
+    // Verify password first (security best practice)
     const isMatch = await bcrypt.compare(password, user.password_hash);
     if (!isMatch) return res.status(400).json({ message: "Invalid credentials" });
 
+    // Check user status AFTER password verification
+    if (user.status === "blocked") {
+      return res.status(403).json({ message: "Your account has been blocked. Please contact admin." });
+    }
+    
+    if (user.status === "pending") {
+      return res.status(403).json({ message: "Your account is pending admin approval. Please wait for verification." });
+    }
+    
+    if (user.status !== "active") {
+      return res.status(403).json({ message: "Your account is not active. Please contact admin." });
+    }
+
+    // For Staff, TA, Professor - check if admin verified their role
+    if ((user.role === "Staff" || user.role === "TA" || user.role === "Professor") && !user.role_admin_verified) {
+      return res.status(403).json({ message: "Your account is pending admin approval. Please wait for verification." });
+    }
+
+    // Generate token for successful login
     const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: "1d" });
     res.json({ token, user });
     } catch (err) {

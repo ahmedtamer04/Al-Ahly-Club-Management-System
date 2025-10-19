@@ -11,11 +11,15 @@ const userSchema = new mongoose.Schema({
     enum: ["Student","Staff","TA","Professor","Vendor","Admin","EventsOffice"], 
     required: true 
   },
-  status: { type: String, enum: ["active","blocked","pending"], default: "active" },
+  status: { 
+    type: String, 
+    enum: ["active","blocked","pending"], 
+    default: "active" 
+  },
   
   // Verification fields
   is_verified: { type: Boolean, default: false },
-  role_admin_verified: { type: Boolean, default: false },
+  role_admin_verified: { type: Boolean, default: null }, // null = not applicable, false = waiting for approval, true = approved
   
   // Email verification fields
   email_verification_token: { type: String },

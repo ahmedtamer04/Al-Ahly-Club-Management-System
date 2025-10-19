@@ -350,13 +350,17 @@ export default function VendorApplicationsPage() {
                           )}
                         </td>
                         <td>
-                          <div>
-                            <strong>{new Date(app.applied_at).toLocaleDateString()}</strong>
-                            <br/>
-                            <small style={{color: '#666'}}>
-                              {new Date(app.applied_at).toLocaleTimeString()}
-                            </small>
-                          </div>
+                          {app.applied_at || app.submitted_at || app.createdAt ? (
+                            <div>
+                              <strong>{new Date(app.applied_at || app.submitted_at || app.createdAt).toLocaleDateString()}</strong>
+                              <br/>
+                              <small style={{color: '#666'}}>
+                                {new Date(app.applied_at || app.submitted_at || app.createdAt).toLocaleTimeString()}
+                              </small>
+                            </div>
+                          ) : (
+                            'N/A'
+                          )}
                         </td>
                         <td>{getStatusBadge(app.status)}</td>
                         <td>
@@ -448,15 +452,18 @@ export default function VendorApplicationsPage() {
               <div style={{marginBottom: '1.5rem'}}>
                 <h3 style={{marginBottom: '0.5rem', color: '#333'}}>🏗️ Booth Details</h3>
                 <div style={{backgroundColor: '#f5f5f5', padding: '1rem', borderRadius: '8px'}}>
-                  <p><strong>Booth Size:</strong> {selectedApplication.booth_size || 'N/A'}</p>
+                  <p><strong>Booth Size:</strong> {selectedApplication.application?.booth_size || selectedApplication.booth_size || 'Not specified'}</p>
                   {selectedApplication.duration_weeks && (
                     <p><strong>Duration:</strong> {selectedApplication.duration_weeks} week(s)</p>
+                  )}
+                  {selectedApplication.application?.setup_duration_weeks && (
+                    <p><strong>Setup Duration:</strong> {selectedApplication.application.setup_duration_weeks} week(s)</p>
                   )}
                   {selectedApplication.platform_position && (
                     <p><strong>Position:</strong> {selectedApplication.platform_position.wall} wall, Slot {selectedApplication.platform_position.slot}</p>
                   )}
-                  {selectedApplication.notes && (
-                    <p><strong>Notes:</strong> {selectedApplication.notes}</p>
+                  {selectedApplication.application?.notes && (
+                    <p><strong>Notes:</strong> {selectedApplication.application.notes}</p>
                   )}
                 </div>
               </div>
