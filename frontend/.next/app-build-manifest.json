@@ -17,41 +17,15 @@
       "static/css/app/auth/login/page.css",
       "static/chunks/app/auth/login/page.js"
     ],
-    "/admin/page": [
+    "/vendor/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/css/app/admin/page.css",
-      "static/chunks/app/admin/page.js"
+      "static/chunks/app/vendor/page.js"
     ],
-    "/auth/register/page": [
+    "/_not-found/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/css/app/auth/register/page.css",
-      "static/chunks/app/auth/register/page.js"
-    ],
-    "/admin/users/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/css/app/admin/users/page.css",
-      "static/chunks/app/admin/users/page.js"
-    ],
-    "/admin/events/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/css/app/admin/events/page.css",
-      "static/chunks/app/admin/events/page.js"
-    ],
-    "/admin/vendors/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/css/app/admin/vendors/page.css",
-      "static/chunks/app/admin/vendors/page.js"
-    ],
-    "/admin/registrations/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/css/app/admin/registrations/page.css",
-      "static/chunks/app/admin/registrations/page.js"
+      "static/chunks/app/_not-found/page.js"
     ]
   }
 }
