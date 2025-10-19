@@ -196,36 +196,6 @@ export default function RegistrationsPage() {
     return true;
   });
 
-  const handleDeleteRegistration = async (registrationId, userName, eventName) => {
-    if (!confirm(`Are you sure you want to delete the registration for ${userName} in "${eventName}"? This action cannot be undone.`)) {
-      return;
-    }
-    
-    try {
-      // Note: We'll need to implement this endpoint or use the existing cancel endpoint
-      await api.delete(`/admin/registrations/${registrationId}`);
-      
-      // Refresh registrations list
-      const response = await api.get('/admin/registrations');
-      setRegistrations(response.registrations || []);
-      
-      // Recalculate stats
-      const registrationsData = response.registrations || [];
-      const registrationStats = {
-        total: registrationsData.length,
-        confirmed: registrationsData.filter(r => r.status === 'registered').length,
-        pending: registrationsData.filter(r => r.status === 'pending').length,
-        cancelled: registrationsData.filter(r => r.status === 'canceled').length
-      };
-      setStats(registrationStats);
-      
-      alert('Registration deleted successfully!');
-    } catch (error) {
-      console.error('Error deleting registration:', error);
-      alert('Failed to delete registration: ' + (error.response?.data?.message || error.message));
-    }
-  };
-
   return (
     <div className="dashboard">
       <nav className="dashboard-nav">
@@ -246,8 +216,6 @@ export default function RegistrationsPage() {
             <li><Link href="/admin/events">📅 All Events</Link></li>
             <li><Link href="/admin/registrations">🎫 Registrations</Link></li>
             <li><Link href="/admin/vendors">🏪 Vendor Applications</Link></li>
-            <li><Link href="/admin/facilities">🏟️ Facilities</Link></li>
-            <li><Link href="/admin/reports">📊 Reports</Link></li>
             <li><Link href="/admin/settings">⚙️ Settings</Link></li>
           </ul>
         </aside>
@@ -430,18 +398,6 @@ export default function RegistrationsPage() {
                             title="View Registration Details"
                           >
                             👁️ View
-                          </button>
-                          <button 
-                            className="btn btn-danger btn-sm"
-                            onClick={() => handleDeleteRegistration(
-                              registration._id, 
-                              registration.user_id ? `${registration.user_id.first_name} ${registration.user_id.last_name}` : registration.name,
-                              registration.event_id?.name || 'Unknown Event'
-                            )}
-                            title="Delete Registration"
-                            style={{marginLeft: '4px'}}
-                          >
-                            🗑️ Delete
                           </button>
                         </td>
                       </tr>

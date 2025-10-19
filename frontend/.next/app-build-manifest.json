@@ -1,21 +1,21 @@
 {
   "pages": {
-    "/admin/registrations/page": [
+    "/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/css/app/admin/registrations/page.css",
-      "static/chunks/app/admin/registrations/page.js"
+      "static/css/app/page.css",
+      "static/chunks/app/page.js"
     ],
     "/layout": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/app/layout.js"
     ],
-    "/admin/events/page": [
+    "/auth/login/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/css/app/admin/events/page.css",
-      "static/chunks/app/admin/events/page.js"
+      "static/css/app/auth/login/page.css",
+      "static/chunks/app/auth/login/page.js"
     ],
     "/admin/page": [
       "static/chunks/webpack.js",
@@ -23,17 +23,35 @@
       "static/css/app/admin/page.css",
       "static/chunks/app/admin/page.js"
     ],
-    "/admin/users/page": [
+    "/admin/registrations/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/css/app/admin/users/page.css",
-      "static/chunks/app/admin/users/page.js"
+      "static/css/app/admin/registrations/page.css",
+      "static/chunks/app/admin/registrations/page.js"
     ],
     "/admin/vendors/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/css/app/admin/vendors/page.css",
       "static/chunks/app/admin/vendors/page.js"
+    ],
+    "/admin/facilities/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/css/app/admin/facilities/page.css",
+      "static/chunks/app/admin/facilities/page.js"
+    ],
+    "/admin/users/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/css/app/admin/users/page.css",
+      "static/chunks/app/admin/users/page.js"
+    ],
+    "/admin/events/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/css/app/admin/events/page.css",
+      "static/chunks/app/admin/events/page.js"
     ]
   }
 }

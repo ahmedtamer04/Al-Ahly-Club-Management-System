@@ -1,4 +1,8 @@
 {
+  "/admin/page": "app/admin/page.js",
+  "/admin/vendors/page": "app/admin/vendors/page.js",
+  "/admin/facilities/page": "app/admin/facilities/page.js",
   "/admin/registrations/page": "app/admin/registrations/page.js",
-  "/admin/vendors/page": "app/admin/vendors/page.js"
+  "/admin/users/page": "app/admin/users/page.js",
+  "/admin/events/page": "app/admin/events/page.js"
 }
