@@ -1,6 +1,8 @@
 {
   "/auth/login/page": "app/auth/login/page.js",
-  "/staff/page": "app/staff/page.js",
   "/admin/users/page": "app/admin/users/page.js",
-  "/staff/events/[id]/page": "app/staff/events/[id]/page.js"
+  "/staff/page": "app/staff/page.js",
+  "/staff/events/[id]/page": "app/staff/events/[id]/page.js",
+  "/staff/events/page": "app/staff/events/page.js",
+  "/page": "app/page.js"
 }
