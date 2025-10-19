@@ -5,7 +5,7 @@ import {
   filterEvents,
   sortEventsByDate,
   deleteEvent,
-  getEventComments
+  getEventComments,
   getEventById
 } from "../controllers/eventController.js";
 

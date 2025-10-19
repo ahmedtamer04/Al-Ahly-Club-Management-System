@@ -1,4 +1,4 @@
-// File: C:\Users\mrabe\Documents\GitHub\Al-Ahly\frontend\app\auth\login\page.js
+// File: C:\Projects\Q3 2025\Al-Ahly\frontend\app\auth\login\page.js
 import * as entry from '../../../../../app/auth/login/page.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 
