@@ -9,11 +9,14 @@ export const registerForEvent = async (req, res) => {
     const { event_id, name, email, personalId, role } = req.body;
     const user_id = req.user._id; // Get from auth middleware
     
+    console.log('Registration attempt - Role received:', role, 'User ID:', user_id);
+    
     if (!event_id || !name || !email || !personalId || !role) {
       return res.status(400).json({ message: "All fields are required." });
     }
     
-    if (!["student", "staff", "TA", "professor"].includes(role)) {
+    if (!["Student", "Staff", "TA", "Professor"].includes(role)) {
+      console.log('Invalid role rejected:', role, 'Valid roles:', ["Student", "Staff", "TA", "Professor"]);
       return res.status(400).json({ message: "Invalid role." });
     }
 
@@ -45,8 +48,15 @@ export const registerForEvent = async (req, res) => {
     res.status(201).json({ message: "Registration successful.", registration });
     
   } catch (error) {
+    console.error('Registration error:', error);
     if (error.code === 11000) {
       return res.status(409).json({ message: "You are already registered for this event." });
+    }
+    if (error.name === 'ValidationError') {
+      return res.status(400).json({ 
+        message: "Validation error.", 
+        details: error.message 
+      });
     }
     res.status(500).json({ message: "Server error.", error: error.message });
   }
@@ -57,51 +67,51 @@ export const viewRegisteredEvents = async (req, res) => {
   try {
     const user_id = req.user._id; // Get from auth middleware
     
+    console.log('Fetching registrations for user:', user_id);
+    console.log('User object from auth:', req.user);
+    
+    // Debug: Check total registrations in database
+    const totalRegistrations = await Registration.countDocuments();
+    console.log('Total registrations in database:', totalRegistrations);
+    
     if (!user_id) {
       return res.status(400).json({ message: "User ID is required." });
     }
 
-    // Find all registrations for the user
+    // Find ALL registrations for the user (including canceled ones)
     const registrations = await Registration.find({ 
-      user_id, 
-      status: "registered" 
+      user_id
     }).populate('event_id');
 
-    // Filter out registrations where event doesn't exist
-    const validRegistrations = registrations.filter(reg => reg.event_id);
+    console.log('Raw registrations from DB:', registrations.map(r => ({
+      id: r._id,
+      status: r.status,
+      event_id: r.event_id ? r.event_id._id : 'NO EVENT',
+      event_name: r.event_id ? r.event_id.name : 'NO EVENT NAME'
+    })));
 
-    const now = new Date();
-    const upcoming = [];
-    const past = [];
+    console.log('Found registrations:', registrations.length);
 
-    validRegistrations.forEach(registration => {
-      const event = registration.event_id;
-      
-      // ✅ FIXED: Use correct field names
-      if (event.end_date >= now) {
-        upcoming.push({
-          registration_id: registration._id,
-          registration_date: registration.createdAt,
-          ...event.toObject()
-        });
-      } else {
-        past.push({
-          registration_id: registration._id,
-          registration_date: registration.createdAt,
-          ...event.toObject()
-        });
-      }
-    });
+    // Filter out registrations where event doesn't exist and format the response
+    const validRegistrations = registrations
+      .filter(reg => reg.event_id)
+      .map(registration => ({
+        _id: registration._id,
+        status: registration.status,
+        name: registration.name,
+        email: registration.email,
+        personalId: registration.personalId,
+        role: registration.role,
+        createdAt: registration.createdAt,
+        event: registration.event_id.toObject()
+      }));
+
+    console.log('Valid registrations:', validRegistrations.length);
 
     res.json({ 
       message: "Registered events retrieved successfully",
-      upcoming, 
-      past,
-      totals: {
-        upcoming: upcoming.length,
-        past: past.length,
-        total: validRegistrations.length
-      }
+      registrations: validRegistrations,
+      count: validRegistrations.length
     });
     
   } catch (error) {
