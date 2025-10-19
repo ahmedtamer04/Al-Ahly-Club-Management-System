@@ -1,11 +1,85 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { registrationAPI, getUser } from '@/utils/api';
 import '@/app/dashboard.css';
 
 export default function MyRegistrationsPage() {
   const [filter, setFilter] = useState('upcoming');
+  const [registrations, setRegistrations] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    fetchRegistrations();
+  }, []);
+
+  const fetchRegistrations = async () => {
+    try {
+      setLoading(true);
+      setError('');
+      
+      const user = getUser();
+      if (!user || !user._id) {
+        setError('Please log in to view your registrations.');
+        return;
+      }
+
+      const response = await registrationAPI.getMyRegistrations(user._id);
+      console.log('Registrations response:', response);
+      
+      let registrationData = [];
+      if (response && response.registrations) {
+        registrationData = response.registrations;
+      } else if (Array.isArray(response)) {
+        registrationData = response;
+      }
+      
+      setRegistrations(registrationData);
+    } catch (err) {
+      console.error('Failed to fetch registrations:', err);
+      setError('Failed to load your registrations. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCancelRegistration = async (registrationId, eventName) => {
+    if (!window.confirm(`Are you sure you want to cancel your registration for "${eventName}"?`)) {
+      return;
+    }
+
+    try {
+      await registrationAPI.cancel(registrationId);
+      alert('Registration cancelled successfully!');
+      
+      // Refresh the registrations list
+      fetchRegistrations();
+    } catch (err) {
+      console.error('Failed to cancel registration:', err);
+      alert('Failed to cancel registration: ' + (err.message || 'Please try again.'));
+    }
+  };
+
+  const getFilteredRegistrations = () => {
+    const now = new Date();
+    return registrations.filter(registration => {
+      if (filter === 'all') return true;
+      if (filter === 'upcoming') {
+        return registration.event && new Date(registration.event.start_date) >= now && registration.status === 'registered';
+      }
+      if (filter === 'past') {
+        return registration.event && new Date(registration.event.start_date) < now;
+      }
+      if (filter === 'cancelled') {
+        return registration.status === 'canceled';
+      }
+      return true;
+    });
+  };
+
+  const filteredRegistrations = getFilteredRegistrations();
 
   return (
     <div className="dashboard">
@@ -25,6 +99,11 @@ export default function MyRegistrationsPage() {
             <li><Link href="/student">🏠 Dashboard</Link></li>
             <li><Link href="/student/events">📅 Browse Events</Link></li>
             <li><Link href="/student/my-registrations">🎫 My Registrations</Link></li>
+            <li><Link href="/student/facilities">🏢 Facilities</Link></li>
+            <li><Link href="/student/gym/schedule">💪 Gym Schedule</Link></li>
+            <li><Link href="/student/workshops">🔧 Workshops</Link></li>
+            <li><Link href="/student/trips">🚌 Trips</Link></li>
+            <li><Link href="/student/register">📝 Event Registration</Link></li>
             <li><Link href="/student/profile">👤 Profile</Link></li>
           </ul>
         </aside>
@@ -32,26 +111,38 @@ export default function MyRegistrationsPage() {
         <main className="main-content">
           <h1>My Registrations 🎫</h1>
 
+          {error && (
+            <div className="alert alert-error" style={{marginBottom: '2rem'}}>
+              {error}
+            </div>
+          )}
+
           {/* Stats */}
           <div className="stats-grid">
             <div className="stat-card">
               <div className="stat-icon">🎫</div>
               <div className="stat-info">
-                <h3>0</h3>
+                <h3>{loading ? '...' : registrations.length}</h3>
                 <p>Total Registrations</p>
               </div>
             </div>
             <div className="stat-card">
               <div className="stat-icon">⏳</div>
               <div className="stat-info">
-                <h3>0</h3>
+                <h3>{loading ? '...' : registrations.filter(r => {
+                  const now = new Date();
+                  return r.event && new Date(r.event.start_date) >= now && r.status === 'registered';
+                }).length}</h3>
                 <p>Upcoming Events</p>
               </div>
             </div>
             <div className="stat-card">
               <div className="stat-icon">✅</div>
               <div className="stat-info">
-                <h3>0</h3>
+                <h3>{loading ? '...' : registrations.filter(r => {
+                  const now = new Date();
+                  return r.event && new Date(r.event.start_date) < now && r.status === 'registered';
+                }).length}</h3>
                 <p>Attended</p>
               </div>
             </div>
@@ -59,6 +150,12 @@ export default function MyRegistrationsPage() {
 
           <section className="section">
             <div className="filter-buttons">
+              <button 
+                className={filter === 'all' ? 'filter-btn active' : 'filter-btn'}
+                onClick={() => setFilter('all')}
+              >
+                All
+              </button>
               <button 
                 className={filter === 'upcoming' ? 'filter-btn active' : 'filter-btn'}
                 onClick={() => setFilter('upcoming')}
@@ -80,27 +177,77 @@ export default function MyRegistrationsPage() {
             </div>
 
             <div className="table-container" style={{marginTop: '1.5rem'}}>
-              <table className="data-table">
-                <thead>
-                  <tr>
-                    <th>Event Name</th>
-                    <th>Type</th>
-                    <th>Date</th>
-                    <th>Location</th>
-                    <th>Status</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <td colSpan="6" className="empty-row">
-                      <div className="empty-state">
-                        <p>🎫 No registrations found</p>
-                      </div>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
+              {loading ? (
+                <div style={{textAlign: 'center', padding: '2rem'}}>
+                  <p>Loading your registrations...</p>
+                </div>
+              ) : (
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      <th>Event Name</th>
+                      <th>Type</th>
+                      <th>Date</th>
+                      <th>Location</th>
+                      <th>Status</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredRegistrations.length === 0 ? (
+                      <tr>
+                        <td colSpan="6" className="empty-row">
+                          <div className="empty-state">
+                            <p>🎫 No registrations found for "{filter}" events</p>
+                          </div>
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredRegistrations.map((registration) => (
+                        <tr key={registration._id}>
+                          <td>
+                            <strong>{registration.event?.name || 'Unknown Event'}</strong>
+                          </td>
+                          <td>
+                            <span className={`event-type event-type-${registration.event?.type?.toLowerCase() || 'default'}`}>
+                              {registration.event?.type || 'Unknown'}
+                            </span>
+                          </td>
+                          <td>
+                            {registration.event?.start_date ? 
+                              new Date(registration.event.start_date).toLocaleDateString() : 'TBD'}
+                          </td>
+                          <td>{registration.event?.location || 'TBD'}</td>
+                          <td>
+                            <span className={`badge ${
+                              registration.status === 'registered' ? 'badge-success' :
+                              registration.status === 'canceled' ? 'badge-secondary' :
+                              'badge-warning'
+                            }`}>
+                              {registration.status === 'registered' ? '✅ Registered' :
+                               registration.status === 'canceled' ? '❌ Cancelled' :
+                               registration.status}
+                            </span>
+                          </td>
+                          <td>
+                            {registration.status === 'registered' && (
+                              <button 
+                                className="btn-secondary btn-sm"
+                                onClick={() => handleCancelRegistration(
+                                  registration._id, 
+                                  registration.event?.name || 'Unknown Event'
+                                )}
+                              >
+                                Cancel
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              )}
             </div>
           </section>
         </main>

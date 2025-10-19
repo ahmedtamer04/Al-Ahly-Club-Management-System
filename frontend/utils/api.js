@@ -346,6 +346,11 @@ export const registrationAPI = {
   // Auth: requireRegistering
   // Returns { upcoming: [], past: [] }
   getMyRegistrations: (userId) => api.get(`/registration/${userId}/events`),
+
+  // PATCH /api/registration/cancel/:registrationId
+  // Auth: requireRegistering
+  // Cancels a registration
+  cancel: (registrationId) => api.patch(`/registration/cancel/${registrationId}`, {}),
 };
 
 // ================================
