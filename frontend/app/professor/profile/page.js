@@ -2,35 +2,83 @@
 
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
-import { getUser } from '@/utils/api';
 import '@/app/dashboard.css';
-import '@/app/utils/loading.css';
 
 export default function ProfessorProfilePage() {
-  const [profile, setProfile] = useState(null);
-  const [isEditing, setIsEditing] = useState(false);
+  const [profile, setProfile] = useState({
+    first_name: '',
+    last_name: '',
+    email: '',
+    id_number: '',
+    role: ''
+  });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    const loadUserData = () => {
-      const userData = getUser();
-      if (userData) {
-        setProfile({
-          name: `${userData.first_name} ${userData.last_name}`,
-          email: userData.email,
-          phone: userData.phone || '',
-          professorId: userData.id_number,
-          department: userData.department || '',
-          specialization: userData.specialization || '',
-          officeHours: userData.office_hours || ''
-        });
-      }
-      setLoading(false);
-    };
-
-    loadUserData();
+    loadProfile();
   }, []);
+
+  const loadProfile = () => {
+    try {
+      const userStr = localStorage.getItem('user');
+      
+      if (!userStr) {
+        setError('No user data found. Please login again.');
+        setLoading(false);
+        return;
+      }
+
+      const user = JSON.parse(userStr);
+      console.log('User data from localStorage:', user); // Debug log
+      
+      setProfile({
+        first_name: user.first_name || '',
+        last_name: user.last_name || '',
+        email: user.email || '',
+        id_number: user.id_number || '',
+        role: user.role || 'Professor'
+      });
+      
+      setLoading(false);
+    } catch (err) {
+      console.error('Error loading profile:', err);
+      setError('Failed to load profile data');
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="dashboard">
+        <nav className="dashboard-nav">
+          <div className="nav-container">
+            <h1 className="nav-brand">Al-Ahly Events</h1>
+            <div className="nav-links">
+              <span className="nav-user">👨‍🏫 Professor Dashboard</span>
+              <Link href="/">Logout</Link>
+            </div>
+          </div>
+        </nav>
+
+        <div className="dashboard-content">
+          <aside className="sidebar">
+            <ul className="sidebar-menu">
+              <li><Link href="/professor">🏠 Dashboard</Link></li>
+              <li><Link href="/professor/events">📅 Events</Link></li>
+              <li><Link href="/professor/workshops">🎨 My Workshops</Link></li>
+              <li><Link href="/professor/gym">💪 Gym Schedule</Link></li>
+              <li><Link href="/professor/profile">👤 Profile</Link></li>
+            </ul>
+          </aside>
+
+          <main className="main-content">
+            <p>Loading profile...</p>
+          </main>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="dashboard">
@@ -58,59 +106,108 @@ export default function ProfessorProfilePage() {
         <main className="main-content">
           <div className="page-header">
             <h1>My Profile 👤</h1>
-            {!isEditing ? (
-              <button className="btn-primary" onClick={() => setIsEditing(true)}>✏️ Edit</button>
-            ) : (
-              <div style={{display: 'flex', gap: '1rem'}}>
-                <button className="btn-primary" onClick={() => setIsEditing(false)}>💾 Save</button>
-                <button className="btn-secondary" onClick={() => setIsEditing(false)}>❌ Cancel</button>
-              </div>
-            )}
           </div>
+
+          {error && (
+            <div style={{ 
+              backgroundColor: '#ffe6e6', 
+              color: '#e74c3c', 
+              padding: '1rem', 
+              borderRadius: '8px', 
+              marginBottom: '1rem' 
+            }}>
+              ⚠️ {error}
+            </div>
+          )}
 
           <section className="section">
             <h2>Personal Information</h2>
-            {loading ? (
-              <div className="loading-container">
-                <div className="loading-spinner"></div>
-                <p>Loading profile...</p>
+            <div className="settings-form">
+              <div className="form-group">
+                <label>First Name</label>
+                <input 
+                  type="text" 
+                  value={profile.first_name} 
+                  disabled 
+                  style={{
+                    padding: '0.75rem', 
+                    borderRadius: '8px', 
+                    border: '2px solid #E5E5E5', 
+                    width: '100%',
+                    background: '#F5F5F5',
+                    cursor: 'not-allowed'
+                  }} 
+                />
               </div>
-            ) : error ? (
-              <div className="alert alert-error">{error}</div>
-            ) : profile ? (
-              <div className="settings-form">
-                <div className="form-group">
-                  <label>Full Name</label>
-                  <input type="text" value={profile.name} disabled={!isEditing} style={{padding: '0.75rem', borderRadius: '8px', border: '2px solid #E5E5E5', width: '100%'}} />
-                </div>
-                <div className="form-group">
-                  <label>Email</label>
-                  <input type="email" value={profile.email} disabled={!isEditing} style={{padding: '0.75rem', borderRadius: '8px', border: '2px solid #E5E5E5', width: '100%'}} />
-                </div>
-                <div className="form-group">
-                  <label>Phone</label>
-                  <input type="tel" value={profile.phone} disabled={!isEditing} style={{padding: '0.75rem', borderRadius: '8px', border: '2px solid #E5E5E5', width: '100%'}} />
-                </div>
-                <div className="form-group">
-                  <label>Professor ID</label>
-                  <input type="text" value={profile.professorId} disabled style={{padding: '0.75rem', borderRadius: '8px', border: '2px solid #E5E5E5', width: '100%', background: '#F5F5F5'}} />
-                </div>
-                <div className="form-group">
-                  <label>Department</label>
-                  <input type="text" value={profile.department} disabled={!isEditing} style={{padding: '0.75rem', borderRadius: '8px', border: '2px solid #E5E5E5', width: '100%'}} />
-                </div>
-                <div className="form-group">
-                  <label>Specialization</label>
-                  <input type="text" value={profile.specialization} disabled={!isEditing} style={{padding: '0.75rem', borderRadius: '8px', border: '2px solid #E5E5E5', width: '100%'}} />
-                </div>
-                <div className="form-group">
-                  <label>Office Hours</label>
-                  <input type="text" value={profile.officeHours} disabled={!isEditing} style={{padding: '0.75rem', borderRadius: '8px', border: '2px solid #E5E5E5', width: '100%'}} />
-                </div>
+
+              <div className="form-group">
+                <label>Last Name</label>
+                <input 
+                  type="text" 
+                  value={profile.last_name} 
+                  disabled 
+                  style={{
+                    padding: '0.75rem', 
+                    borderRadius: '8px', 
+                    border: '2px solid #E5E5E5', 
+                    width: '100%',
+                    background: '#F5F5F5',
+                    cursor: 'not-allowed'
+                  }} 
+                />
               </div>
-            ) : (
-              <div className="alert alert-error">No profile data found</div>
-            )}
+
+              <div className="form-group">
+                <label>Email</label>
+                <input 
+                  type="email" 
+                  value={profile.email} 
+                  disabled 
+                  style={{
+                    padding: '0.75rem', 
+                    borderRadius: '8px', 
+                    border: '2px solid #E5E5E5', 
+                    width: '100%', 
+                    background: '#F5F5F5',
+                    cursor: 'not-allowed'
+                  }} 
+                />
+              </div>
+
+              <div className="form-group">
+                <label>ID Number</label>
+                <input 
+                  type="text" 
+                  value={profile.id_number} 
+                  disabled 
+                  style={{
+                    padding: '0.75rem', 
+                    borderRadius: '8px', 
+                    border: '2px solid #E5E5E5', 
+                    width: '100%', 
+                    background: '#F5F5F5',
+                    cursor: 'not-allowed'
+                  }} 
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Role</label>
+                <input 
+                  type="text" 
+                  value={profile.role.toUpperCase()} 
+                  disabled 
+                  style={{
+                    padding: '0.75rem', 
+                    borderRadius: '8px', 
+                    border: '2px solid #E5E5E5', 
+                    width: '100%', 
+                    background: '#F5F5F5',
+                    cursor: 'not-allowed'
+                  }} 
+                />
+              </div>
+            </div>
           </section>
         </main>
       </div>

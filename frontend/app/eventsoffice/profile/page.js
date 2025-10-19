@@ -1,20 +1,89 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import '@/app/dashboard.css';
 
 export default function EventsOfficeProfilePage() {
   const [profile, setProfile] = useState({
-    name: 'Sarah Ahmed',
-    email: 'sarah.ahmed@university.edu',
-    phone: '+20 123 456 7890',
-    staffId: 'EO-2025-001',
-    department: 'Events Office',
-    position: 'Events Coordinator'
+    first_name: '',
+    last_name: '',
+    email: '',
+    id_number: '',
+    role: ''
   });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const [isEditing, setIsEditing] = useState(false);
+  useEffect(() => {
+    loadProfile();
+  }, []);
+
+  const loadProfile = () => {
+    try {
+      const userStr = localStorage.getItem('user');
+      
+      if (!userStr) {
+        setError('No user data found. Please login again.');
+        setLoading(false);
+        return;
+      }
+
+      const user = JSON.parse(userStr);
+      console.log('User data from localStorage:', user); // Debug log
+      
+      setProfile({
+        first_name: user.first_name || '',
+        last_name: user.last_name || '',
+        email: user.email || '',
+        id_number: user.id_number || '',
+        role: user.role || 'Events Office'
+      });
+      
+      setLoading(false);
+    } catch (err) {
+      console.error('Error loading profile:', err);
+      setError('Failed to load profile data');
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="dashboard">
+        <nav className="dashboard-nav">
+          <div className="nav-container">
+            <h1 className="nav-brand">Al-Ahly Events</h1>
+            <div className="nav-links">
+              <span className="nav-user">🎯 Events Office Dashboard</span>
+              <Link href="/">Logout</Link>
+            </div>
+          </div>
+        </nav>
+
+        <div className="dashboard-content">
+          <aside className="sidebar">
+            <ul className="sidebar-menu">
+              <li><Link href="/eventsoffice">🏠 Dashboard</Link></li>
+              <li><Link href="/eventsoffice/create">➕ Create Event</Link></li>
+              <li><Link href="/eventsoffice/workshops">🎨 Workshops</Link></li>
+              <li><Link href="/eventsoffice/trips">🚌 Trips</Link></li>
+              <li><Link href="/eventsoffice/bazaars">🎪 Bazaars</Link></li>
+              <li><Link href="/eventsoffice/gym">🏋️ Gym Sessions</Link></li>
+              <li><Link href="/eventsoffice/vendors">🏪 Vendor Requests</Link></li>
+              <li><Link href="/eventsoffice/facilities">🏟️ Facilities</Link></li>
+              <li><Link href="/eventsoffice/registrations">🎫 Registrations</Link></li>
+              <li><Link href="/eventsoffice/profile">👤 Profile</Link></li>
+            </ul>
+          </aside>
+
+          <main className="main-content">
+            <p>Loading profile...</p>
+          </main>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="dashboard">
@@ -47,42 +116,106 @@ export default function EventsOfficeProfilePage() {
         <main className="main-content">
           <div className="page-header">
             <h1>My Profile 👤</h1>
-            {!isEditing ? (
-              <button className="btn-primary" onClick={() => setIsEditing(true)}>✏️ Edit</button>
-            ) : (
-              <div style={{display: 'flex', gap: '1rem'}}>
-                <button className="btn-primary" onClick={() => setIsEditing(false)}>💾 Save</button>
-                <button className="btn-secondary" onClick={() => setIsEditing(false)}>❌ Cancel</button>
-              </div>
-            )}
           </div>
+
+          {error && (
+            <div style={{ 
+              backgroundColor: '#ffe6e6', 
+              color: '#e74c3c', 
+              padding: '1rem', 
+              borderRadius: '8px', 
+              marginBottom: '1rem' 
+            }}>
+              ⚠️ {error}
+            </div>
+          )}
 
           <section className="section">
             <h2>Personal Information</h2>
             <div className="settings-form">
               <div className="form-group">
-                <label>Full Name</label>
-                <input type="text" value={profile.name} disabled={!isEditing} style={{padding: '0.75rem', borderRadius: '8px', border: '2px solid #E5E5E5', width: '100%'}} />
+                <label>First Name</label>
+                <input 
+                  type="text" 
+                  value={profile.first_name} 
+                  disabled 
+                  style={{
+                    padding: '0.75rem', 
+                    borderRadius: '8px', 
+                    border: '2px solid #E5E5E5', 
+                    width: '100%',
+                    background: '#F5F5F5',
+                    cursor: 'not-allowed'
+                  }} 
+                />
               </div>
+
+              <div className="form-group">
+                <label>Last Name</label>
+                <input 
+                  type="text" 
+                  value={profile.last_name} 
+                  disabled 
+                  style={{
+                    padding: '0.75rem', 
+                    borderRadius: '8px', 
+                    border: '2px solid #E5E5E5', 
+                    width: '100%',
+                    background: '#F5F5F5',
+                    cursor: 'not-allowed'
+                  }} 
+                />
+              </div>
+
               <div className="form-group">
                 <label>Email</label>
-                <input type="email" value={profile.email} disabled={!isEditing} style={{padding: '0.75rem', borderRadius: '8px', border: '2px solid #E5E5E5', width: '100%'}} />
+                <input 
+                  type="email" 
+                  value={profile.email} 
+                  disabled 
+                  style={{
+                    padding: '0.75rem', 
+                    borderRadius: '8px', 
+                    border: '2px solid #E5E5E5', 
+                    width: '100%', 
+                    background: '#F5F5F5',
+                    cursor: 'not-allowed'
+                  }} 
+                />
               </div>
+
               <div className="form-group">
-                <label>Phone</label>
-                <input type="tel" value={profile.phone} disabled={!isEditing} style={{padding: '0.75rem', borderRadius: '8px', border: '2px solid #E5E5E5', width: '100%'}} />
+                <label>ID Number</label>
+                <input 
+                  type="text" 
+                  value={profile.id_number} 
+                  disabled 
+                  style={{
+                    padding: '0.75rem', 
+                    borderRadius: '8px', 
+                    border: '2px solid #E5E5E5', 
+                    width: '100%', 
+                    background: '#F5F5F5',
+                    cursor: 'not-allowed'
+                  }} 
+                />
               </div>
+
               <div className="form-group">
-                <label>Staff ID</label>
-                <input type="text" value={profile.staffId} disabled style={{padding: '0.75rem', borderRadius: '8px', border: '2px solid #E5E5E5', width: '100%', background: '#F5F5F5'}} />
-              </div>
-              <div className="form-group">
-                <label>Department</label>
-                <input type="text" value={profile.department} disabled={!isEditing} style={{padding: '0.75rem', borderRadius: '8px', border: '2px solid #E5E5E5', width: '100%'}} />
-              </div>
-              <div className="form-group">
-                <label>Position</label>
-                <input type="text" value={profile.position} disabled={!isEditing} style={{padding: '0.75rem', borderRadius: '8px', border: '2px solid #E5E5E5', width: '100%'}} />
+                <label>Role</label>
+                <input 
+                  type="text" 
+                  value={profile.role.toUpperCase()} 
+                  disabled 
+                  style={{
+                    padding: '0.75rem', 
+                    borderRadius: '8px', 
+                    border: '2px solid #E5E5E5', 
+                    width: '100%', 
+                    background: '#F5F5F5',
+                    cursor: 'not-allowed'
+                  }} 
+                />
               </div>
             </div>
           </section>
