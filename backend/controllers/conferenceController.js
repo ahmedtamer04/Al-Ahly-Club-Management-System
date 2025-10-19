@@ -47,7 +47,9 @@ export const createConference = async (req, res) => {
       status: "upcoming",
       conference: { // ← REQUIRED: Conference-specific fields
         campus,
-        professors_participating,
+        professors_participating: Array.isArray(professors_participating) 
+          ? professors_participating 
+          : professors_participating.split(',').map(p => p.trim()).filter(p => p.length > 0),
         full_agenda,
         conference_website,
         required_budget: Number(required_budget),
@@ -105,7 +107,14 @@ export const editConference = async (req, res) => {
     conferenceFields.forEach(field => {
       if (updates[field] !== undefined) {
         if (!updates.conference) updates.conference = {};
-        updates.conference[field] = updates[field];
+        
+        // Special handling for professors_participating - convert string to array
+        if (field === 'professors_participating' && typeof updates[field] === 'string') {
+          updates.conference[field] = updates[field].split(',').map(p => p.trim()).filter(p => p.length > 0);
+        } else {
+          updates.conference[field] = updates[field];
+        }
+        
         delete updates[field];
       }
     });

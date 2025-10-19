@@ -41,7 +41,9 @@ export const createWorkshop = async (req, res) => {
       workshop: { // ← REQUIRED: Workshop-specific fields
         full_agenda,
         faculty_responsible,
-        professors_participating,
+        professors_participating: Array.isArray(professors_participating) 
+          ? professors_participating 
+          : professors_participating.split(',').map(p => p.trim()).filter(p => p.length > 0),
         required_budget: Number(required_budget),
         funding_source,
         extra_resources,
@@ -102,7 +104,14 @@ export const editWorkshop = async (req, res) => {
     workshopFields.forEach(field => {
       if (updates[field] !== undefined) {
         if (!updates.workshop) updates.workshop = {};
-        updates.workshop[field] = updates[field];
+        
+        // Special handling for professors_participating - convert string to array
+        if (field === 'professors_participating' && typeof updates[field] === 'string') {
+          updates.workshop[field] = updates[field].split(',').map(p => p.trim()).filter(p => p.length > 0);
+        } else {
+          updates.workshop[field] = updates[field];
+        }
+        
         delete updates[field];
       }
     });

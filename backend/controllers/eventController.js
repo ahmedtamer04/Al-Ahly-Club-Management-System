@@ -10,8 +10,8 @@ export const getUpcomingEvents = async (req, res) => {
       status: "upcoming",
       start_date: { $gt: new Date() },
     })
-    .populate('bazaar.vendors_participating.vendor_id', 'company_name email')
-    .populate('booth.vendors.vendor_id', 'company_name email')
+    .populate('bazaar.vendors_participating.vendor_id', 'first_name last_name email vendor_info')
+    .populate('booth.vendors.vendor_id', 'first_name last_name email vendor_info')
     .sort({ start_date: 1 });
     res.status(200).send(JSON.stringify(events, null, 2));
   } catch (err) {
