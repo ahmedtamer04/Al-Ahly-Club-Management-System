@@ -30,7 +30,7 @@ export default function TAMyEventsPage() {
       const user = JSON.parse(userStr);
       const userId = user._id;
 
-      // Fetch registrations using existing backend route
+      // Use the /:user_id/events endpoint since /my-events might not exist
       const response = await fetch(`http://localhost:5000/api/registration/${userId}/events`, {
         method: 'GET',
         headers: {
@@ -39,11 +39,15 @@ export default function TAMyEventsPage() {
         }
       });
 
+      console.log('Response status:', response.status); // Debug log
+
       if (!response.ok) {
         throw new Error('Failed to fetch registrations');
       }
 
       const data = await response.json();
+      console.log('Registrations data:', data); // Debug log
+      
       setUpcomingEvents(data.upcoming || []);
       setPastEvents(data.past || []);
       setError(null);
@@ -62,14 +66,18 @@ export default function TAMyEventsPage() {
   };
 
   const renderRegistrationCard = (registration) => {
-    if (!registration.event_id) return null;
+    // Change from registration.event_id to registration.event
+    if (!registration.event) {
+      console.warn('Registration missing event:', registration);
+      return null;
+    }
 
     return (
       <div key={registration._id} className="event-card">
-        <h3>{registration.event_id.name}</h3>
-        <p><strong>Type:</strong> {registration.event_id.type}</p>
-        <p><strong>Location:</strong> {registration.event_id.location}</p>
-        <p><strong>Event Date:</strong> {formatDate(registration.event_id.start_date)}</p>
+        <h3>{registration.event.name}</h3>
+        <p><strong>Type:</strong> {registration.event.type}</p>
+        <p><strong>Location:</strong> {registration.event.location}</p>
+        <p><strong>Event Date:</strong> {formatDate(registration.event.start_date)}</p>
         <p><strong>Registered On:</strong> {formatDate(registration.registration_date)}</p>
         
         <div style={{ 
@@ -85,7 +93,7 @@ export default function TAMyEventsPage() {
 
         <button 
           className="btn-primary" 
-          onClick={() => setSelectedEvent(registration.event_id)}
+          onClick={() => setSelectedEvent(registration.event)}
           style={{ marginTop: '1rem', width: '100%' }}
         >
           View Details
