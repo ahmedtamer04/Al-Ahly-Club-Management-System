@@ -64,16 +64,10 @@ const fetchWithAuth = async (endpoint, options = {}) => {
 
   try {
     const response = await fetch(`${API_BASE_URL}${endpoint}`, config);
-    
-    // Log the request for debugging
-    console.log(`API Request: ${config.method || 'GET'} ${API_BASE_URL}${endpoint}`);
-    console.log('Response status:', response.status);
-    
     const data = await response.json();
 
     if (!response.ok) {
-      console.error('API Error Response:', data);
-      throw new Error(data.message || `Request failed with status ${response.status}`);
+      throw new Error(data.message || 'Request failed');
     }
 
     return data;
@@ -267,26 +261,26 @@ export const conferenceAPI = {
 // ================================
 
 export const gymAPI = {
-  // GET /api/gym-sessions/schedule
+  // GET /api/gymSession/schedule
   // Auth: requireStudentOrAbove
   // Query params: month, year, type
   getSchedule: (params = {}) => {
     const queryString = new URLSearchParams(params).toString();
-    return api.get(`/gym-sessions/schedule${queryString ? `?${queryString}` : ''}`);
+    return api.get(`/gymSession/schedule${queryString ? `?${queryString}` : ''}`);
   },
 
-  // POST /api/gym-sessions/create
+  // POST /api/gymSession/create
   // Auth: requireAdminOrEventsOffice
   // Required: { date, time, duration, type, maxParticipants }
-  create: (sessionData) => api.post('/gym-sessions/create', sessionData),
+  create: (sessionData) => api.post('/gymSession/create', sessionData),
 
-  // PUT /api/gym-sessions/edit/:id
+  // PUT /api/gymSession/edit/:id
   // Auth: requireAdminOrEventsOffice
-  edit: (id, updates) => api.put(`/gym-sessions/edit/${id}`, updates),
+  edit: (id, updates) => api.put(`/gymSession/edit/${id}`, updates),
 
-  // PATCH /api/gym-sessions/cancel/:id
+  // PATCH /api/gymSession/cancel/:id
   // Auth: requireAdminOrEventsOffice
-  cancel: (id) => api.patch(`/gym-sessions/cancel/${id}`, {}),
+  cancel: (id) => api.patch(`/gymSession/cancel/${id}`, {}),
 };
 
 // ================================
@@ -340,11 +334,6 @@ export const registrationAPI = {
   // Auth: requireRegistering
   // Returns { upcoming: [], past: [] }
   getMyRegistrations: (userId) => api.get(`/registration/${userId}/events`),
-
-  // DELETE /api/registration/cancel/:id
-  // Auth: requireRegistering
-  // Cancel a registration
-  cancel: (registrationId) => api.delete(`/registration/cancel/${registrationId}`),
 };
 
 // ================================
@@ -436,22 +425,6 @@ export const adminAPI = {
   // GET /api/admin/users
   // Auth: requireAdmin
   getAllUsers: () => api.get('/admin/users'),
-};
-
-// ================================
-// FACILITIES APIs (Student access)
-// ================================
-
-export const facilitiesAPI = {
-  // GET /api/facilities/getAll
-  // Auth: requireStudent
-  // Returns array of facility objects
-  getAll: () => api.get('/facilities/getAll'),
-
-  // POST /api/facilities/add (Admin/EventsOffice only)
-  // Auth: requireAdminOrEventsOffice
-  // Required: { name, type, location, attributes: { sport, indoor }, status }
-  add: (facilityData) => api.post('/facilities/add', facilityData),
 };
 
 export default api;
