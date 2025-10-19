@@ -8,6 +8,7 @@ export default function TADashboard() {
   const [upcomingEventsCount, setUpcomingEventsCount] = useState(0);
   const [gymSessionsCount, setGymSessionsCount] = useState(0);
   const [myEventsCount, setMyEventsCount] = useState(0);
+  const [favoritesCount, setFavoritesCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -71,6 +72,20 @@ export default function TADashboard() {
           setGymSessionsCount(scheduledSessions.length);
         }
 
+        // Fetch favorites count
+        const favoritesResponse = await fetch('http://localhost:5000/api/favorites', {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (favoritesResponse.ok) {
+          const favoritesData = await favoritesResponse.json();
+          setFavoritesCount(favoritesData.length);
+        }
+
       } catch (error) {
         console.error('Error fetching stats:', error);
       } finally {
@@ -126,16 +141,30 @@ export default function TADashboard() {
             </div>
           </div>
 
-          {/* Gym Sessions Card - Half width, under upcoming events */}
-          <div style={{ marginTop: '1.5rem', maxWidth: 'calc(50% - 0.75rem)' }}>
+          {/* Gym Sessions and Favorites Cards - Half width each, side by side */}
+          <div style={{ 
+            marginTop: '1.5rem', 
+            display: 'grid', 
+            gridTemplateColumns: 'repeat(2, 1fr)', 
+            gap: '1.5rem',
+            maxWidth: '100%'
+          }}>
             <div className="stat-card">
               <div className="stat-icon">💪</div>
               <div className="stat-info">
                 <h3>{loading ? '...' : gymSessionsCount}</h3>
                 <p>Available Gym Sessions</p>
+              </div>
+            </div>
+
+            <div className="stat-card">
+              <div className="stat-icon">⭐</div>
+              <div className="stat-info">
+                <h3>{loading ? '...' : favoritesCount}</h3>
+                <p>Favorite Events</p>
+              </div>
             </div>
           </div>
-        </div>
           
         </main>
       </div>

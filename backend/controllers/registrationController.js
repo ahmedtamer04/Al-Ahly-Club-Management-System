@@ -18,6 +18,27 @@ export const registerForEvent = async (req, res) => {
       return res.status(400).json({ message: "All fields are required." });
     }
     
+    // ✅ ADD VALIDATION: Check if provided data matches authenticated user
+    console.log('Validating user data against authenticated user...');
+    console.log('Provided email:', email, 'User email:', req.user.email);
+    console.log('Provided personalId:', personalId, 'User id_number:', req.user.id_number);
+    
+    // Validate email
+    if (email.toLowerCase() !== req.user.email.toLowerCase()) {
+      return res.status(400).json({ 
+        message: "Email does not match your account. Please use your registered email: " + req.user.email 
+      });
+    }
+    
+    // Validate personal ID
+    if (personalId !== req.user.id_number) {
+      return res.status(400).json({ 
+        message: "Personal ID does not match your account. Please use your registered ID." 
+      });
+    }
+    
+    console.log('✅ User data validation passed!');
+    
     // Normalize and validate role (match the Registration model enum)
     let normalizedRole;
     const roleLower = role ? role.toString().toLowerCase() : '';
@@ -63,6 +84,19 @@ export const registerForEvent = async (req, res) => {
       return res.status(400).json({ message: "Event is full." });
     }
 
+    // Check if user already registered for this event
+    const existingRegistration = await Registration.findOne({
+      user_id,
+      event_id,
+      status: 'registered'
+    });
+
+    if (existingRegistration) {
+      return res.status(409).json({ 
+        message: "You are already registered for this event." 
+      });
+    }
+
     const registration = new Registration({
       event_id,
       user_id,
@@ -91,6 +125,7 @@ export const registerForEvent = async (req, res) => {
     });
     
   } catch (error) {
+    console.error('Registration error:', error);
     if (error.code === 11000) {
       return res.status(409).json({ message: "You are already registered for this event." });
     }
