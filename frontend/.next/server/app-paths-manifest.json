@@ -3,5 +3,6 @@
   "/student/gym/schedule/page": "app/student/gym/schedule/page.js",
   "/student/page": "app/student/page.js",
   "/student/events/page": "app/student/events/page.js",
-  "/student/events/search/page": "app/student/events/search/page.js"
+  "/student/events/search/page": "app/student/events/search/page.js",
+  "/student/my-registrations/page": "app/student/my-registrations/page.js"
 }

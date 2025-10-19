@@ -111,9 +111,10 @@ export const viewRegisteredEvents = async (req, res) => {
       return res.status(400).json({ message: "User ID is required." });
     }
 
-    // Get all registrations (including cancelled ones)
+    // Get all active registrations (canceled ones are deleted)
     const registrations = await Registration.find({ 
-      user_id
+      user_id,
+      status: "registered"
     }).populate('event_id');
     
     console.log('Found registrations:', registrations.length);
@@ -172,8 +173,7 @@ export const cancelRegistration = async (req, res) => {
 
     const registration = await Registration.findOne({
       _id: registrationId,
-      user_id,
-      status: "registered"
+      user_id
     });
 
     console.log('Found registration:', registration);
@@ -192,12 +192,11 @@ export const cancelRegistration = async (req, res) => {
       });
     }
 
-    console.log('Cancelling registration');
-    registration.status = "canceled";
-    await registration.save();
+    console.log('Deleting registration');
+    await Registration.findByIdAndDelete(registrationId);
 
-    console.log('Registration cancelled successfully');
-    res.json({ message: "Registration canceled successfully." });
+    console.log('Registration deleted successfully');
+    res.json({ message: "Registration canceled and removed successfully." });
 
   } catch (error) {
     console.error('Error canceling registration:', error);
