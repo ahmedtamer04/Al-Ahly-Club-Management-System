@@ -38,6 +38,7 @@ export default function StaffDashboard() {
           <ul className="sidebar-menu">
             <li><Link href="/staff">🏠 Dashboard</Link></li>
             <li><Link href="/staff/events">📅 Browse Events</Link></li>
+            <li><Link href="/staff/gym/schedule">💪 Gym Schedule</Link></li>
             <li><Link href="/staff/profile">👤 Profile</Link></li>
           </ul>
         </aside>
@@ -60,6 +61,15 @@ export default function StaffDashboard() {
                 <p>Registered Events</p>
               </div>
             </div>
+            <Link href="/staff/gym/schedule" style={{textDecoration: 'none', color: 'inherit'}}>
+              <div className="stat-card" style={{cursor: 'pointer', transition: 'transform 0.2s'}} onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-4px)'} onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}>
+                <div className="stat-icon">💪</div>
+                <div className="stat-info">
+                  <h3>View</h3>
+                  <p>Gym Schedule</p>
+                </div>
+              </div>
+            </Link>
           </div>
 
           <section className="section">

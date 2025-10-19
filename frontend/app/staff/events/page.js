@@ -226,6 +226,9 @@ export default function StaffEventsPage() {
               <Link href="/staff/events">📅 Browse Events</Link>
             </li>
             <li>
+              <Link href="/staff/gym/schedule">💪 Gym Schedule</Link>
+            </li>
+            <li>
               <Link href="/staff/profile">👤 Profile</Link>
             </li>
           </ul>
