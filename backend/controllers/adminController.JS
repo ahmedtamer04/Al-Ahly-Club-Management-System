@@ -190,24 +190,53 @@ export const approveUser = async (req, res) => {
       return res.status(400).json({ message: "Only Staff, TA, and Professor users need approval" });
     }
 
-    // INSTANT ACTIVATION - NO EMAIL NEEDED
+    // Generate verification token
+    const verificationToken = generateVerificationToken();
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+    
+    // Update user with admin approval and verification token
     user.role_admin_verified = true;
-    user.is_verified = true;          // ← Set to true immediately
-    user.status = "active";           // ← Set to active immediately
+    user.is_verified = false; // Will be set to true after email verification
+    user.status = "pending"; // Remains pending until email verified
+    user.email_verification_token = verificationToken;
+    user.email_verification_expires = expiresAt;
     await user.save();
-
-    res.json({ 
-      message: `${user.role} user approved and activated successfully`,
-      user: {
-        id: user._id,
-        name: `${user.first_name} ${user.last_name}`,
-        email: user.email,
-        role: user.role,
-        status: user.status,           // Will be "active"
-        is_verified: user.is_verified, // Will be true
-        role_admin_verified: user.role_admin_verified // Will be true
-      }
-    });
+    
+    // Send verification email
+    try {
+      await sendVerificationEmail(
+        user.email,
+        verificationToken,
+        user.role,
+        `${user.first_name} ${user.last_name}`,
+        false // isStudent = false
+      );
+      
+      res.json({ 
+        message: `${user.role} user approved. Verification email sent to ${user.email}`,
+        user: {
+          id: user._id,
+          name: `${user.first_name} ${user.last_name}`,
+          email: user.email,
+          role: user.role,
+          status: user.status,
+          is_verified: user.is_verified,
+          role_admin_verified: user.role_admin_verified
+        }
+      });
+    } catch (emailError) {
+      console.error('Error sending verification email:', emailError);
+      // Rollback the approval if email fails
+      user.role_admin_verified = false;
+      user.status = "pending";
+      user.email_verification_token = undefined;
+      user.email_verification_expires = undefined;
+      await user.save();
+      
+      return res.status(500).json({ 
+        message: "Failed to send verification email. Approval cancelled." 
+      });
+    }
 
   } catch (err) {
     console.error('Error approving user:', err);

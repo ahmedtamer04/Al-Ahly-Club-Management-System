@@ -1,6 +1,7 @@
 import User from "../models/User.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import { generateVerificationToken, sendVerificationEmail } from "../services/emailService.js";
 
 export const signupUser = async (req, res) => {
   try {
@@ -40,11 +41,26 @@ export const signupUser = async (req, res) => {
     if (role=="Admin" || role=="EventsOffice") {
       return res.status(400).json({ message: "Cannot signup as Admin or Events Office" });
     }
-    // Validate email domain for non vendors
-    if (!email.endsWith('@guc.edu.eg')) {
+    // Validate email domain for non vendors (development mode bypass)
+    const isDevelopment = process.env.NODE_ENV === 'development' || process.env.DEVELOPMENT_MODE === 'true';
+    
+    console.log('=== EMAIL VALIDATION DEBUG ===');
+    console.log('NODE_ENV:', process.env.NODE_ENV);
+    console.log('DEVELOPMENT_MODE:', process.env.DEVELOPMENT_MODE);
+    console.log('isDevelopment:', isDevelopment);
+    console.log('Email:', email);
+    console.log('Email ends with @guc.edu.eg:', email.endsWith('@guc.edu.eg'));
+    console.log('============================');
+    
+    if (!isDevelopment && !email.endsWith('@guc.edu.eg')) {
       return res.status(400).json({ 
         message: "Email must be a valid GUC email address ending with @guc.edu.eg" 
       });
+    }
+    
+    // Log if using non-GUC email in development
+    if (isDevelopment && !email.endsWith('@guc.edu.eg')) {
+      console.log(`✅ DEVELOPMENT MODE ACTIVE: Allowing non-GUC email: ${email}`);
     }
     //check if user already exists
     const userExists = await User.findOne({ email });
@@ -90,7 +106,58 @@ export const signupUser = async (req, res) => {
       });
     }
 
-    // Create regular user (Student, Vendor, Admin, EventsOffice - no approval needed)
+    // Create Student user (requires email verification)
+    if (role === "Student") {
+      // Generate verification token
+      const verificationToken = generateVerificationToken();
+      const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+      
+      const user = await User.create({
+        first_name,
+        last_name,
+        email,
+        id_number,
+        password_hash: hash,
+        role,
+        status: "pending", // Pending until email verified
+        is_verified: false,
+        role_admin_verified: null, // Not applicable for students
+        email_verification_token: verificationToken,
+        email_verification_expires: expiresAt
+      });
+      
+      // Send verification email
+      try {
+        await sendVerificationEmail(
+          user.email,
+          verificationToken,
+          user.role,
+          `${user.first_name} ${user.last_name}`,
+          true // isStudent flag
+        );
+        
+        return res.status(201).json({ 
+          message: "Registration successful! Please check your email to verify your account.",
+          user: {
+            id: user._id,
+            first_name: user.first_name,
+            last_name: user.last_name,
+            email: user.email,
+            role: user.role,
+            status: user.status,
+            is_verified: user.is_verified
+          }
+        });
+      } catch (emailError) {
+        // If email fails, delete the user
+        await User.findByIdAndDelete(user._id);
+        return res.status(500).json({ 
+          message: "Failed to send verification email. Please try again." 
+        });
+      }
+    }
+
+    // Create other users (Vendor, Admin, EventsOffice - no approval needed)
     const user = await User.create({
       first_name,
       last_name,
@@ -99,6 +166,7 @@ export const signupUser = async (req, res) => {
       password_hash: hash,
       role,
       status: "active", // Auto-approved roles
+      is_verified: true,
       role_admin_verified: true // These roles don't need admin verification
     });
 
@@ -132,17 +200,30 @@ export const loginUser = async (req, res) => {
       return res.status(403).json({ message: "Your account has been blocked. Please contact admin." });
     }
     
-    if (user.status === "pending") {
+    // For Staff, TA, Professor - check if admin verified their role
+    if ((user.role === "Staff" || user.role === "TA" || user.role === "Professor") && !user.role_admin_verified) {
       return res.status(403).json({ message: "Your account is pending admin approval. Please wait for verification." });
+    }
+    
+    // Check email verification for both students and approved staff/TA/professor
+    if (!user.is_verified) {
+      if (user.role === "Student") {
+        return res.status(403).json({ 
+          message: "Please verify your email address. Check your inbox for the verification link." 
+        });
+      } else if (["Staff", "TA", "Professor"].includes(user.role) && user.role_admin_verified) {
+        return res.status(403).json({ 
+          message: "Your role has been approved. Please check your email to verify your account." 
+        });
+      }
+    }
+    
+    if (user.status === "pending") {
+      return res.status(403).json({ message: "Your account is pending verification. Please check your email." });
     }
     
     if (user.status !== "active") {
       return res.status(403).json({ message: "Your account is not active. Please contact admin." });
-    }
-
-    // For Staff, TA, Professor - check if admin verified their role
-    if ((user.role === "Staff" || user.role === "TA" || user.role === "Professor") && !user.role_admin_verified) {
-      return res.status(403).json({ message: "Your account is pending admin approval. Please wait for verification." });
     }
 
     // Generate token for successful login
