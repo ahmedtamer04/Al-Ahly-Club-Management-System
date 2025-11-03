@@ -146,9 +146,13 @@ if (typeof document !== 'undefined') {
 
 export default function AllEventsPage() {
   const [events, setEvents] = useState([]);
+  const [filteredEvents, setFilteredEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
+  const [filterLocation, setFilterLocation] = useState('');
+  const [filterProfessor, setFilterProfessor] = useState('');
+  const [sortOrder, setSortOrder] = useState('desc');
   const [registrationCounts, setRegistrationCounts] = useState({}); // New state for registration counts
   const [viewEventModal, setViewEventModal] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState(null);
@@ -228,6 +232,7 @@ export default function AllEventsPage() {
         const allEvents = [...nonBoothEvents, ...boothEvents];
         console.log('All events combined:', allEvents);
         setEvents(allEvents);
+        setFilteredEvents(allEvents); // Initialize filtered events
         
         // Calculate stats
         const eventStats = {
@@ -250,6 +255,7 @@ export default function AllEventsPage() {
         console.error('Error fetching events:', error);
         // If there's an error, keep showing the placeholder
         setEvents([]);
+        setFilteredEvents([]);
       } finally {
         setLoading(false);
       }
@@ -257,6 +263,11 @@ export default function AllEventsPage() {
 
     fetchEvents();
   }, []);
+
+  // Apply filters when dependencies change
+  useEffect(() => {
+    applyFiltersAndSort();
+  }, [events, searchTerm, filter, filterLocation, filterProfessor, sortOrder]);
 
   // Function to fetch registration counts for all events
   const fetchRegistrationCounts = async (events) => {
@@ -328,23 +339,74 @@ export default function AllEventsPage() {
     return registrationCounts[eventId] || 0;
   };
 
-  // Filter events based on type and search term
-  const filteredEvents = events.filter(event => {
-    // Filter by type
-    if (filter !== 'all' && event.type !== filter) {
-      return false;
-    }
-    
-    // Filter by search term
+  // Apply comprehensive filters and sorting
+  const applyFiltersAndSort = () => {
+    let result = [...events];
+
+    // Search by event name, location, description, or professor name
     if (searchTerm) {
       const searchLower = searchTerm.toLowerCase();
-      return event.name.toLowerCase().includes(searchLower) ||
-             event.location.toLowerCase().includes(searchLower) ||
-             event.short_description.toLowerCase().includes(searchLower);
+      result = result.filter(event => {
+        const nameMatch = event.name?.toLowerCase().includes(searchLower);
+        const locationMatch = event.location?.toLowerCase().includes(searchLower);
+        const descriptionMatch = event.short_description?.toLowerCase().includes(searchLower);
+        const professorMatch = 
+          event.workshop?.professors_participating?.some(prof => 
+            prof.toLowerCase().includes(searchLower)
+          ) ||
+          event.conference?.professors_participating?.some(prof => 
+            prof.toLowerCase().includes(searchLower)
+          );
+        return nameMatch || locationMatch || descriptionMatch || professorMatch;
+      });
     }
-    
-    return true;
-  });
+
+    // Filter by type
+    if (filter !== 'all') {
+      result = result.filter(event => event.type === filter);
+    }
+
+    // Filter by location
+    if (filterLocation) {
+      const locationLower = filterLocation.toLowerCase();
+      result = result.filter(event => 
+        event.location?.toLowerCase().includes(locationLower)
+      );
+    }
+
+    // Filter by professor
+    if (filterProfessor) {
+      const profLower = filterProfessor.toLowerCase();
+      result = result.filter(event => {
+        return (
+          event.workshop?.professors_participating?.some(prof => 
+            prof.toLowerCase().includes(profLower)
+          ) ||
+          event.conference?.professors_participating?.some(prof => 
+            prof.toLowerCase().includes(profLower)
+          )
+        );
+      });
+    }
+
+    // Sort by date
+    result.sort((a, b) => {
+      const dateA = new Date(a.start_date);
+      const dateB = new Date(b.start_date);
+      return sortOrder === 'asc' ? dateA - dateB : dateB - dateA;
+    });
+
+    setFilteredEvents(result);
+  };
+
+  // Clear all filters
+  const clearFilters = () => {
+    setSearchTerm('');
+    setFilter('all');
+    setFilterLocation('');
+    setFilterProfessor('');
+    setSortOrder('desc');
+  };
 
   const handleDeleteEvent = async (eventId, eventName, isBooth = false) => {
     const message = isBooth 
@@ -422,6 +484,7 @@ export default function AllEventsPage() {
       
       const allEvents = [...nonBoothEvents, ...boothEvents];
       setEvents(allEvents);
+      setFilteredEvents(allEvents); // Update filtered events as well
       
       // Refresh registration counts for the updated events list
       if (nonBoothEvents && nonBoothEvents.length > 0) {
@@ -926,56 +989,154 @@ export default function AllEventsPage() {
             </div>
           </div>
 
-          {/* Filters */}
-          <section className="section">
-            <div className="filter-bar">
-              <div className="search-box">
+          {/* Search and Filter Section */}
+          <div className="filters-section" style={{ 
+            background: '#f8f9fa', 
+            padding: '20px', 
+            borderRadius: '8px', 
+            marginBottom: '24px' 
+          }}>
+            <h3 style={{ marginBottom: '16px' }}>🔍 Search & Filter</h3>
+            
+            <div style={{ 
+              display: 'grid', 
+              gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', 
+              gap: '16px',
+              marginBottom: '16px'
+            }}>
+              {/* Search by Name, Location, Description, or Professor */}
+              <div>
+                <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>
+                  Search by Name, Location, Description, or Professor
+                </label>
                 <input
                   type="text"
-                  placeholder="🔍 Search events by title..."
+                  placeholder="Enter search terms..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '10px',
+                    border: '1px solid #ddd',
+                    borderRadius: '4px',
+                    fontSize: '14px'
+                  }}
                 />
               </div>
-              <div className="filter-buttons">
-                <button 
-                  className={filter === 'all' ? 'filter-btn active' : 'filter-btn'}
-                  onClick={() => setFilter('all')}
+
+              {/* Filter by Type */}
+              <div>
+                <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>
+                  Filter by Type
+                </label>
+                <select
+                  value={filter}
+                  onChange={(e) => setFilter(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '10px',
+                    border: '1px solid #ddd',
+                    borderRadius: '4px',
+                    fontSize: '14px'
+                  }}
                 >
-                  All Events
-                </button>
-                <button 
-                  className={filter === 'Workshop' ? 'filter-btn active' : 'filter-btn'}
-                  onClick={() => setFilter('Workshop')}
-                >
-                  Workshops
-                </button>
-                <button 
-                  className={filter === 'Trip' ? 'filter-btn active' : 'filter-btn'}
-                  onClick={() => setFilter('Trip')}
-                >
-                  Trips
-                </button>
-                <button 
-                  className={filter === 'Bazaar' ? 'filter-btn active' : 'filter-btn'}
-                  onClick={() => setFilter('Bazaar')}
-                >
-                  Bazaars
-                </button>
-                <button 
-                  className={filter === 'Booth' ? 'filter-btn active' : 'filter-btn'}
-                  onClick={() => setFilter('Booth')}
-                >
-                  Booths
-                </button>
-                <button 
-                  className={filter === 'Conference' ? 'filter-btn active' : 'filter-btn'}
-                  onClick={() => setFilter('Conference')}
-                >
-                  Conferences
-                </button>
+                  <option value="all">All Types</option>
+                  <option value="Workshop">Workshop</option>
+                  <option value="Conference">Conference</option>
+                  <option value="Trip">Trip</option>
+                  <option value="Bazaar">Bazaar</option>
+                  <option value="Booth">Booth</option>
+                </select>
+              </div>
+
+              {/* Filter by Location */}
+              <div>
+                <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>
+                  Filter by Location
+                </label>
+                <input
+                  type="text"
+                  placeholder="Enter location..."
+                  value={filterLocation}
+                  onChange={(e) => setFilterLocation(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '10px',
+                    border: '1px solid #ddd',
+                    borderRadius: '4px',
+                    fontSize: '14px'
+                  }}
+                />
+              </div>
+
+              {/* Filter by Professor */}
+              <div>
+                <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>
+                  Filter by Professor
+                </label>
+                <input
+                  type="text"
+                  placeholder="Enter professor name..."
+                  value={filterProfessor}
+                  onChange={(e) => setFilterProfessor(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '10px',
+                    border: '1px solid #ddd',
+                    borderRadius: '4px',
+                    fontSize: '14px'
+                  }}
+                />
               </div>
             </div>
+
+            {/* Sort and Clear Buttons */}
+            <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <label style={{ fontWeight: '500' }}>Sort by Date:</label>
+                <select
+                  value={sortOrder}
+                  onChange={(e) => setSortOrder(e.target.value)}
+                  style={{
+                    padding: '8px 12px',
+                    border: '1px solid #ddd',
+                    borderRadius: '4px',
+                    fontSize: '14px'
+                  }}
+                >
+                  <option value="desc">Newest First</option>
+                  <option value="asc">Oldest First</option>
+                </select>
+              </div>
+              <button 
+                onClick={clearFilters} 
+                className="btn btn-secondary btn-sm"
+                style={{ marginLeft: 'auto' }}
+              >
+                🔄 Clear All Filters
+              </button>
+            </div>
+
+            {/* Results Count */}
+            <div style={{ marginTop: '12px', color: '#666', fontSize: '14px' }}>
+              Showing {filteredEvents.length} of {events.length} events
+              {(searchTerm || filter !== 'all' || filterLocation || filterProfessor) && (
+                <span style={{ 
+                  marginLeft: '10px',
+                  background: '#0066cc',
+                  color: 'white',
+                  padding: '2px 8px',
+                  borderRadius: '12px',
+                  fontSize: '12px',
+                  fontWeight: '600'
+                }}>
+                  ✓ Filters Active
+                </span>
+              )}
+            </div>
+          </div>
+
+          <section className="section">
 
             {/* Events Table */}
             <div className="table-container">
@@ -1001,11 +1162,11 @@ export default function AllEventsPage() {
                         </div>
                       </td>
                     </tr>
-                  ) : filteredEvents.length === 0 ? (
+                  ) : filteredEvents.length === 0 && events.length > 0 ? (
                     <tr>
                       <td colSpan="8" className="empty-row">
                         <div className="empty-state">
-                          <p>📅 No events found</p>
+                          <p>� No events found matching your criteria</p>
                           {filter !== 'all' && (
                             <p style={{fontSize: '0.9rem', color: '#999'}}>
                               No {filter.toLowerCase()} events match your search criteria
@@ -1013,9 +1174,27 @@ export default function AllEventsPage() {
                           )}
                           {searchTerm && (
                             <p style={{fontSize: '0.9rem', color: '#999'}}>
-                              Try adjusting your search terms
+                              Try adjusting your search terms or clearing filters
                             </p>
                           )}
+                          <button 
+                            onClick={clearFilters}
+                            className="btn btn-secondary btn-sm"
+                            style={{marginTop: '10px'}}
+                          >
+                            Clear All Filters
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ) : filteredEvents.length === 0 ? (
+                    <tr>
+                      <td colSpan="8" className="empty-row">
+                        <div className="empty-state">
+                          <p>📅 No events available</p>
+                          <p style={{fontSize: '0.9rem', color: '#999'}}>
+                            No events have been created yet
+                          </p>
                         </div>
                       </td>
                     </tr>
