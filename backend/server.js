@@ -10,7 +10,7 @@ import connectDB from "./config/db.js";
 import authRoutes from "./routes/authRoutes.js";
 
 import tripRoutes from "./routes/tripRoutes.js";
-import adminRoutes from "./routes/adminRoutes.js";
+import adminRoutes, { emailVerificationRoute } from "./routes/adminRoutes.js";
 import facilityRoutes from "./routes/facilityRoutes.js";
 import gymSessionsRoutes from "./routes/gymSessionsRoutes.js";
 import conferenceRoutes from "./routes/conferenceRoutes.js";
@@ -61,6 +61,8 @@ app.get("/", (req, res) => {
 
 // API Routes (all routes prefixed with /api)
 app.use("/api/auth", authRoutes);
+// Email verification route (no auth required) - must be before admin routes
+app.use("/api/admin", emailVerificationRoute);
 app.use("/api/admin", adminRoutes);
 app.use("/api/facilities", facilityRoutes);
 app.use("/api/gym-sessions", gymSessionsRoutes);
