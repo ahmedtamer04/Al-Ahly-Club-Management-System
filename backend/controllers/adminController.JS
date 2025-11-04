@@ -190,6 +190,35 @@ export const approveUser = async (req, res) => {
       return res.status(400).json({ message: "Only Staff, TA, and Professor users need approval" });
     }
 
+    // Check if email verification should be skipped in development
+    const isDevelopment = process.env.NODE_ENV === 'development' || process.env.DEVELOPMENT_MODE === 'true';
+    const skipEmailVerification = process.env.SKIP_EMAIL_VERIFICATION === 'true' && isDevelopment;
+    
+    if (skipEmailVerification) {
+      console.log('⚠️ DEVELOPMENT MODE: Skipping email verification for approved user');
+      console.log('✅ User auto-verified and activated for testing');
+      
+      user.role_admin_verified = true;
+      user.is_verified = true; // Auto-verified in dev mode
+      user.status = "active"; // Auto-active in dev mode
+      await user.save();
+      
+      return res.json({ 
+        message: `${user.role} user approved and activated. (Email verification skipped in development mode)`,
+        devMode: true,
+        user: {
+          id: user._id,
+          name: `${user.first_name} ${user.last_name}`,
+          email: user.email,
+          role: user.role,
+          status: user.status,
+          is_verified: user.is_verified,
+          role_admin_verified: user.role_admin_verified
+        }
+      });
+    }
+    
+    // Normal flow with email verification
     // Generate verification token
     const verificationToken = generateVerificationToken();
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
@@ -248,11 +277,27 @@ export const approveUser = async (req, res) => {
 export const verifyEmail = async (req, res) => {
   try {
     const { token } = req.params;
+    
+    console.log('=== EMAIL VERIFICATION DEBUG ===');
+    console.log('Token received:', token);
+    console.log('Token length:', token?.length);
 
     const user = await User.findOne({
       email_verification_token: token,
       email_verification_expires: { $gt: Date.now() }
     });
+    
+    console.log('User found:', user ? 'Yes' : 'No');
+    if (!user) {
+      // Check if token exists but expired
+      const expiredUser = await User.findOne({ email_verification_token: token });
+      console.log('Expired token found:', expiredUser ? 'Yes' : 'No');
+      if (expiredUser) {
+        console.log('Token expired at:', expiredUser.email_verification_expires);
+        console.log('Current time:', new Date());
+      }
+    }
+    console.log('===============================');
 
     if (!user) {
       return res.status(400).json({ 

@@ -1,17 +1,29 @@
 import nodemailer from 'nodemailer';
 import crypto from 'crypto';
 
-// Configure email transporter (using Gmail as example)
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS
+// Create transporter lazily to ensure environment variables are loaded
+let transporter = null;
+
+const getTransporter = () => {
+  if (!transporter) {
+    console.log('=== EMAIL SERVICE TRANSPORTER DEBUG ===');
+    console.log('EMAIL_USER:', process.env.EMAIL_USER ? '✅ Set' : '❌ NOT SET');
+    console.log('EMAIL_PASS:', process.env.EMAIL_PASS ? `✅ Set (length: ${process.env.EMAIL_PASS.length})` : '❌ NOT SET');
+    console.log('======================================');
+    
+    transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS
+      }
+      // Alternative: Use other email services like:
+      // - SendGrid, Mailgun, Outlook, etc.
+      // - Or SMTP configuration for other providers
+    });
   }
-  // Alternative: Use other email services like:
-  // - SendGrid, Mailgun, Outlook, etc.
-  // - Or SMTP configuration for other providers
-});
+  return transporter;
+};
 
 export const generateVerificationToken = () => {
   return crypto.randomBytes(32).toString('hex');
@@ -71,7 +83,8 @@ export const sendVerificationEmail = async (email, token, userRole, userName, is
   };
 
   try {
-    const info = await transporter.sendMail(mailOptions);
+    const emailTransporter = getTransporter();
+    const info = await emailTransporter.sendMail(mailOptions);
     console.log(`✅ Verification email sent to ${email}`);
     console.log(`Message ID: ${info.messageId}`);
   } catch (error) {

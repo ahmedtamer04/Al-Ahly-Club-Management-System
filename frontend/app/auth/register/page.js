@@ -42,11 +42,13 @@ export default function RegisterPage() {
         setMessage({ text: 'All fields are required', type: 'error' });
         return;
       }
-      // Email domain validation for non-vendors
-      if (!formData.email.endsWith('@guc.edu.eg')) {
-        setMessage({ text: 'Email must be a valid GUC email (@guc.edu.eg)', type: 'error' });
-        return;
-      }
+      // Email domain validation DISABLED for development testing
+      // Backend will handle validation based on DEVELOPMENT_MODE flag
+      // UNCOMMENT IN PRODUCTION:
+      // if (!formData.email.endsWith('@guc.edu.eg')) {
+      //   setMessage({ text: 'Email must be a valid GUC email (@guc.edu.eg)', type: 'error' });
+      //   return;
+      // }
     }
 
     // Prepare data for backend
@@ -69,11 +71,20 @@ export default function RegisterPage() {
     try {
       const response = await authAPI.signup(registrationData);
       
-      // Success message based on role
+      // Success message based on role and response
       if (formData.role === 'Staff' || formData.role === 'TA' || formData.role === 'Professor') {
         setMessage({ 
-          text: 'Account created! Waiting for admin approval before you can login.', 
+          text: response.devMode 
+            ? 'Account created! Waiting for admin approval. (Development mode: No email verification needed)'
+            : 'Account created! Waiting for admin approval. You will receive a verification email once approved.', 
           type: 'warning' 
+        });
+      } else if (formData.role === 'Student') {
+        setMessage({ 
+          text: response.devMode
+            ? 'Account created successfully! You can login immediately. (Development mode: Email verification skipped)'
+            : 'Account created! Please check your email to verify your account before logging in.',
+          type: 'success' 
         });
       } else {
         setMessage({ text: 'Account created successfully! You can now login.', type: 'success' });
@@ -188,16 +199,16 @@ export default function RegisterPage() {
               </div>
 
               <div className="form-group">
-                <label>GUC Email *</label>
+                <label>Email *</label>
                 <input
                   type="email"
-                  placeholder="student@guc.edu.eg"
+                  placeholder="your.email@example.com"
                   value={formData.email}
                   onChange={(e) => setFormData({...formData, email: e.target.value})}
                   required
                 />
                 <small style={{color: '#666', fontSize: '0.85rem'}}>
-                  Must end with @guc.edu.eg
+                  Any email works in development mode
                 </small>
               </div>
 

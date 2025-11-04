@@ -896,6 +896,16 @@ export default function ManageUsersPage() {
                                 {user.status === 'blocked' ? '🔓 Unblock' : '🔒 Block'}
                               </button>
                             )}
+                            {/* Resend verification email for unverified users */}
+                            {!user.is_verified && (
+                              <button
+                                className="btn btn-info btn-sm ml-2"
+                                onClick={() => handleResendVerification(user._id)}
+                                title="Resend Verification Email"
+                              >
+                                📧 Resend Email
+                              </button>
+                            )}
                             {/* Allow deleting any user except yourself */}
                             {user._id !== currentUser?._id && (
                               <button

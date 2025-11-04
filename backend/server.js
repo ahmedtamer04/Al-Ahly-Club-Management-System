@@ -27,6 +27,8 @@ const app = express();
 // Debug: Check if environment variables are loaded
 console.log("MONGO_URI:", process.env.MONGO_URI ? "✅ Loaded" : "❌ Not found");
 console.log("JWT_SECRET:", process.env.JWT_SECRET ? "✅ Loaded" : "❌ Not found");
+console.log("DEVELOPMENT_MODE:", process.env.DEVELOPMENT_MODE ? `✅ ${process.env.DEVELOPMENT_MODE}` : "❌ Not found");
+console.log("EMAIL_USER:", process.env.EMAIL_USER ? "✅ Loaded" : "❌ Not found");
 
 // Middleware
 app.use(cors());

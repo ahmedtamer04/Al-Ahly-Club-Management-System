@@ -42,7 +42,9 @@ export const signupUser = async (req, res) => {
       return res.status(400).json({ message: "Cannot signup as Admin or Events Office" });
     }
     // Validate email domain for non vendors (development mode bypass)
-    const isDevelopment = process.env.NODE_ENV === 'development' || process.env.DEVELOPMENT_MODE === 'true';
+    const isDevelopment = process.env.NODE_ENV === 'development' || 
+                          process.env.DEVELOPMENT_MODE === 'true' ||
+                          process.env.DEVELOPMENT_MODE === true;
     
     console.log('=== EMAIL VALIDATION DEBUG ===');
     console.log('NODE_ENV:', process.env.NODE_ENV);
@@ -108,6 +110,41 @@ export const signupUser = async (req, res) => {
 
     // Create Student user (requires email verification)
     if (role === "Student") {
+      // Check if email verification should be skipped in development
+      const skipEmailVerification = process.env.SKIP_EMAIL_VERIFICATION === 'true' && isDevelopment;
+      
+      if (skipEmailVerification) {
+        console.log('⚠️ DEVELOPMENT MODE: Skipping email verification');
+        console.log('✅ User account created and auto-verified for testing');
+        
+        const user = await User.create({
+          first_name,
+          last_name,
+          email,
+          id_number,
+          password_hash: hash,
+          role,
+          status: "active", // Auto-active in dev mode
+          is_verified: true, // Auto-verified in dev mode
+          role_admin_verified: true // Students are auto-approved
+        });
+        
+        return res.status(201).json({ 
+          message: "Registration successful! (Email verification skipped in development mode - You can login immediately)",
+          devMode: true,
+          user: {
+            id: user._id,
+            first_name: user.first_name,
+            last_name: user.last_name,
+            email: user.email,
+            role: user.role,
+            status: user.status,
+            is_verified: user.is_verified
+          }
+        });
+      }
+      
+      // Normal flow with email verification
       // Generate verification token
       const verificationToken = generateVerificationToken();
       const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
@@ -119,9 +156,9 @@ export const signupUser = async (req, res) => {
         id_number,
         password_hash: hash,
         role,
-        status: "pending", // Pending until email verified
+        status: "pending", // Pending until email verified, then auto-approved
         is_verified: false,
-        role_admin_verified: null, // Not applicable for students
+        role_admin_verified: true, // Students are auto-approved, only need email verification
         email_verification_token: verificationToken,
         email_verification_expires: expiresAt
       });
@@ -149,10 +186,33 @@ export const signupUser = async (req, res) => {
           }
         });
       } catch (emailError) {
-        // If email fails, delete the user
+        console.error('❌ Email sending failed:', emailError.message);
+        
+        // In development mode, allow account creation without email verification
+        if (isDevelopment) {
+          console.log('⚠️ DEVELOPMENT MODE: Email failed but allowing account creation');
+          console.log('⚠️ User can verify later or admin can manually verify');
+          
+          return res.status(201).json({ 
+            message: "Registration successful! (Email sending failed - Development Mode: You can login without verification or admin can verify manually)",
+            warning: "Email verification disabled in development mode",
+            user: {
+              id: user._id,
+              first_name: user.first_name,
+              last_name: user.last_name,
+              email: user.email,
+              role: user.role,
+              status: user.status,
+              is_verified: user.is_verified
+            }
+          });
+        }
+        
+        // In production, delete the user if email fails
         await User.findByIdAndDelete(user._id);
         return res.status(500).json({ 
-          message: "Failed to send verification email. Please try again." 
+          message: "Failed to send verification email. Please try again or contact support.",
+          error: emailError.message
         });
       }
     }
