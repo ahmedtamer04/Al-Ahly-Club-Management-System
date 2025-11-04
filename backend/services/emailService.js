@@ -212,3 +212,96 @@ export const sendPaymentReceipt = async (email, paymentDetails) => {
     return false;
   }
 };
+
+export const sendCertificateEmail = async (email, certificateData, pdfBuffer) => {
+  const {
+    userName,
+    workshopName,
+    workshopDate,
+    certificateId
+  } = certificateData;
+
+  const mailOptions = {
+    from: process.env.EMAIL_USER,
+    to: email,
+    subject: `Certificate of Attendance - ${workshopName}`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8f9fa;">
+        <div style="background-color: white; border-radius: 10px; padding: 30px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+          <div style="text-align: center; margin-bottom: 30px;">
+            <h1 style="color: #2c3e50; margin: 0;">🎓 Congratulations!</h1>
+            <p style="color: #7f8c8d; margin-top: 10px;">GUC Al-Ahly Club</p>
+          </div>
+          
+          <div style="background-color: #e8f5e9; padding: 20px; border-radius: 8px; margin-bottom: 30px;">
+            <h2 style="color: #2e7d32; margin: 0 0 10px 0; font-size: 18px;">Certificate of Attendance</h2>
+            <p style="color: #1b5e20; margin: 0; font-size: 14px;">You have successfully completed the workshop!</p>
+          </div>
+          
+          <div style="margin-bottom: 30px;">
+            <h3 style="color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px; margin-bottom: 20px;">Workshop Details</h3>
+            
+            <table style="width: 100%; border-collapse: collapse;">
+              <tr>
+                <td style="padding: 12px 0; color: #7f8c8d; font-weight: 600; width: 40%;">Participant:</td>
+                <td style="padding: 12px 0; color: #2c3e50;">${userName}</td>
+              </tr>
+              <tr style="background-color: #f8f9fa;">
+                <td style="padding: 12px 10px; color: #7f8c8d; font-weight: 600;">Workshop:</td>
+                <td style="padding: 12px 10px; color: #2c3e50;">${workshopName}</td>
+              </tr>
+              <tr>
+                <td style="padding: 12px 0; color: #7f8c8d; font-weight: 600;">Date:</td>
+                <td style="padding: 12px 0; color: #2c3e50;">${workshopDate}</td>
+              </tr>
+              <tr style="background-color: #f8f9fa;">
+                <td style="padding: 12px 10px; color: #7f8c8d; font-weight: 600;">Certificate ID:</td>
+                <td style="padding: 12px 10px; color: #2c3e50; font-family: monospace; font-size: 12px;">${certificateId}</td>
+              </tr>
+            </table>
+          </div>
+          
+          <div style="background-color: #fff3cd; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+            <p style="color: #856404; margin: 0; font-size: 14px;">
+              <strong>📎 Note:</strong> Your certificate is attached to this email as a PDF file. Please download and save it for your records.
+            </p>
+          </div>
+          
+          <div style="text-align: center; margin-top: 30px;">
+            <a href="${process.env.FRONTEND_URL || 'http://localhost:3000'}" 
+               style="background-color: #3498db; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">
+              View Dashboard
+            </a>
+          </div>
+          
+          <hr style="margin: 30px 0; border: none; border-top: 1px solid #ecf0f1;">
+          
+          <p style="color: #95a5a6; font-size: 12px; text-align: center; margin: 0;">
+            This certificate has been automatically generated and sent to you upon completing the workshop.<br>
+            For any questions, please contact our support team.<br>
+            <br>
+            © ${new Date().getFullYear()} GUC Al-Ahly Club. All rights reserved.
+          </p>
+        </div>
+      </div>
+    `,
+    attachments: [
+      {
+        filename: `Certificate_${workshopName.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`,
+        content: pdfBuffer,
+        contentType: 'application/pdf'
+      }
+    ]
+  };
+
+  try {
+    const emailTransporter = getTransporter();
+    const info = await emailTransporter.sendMail(mailOptions);
+    console.log(`✅ Certificate email sent to ${email}`);
+    console.log(`Message ID: ${info.messageId}`);
+    return true;
+  } catch (error) {
+    console.error('❌ Error sending certificate email:', error);
+    throw new Error('Failed to send certificate email');
+  }
+};
