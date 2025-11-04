@@ -63,13 +63,47 @@ export const registerForEvent = async (req, res) => {
       return res.status(400).json({ message: "Event is full." });
     }
 
+    // Check if user already has a registration for this event
+    const existingRegistration = await Registration.findOne({
+      user_id,
+      event_id
+    });
+
+    if (existingRegistration) {
+      // If existing registration is pending (unpaid), delete it and allow re-registration
+      if (existingRegistration.payment_status === 'pending') {
+        console.log('Found pending registration, deleting it to allow re-registration');
+        await Registration.findByIdAndDelete(existingRegistration._id);
+      } else {
+        // If already paid or free, they're truly registered
+        return res.status(409).json({ 
+          message: "You are already registered for this event.",
+          payment_status: existingRegistration.payment_status
+        });
+      }
+    }
+
+    // Determine if event requires payment
+    let requiresPayment = false;
+    let eventPrice = 0;
+    
+    if (event.type === 'Workshop' && event.workshop?.price) {
+      requiresPayment = event.workshop.price > 0;
+      eventPrice = event.workshop.price;
+    } else if (event.type === 'Trip' && event.trip?.price) {
+      requiresPayment = event.trip.price > 0;
+      eventPrice = event.trip.price;
+    }
+
     const registration = new Registration({
       event_id,
       user_id,
       name,
       email,
       personalId,
-      role: normalizedRole  // Use the normalized role
+      role: normalizedRole,
+      payment_status: requiresPayment ? 'pending' : 'free',
+      payment_amount: eventPrice
     });
     
     console.log('Creating registration with data:', {
@@ -91,8 +125,13 @@ export const registerForEvent = async (req, res) => {
     });
     
   } catch (error) {
+    console.error('Registration error:', error);
     if (error.code === 11000) {
-      return res.status(409).json({ message: "You are already registered for this event." });
+      // This shouldn't happen anymore since we handle duplicates above,
+      // but keeping as fallback
+      return res.status(409).json({ 
+        message: "You are already registered for this event. If you think this is an error, please contact support." 
+      });
     }
     res.status(500).json({ message: "Server error.", error: error.message });
   }
@@ -111,10 +150,11 @@ export const viewRegisteredEvents = async (req, res) => {
       return res.status(400).json({ message: "User ID is required." });
     }
 
-    // Get all active registrations (canceled ones are deleted)
+    // Get all active registrations (exclude pending payment and canceled ones)
     const registrations = await Registration.find({ 
       user_id,
-      status: "registered"
+      status: "registered",
+      payment_status: { $in: ['paid', 'free'] }  // Only show completed registrations
     }).populate('event_id');
     
     console.log('Found registrations:', registrations.length);
@@ -278,5 +318,36 @@ export const getAllRegistrations = async (req, res) => {
       message: "Server error while fetching registrations.", 
       error: error.message 
     });
+  }
+};
+
+// Cancel unpaid registration (when user closes payment modal)
+export const cancelUnpaidRegistration = async (req, res) => {
+  try {
+    const { registrationId } = req.params;
+    const user_id = req.user._id;
+
+    console.log('Cancel unpaid registration:', { registrationId, user_id });
+
+    const registration = await Registration.findOne({
+      _id: registrationId,
+      user_id,
+      payment_status: 'pending'
+    });
+
+    if (!registration) {
+      console.log('Pending registration not found');
+      return res.status(404).json({ message: "Registration not found or already processed." });
+    }
+
+    // Delete the pending registration
+    await Registration.findByIdAndDelete(registrationId);
+
+    console.log('Unpaid registration deleted successfully');
+    res.json({ message: "Unpaid registration canceled successfully." });
+
+  } catch (error) {
+    console.error('Error canceling unpaid registration:', error);
+    res.status(500).json({ message: "Server error.", error: error.message });
   }
 };

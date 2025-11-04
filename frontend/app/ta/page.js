@@ -115,6 +115,7 @@ export default function TADashboard() {
             <li><Link href="/ta/events">📅 Browse Events</Link></li>
             <li><Link href="/ta/favorites">⭐ My Favorites</Link></li>
             <li><Link href="/ta/my-events">✏️ My Events</Link></li>
+            <li><Link href="/ta/payment-history">💰 Payment History</Link></li>
             <li><Link href="/ta/gym">💪 Gym Schedule</Link></li>
             <li><Link href="/ta/profile">👤 Profile</Link></li>
           </ul>

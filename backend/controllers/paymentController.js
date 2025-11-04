@@ -2,6 +2,18 @@ import User from "../models/User.js";
 import Payment from "../models/Payment.js";
 import Event from "../models/Events.js";
 import Registration from "../models/Registration.js";
+import Stripe from "stripe";
+
+// Lazy initialization of Stripe - will be initialized when first needed
+let stripe = null;
+
+const getStripe = () => {
+  if (!stripe && process.env.STRIPE_SECRET_KEY) {
+    console.log('✅ Initializing Stripe with key:', process.env.STRIPE_SECRET_KEY.substring(0, 20) + '...');
+    stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+  }
+  return stripe;
+};
 
 // Get user wallet balance
 export const getWalletBalance = async (req, res) => {
@@ -139,6 +151,7 @@ export const payWithWallet = async (req, res) => {
     }
 
     res.json({
+      success: true,
       message: "Payment successful",
       payment: payment,
       new_balance: user.wallet.balance
@@ -174,15 +187,30 @@ export const createStripePayment = async (req, res) => {
       return res.status(400).json({ message: "Event has no price set" });
     }
 
-    // TODO: Integrate with actual Stripe API
-    // For now, simulate payment intent creation
-    const mockPaymentIntent = {
-      id: `pi_mock_${Date.now()}`,
-      client_secret: `pi_mock_${Date.now()}_secret_${Math.random().toString(36).substr(2, 9)}`,
-      amount: amount * 100, // Stripe uses cents
+    // Get Stripe instance (lazy initialization)
+    const stripe = getStripe();
+    
+    if (!stripe) {
+      console.error('Stripe initialization failed. STRIPE_SECRET_KEY:', process.env.STRIPE_SECRET_KEY ? 'EXISTS' : 'MISSING');
+      return res.status(500).json({ 
+        message: "Stripe is not configured. Please set STRIPE_SECRET_KEY in environment variables." 
+      });
+    }
+
+    // Create Stripe payment intent
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: Math.round(amount * 100), // Stripe uses cents
       currency: 'usd',
-      status: 'requires_payment_method'
-    };
+      metadata: {
+        event_id: event_id,
+        registration_id: registration_id || 'none',
+        user_id: req.user._id.toString(),
+        event_name: event.name
+      },
+      automatic_payment_methods: {
+        enabled: true,
+      },
+    });
 
     // Create pending payment record
     const payment = await Payment.create({
@@ -193,13 +221,14 @@ export const createStripePayment = async (req, res) => {
       payment_method: 'stripe',
       payment_status: 'pending',
       description: `Payment for ${event.name}`,
-      stripe_payment_intent_id: mockPaymentIntent.id,
-      stripe_client_secret: mockPaymentIntent.client_secret
+      stripe_payment_intent_id: paymentIntent.id,
+      stripe_client_secret: paymentIntent.client_secret
     });
 
     res.json({
+      success: true,
       message: "Payment intent created",
-      client_secret: mockPaymentIntent.client_secret,
+      client_secret: paymentIntent.client_secret,
       payment_id: payment._id,
       amount: amount
     });
@@ -228,8 +257,27 @@ export const confirmStripePayment = async (req, res) => {
       return res.status(403).json({ message: "Unauthorized" });
     }
 
-    // TODO: Verify payment with Stripe API
-    // For now, simulate successful payment
+    // Verify payment with Stripe API
+    const stripe = getStripe();
+    if (stripe && payment_intent_id) {
+      try {
+        const paymentIntent = await stripe.paymentIntents.retrieve(payment_intent_id);
+        
+        if (paymentIntent.status !== 'succeeded') {
+          return res.status(400).json({ 
+            message: "Payment not completed. Status: " + paymentIntent.status 
+          });
+        }
+      } catch (stripeError) {
+        console.error('Stripe verification error:', stripeError);
+        return res.status(500).json({ 
+          message: "Failed to verify payment with Stripe",
+          error: stripeError.message 
+        });
+      }
+    }
+
+    // Mark payment as completed
     payment.payment_status = 'completed';
     payment.paid_at = new Date();
     await payment.save();
@@ -262,6 +310,7 @@ export const confirmStripePayment = async (req, res) => {
     await user.save();
 
     res.json({
+      success: true,
       message: "Payment confirmed successfully",
       payment: payment
     });

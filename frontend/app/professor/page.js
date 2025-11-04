@@ -33,6 +33,7 @@ export default function ProfessorDashboard() {
             <li><Link href="/professor">🏠 Dashboard</Link></li>
             <li><Link href="/professor/events">📅 Events</Link></li>
             <li><Link href="/professor/workshops">🎨 My Workshops</Link></li>
+            <li><Link href="/professor/payment-history">💰 Payment History</Link></li>
             <li><Link href="/professor/gym">💪 Gym Schedule</Link></li>
             <li><Link href="/professor/profile">👤 Profile</Link></li>
           </ul>

@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useState, useEffect, useCallback } from 'react';
 import { eventAPI, registrationAPI, getUser } from '@/utils/api';
+import PaymentModal from '@/app/components/PaymentModal';
 import '@/app/dashboard.css';
 
 export default function BrowseEventsPage() {
@@ -14,6 +15,10 @@ export default function BrowseEventsPage() {
   const [error, setError] = useState(null);
   const [sortOrder, setSortOrder] = useState('desc'); // 'desc' for newest first, 'asc' for oldest first
   const [registering, setRegistering] = useState(null);
+  
+  // Payment modal states
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [paymentData, setPaymentData] = useState(null);
   
   // Advanced filter states
   const [showFilters, setShowFilters] = useState(false);
@@ -197,7 +202,7 @@ export default function BrowseEventsPage() {
         role: userRole
       });
 
-      await registrationAPI.register({
+      const response = await registrationAPI.register({
         event_id: event._id,
         name: userName,
         email: userEmail,
@@ -205,9 +210,24 @@ export default function BrowseEventsPage() {
         role: userRole
       });
 
-      // Refresh events after registration
-      await fetchEvents();
-      alert('Successfully registered for the event!');
+      // Check if event requires payment
+      const eventPrice = event.workshop?.price || event.trip?.price || 0;
+      
+      if (eventPrice > 0) {
+        // Show payment modal
+        setPaymentData({
+          eventId: event._id,
+          registrationId: response.registration._id,
+          amount: eventPrice,
+          eventName: event.name,
+          eventType: event.type
+        });
+        setShowPaymentModal(true);
+      } else {
+        // Free event - registration complete
+        await fetchEvents();
+        alert('Successfully registered for the event!');
+      }
       
     } catch (err) {
       console.error('Registration error details:', {
@@ -234,6 +254,36 @@ export default function BrowseEventsPage() {
     } finally {
       setRegistering(null);
     }
+  };
+
+  const handlePaymentSuccess = async (payment) => {
+    console.log('Payment successful:', payment);
+    setShowPaymentModal(false);
+    setPaymentData(null);
+    await fetchEvents();
+    alert('Payment completed! Registration confirmed.');
+  };
+
+  const handlePaymentModalClose = async () => {
+    if (paymentData?.registrationId) {
+      // User closed modal without paying - cancel the pending registration
+      try {
+        const token = localStorage.getItem('token');
+        await fetch(`http://localhost:5000/api/registration/cancel-unpaid/${paymentData.registrationId}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        console.log('Unpaid registration canceled');
+      } catch (error) {
+        console.error('Error canceling unpaid registration:', error);
+      }
+    }
+    setShowPaymentModal(false);
+    setPaymentData(null);
+    await fetchEvents();
   };
 
   return (
@@ -661,6 +711,20 @@ export default function BrowseEventsPage() {
           </section>
         </main>
       </div>
+
+      {/* Payment Modal */}
+      {showPaymentModal && paymentData && (
+        <PaymentModal
+          isOpen={showPaymentModal}
+          onClose={handlePaymentModalClose}
+          eventId={paymentData.eventId}
+          registrationId={paymentData.registrationId}
+          amount={paymentData.amount}
+          eventName={paymentData.eventName}
+          eventType={paymentData.eventType}
+          onPaymentSuccess={handlePaymentSuccess}
+        />
+      )}
     </div>
   );
 }
