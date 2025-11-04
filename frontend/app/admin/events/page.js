@@ -303,14 +303,23 @@ export default function AllEventsPage() {
     const startDate = new Date(event.start_date);
     const endDate = new Date(event.end_date);
     
+    // Check database status first
     if (event.status === 'cancelled') {
       return <span style={{color: '#f44336', fontWeight: 'bold'}}>❌ Cancelled</span>;
-    } else if (now < startDate) {
+    }
+    
+    if (event.status === 'completed') {
+      return <span style={{color: '#9c27b0', fontWeight: 'bold'}}>🎓 Completed</span>;
+    }
+    
+    // Fall back to date-based status
+    if (now < startDate) {
       return <span style={{color: '#2196f3', fontWeight: 'bold'}}>🔜 Upcoming</span>;
     } else if (now >= startDate && now <= endDate) {
       return <span style={{color: '#4caf50', fontWeight: 'bold'}}>▶️ Active</span>;
     } else {
-      return <span style={{color: '#666', fontWeight: 'bold'}}>✅ Completed</span>;
+      // Past end date but not marked as completed
+      return <span style={{color: '#ff9800', fontWeight: 'bold'}}>⌛ Ended</span>;
     }
   };
 
@@ -1357,7 +1366,7 @@ export default function AllEventsPage() {
                           >
                             👁️ View
                           </button>
-                          {event.type === 'Workshop' && event.status !== 'completed' && (
+                          {event.type === 'Workshop' && event.status !== 'completed' && event.status !== 'cancelled' && (
                             <button 
                               className="btn btn-sm"
                               onClick={() => handleCompleteWorkshop(event._id, event.name, event.end_date)}
