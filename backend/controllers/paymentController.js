@@ -3,6 +3,7 @@ import Payment from "../models/Payment.js";
 import Event from "../models/Events.js";
 import Registration from "../models/Registration.js";
 import Stripe from "stripe";
+import { sendPaymentReceipt } from "../services/emailService.js";
 
 // Lazy initialization of Stripe - will be initialized when first needed
 let stripe = null;
@@ -149,6 +150,21 @@ export const payWithWallet = async (req, res) => {
         paid_at: new Date()
       });
     }
+
+    // Send payment receipt email (non-blocking)
+    sendPaymentReceipt(user.email, {
+      userName: `${user.first_name} ${user.last_name}`,
+      eventName: event.name,
+      eventType: event.type,
+      amount: amount,
+      paymentMethod: 'wallet',
+      transactionId: payment._id.toString(),
+      paymentDate: payment.paid_at,
+      registrationId: registration_id || payment._id.toString()
+    }).catch(err => {
+      console.error('Failed to send payment receipt email:', err);
+      // Don't fail the payment if email fails
+    });
 
     res.json({
       success: true,
@@ -308,6 +324,24 @@ export const confirmStripePayment = async (req, res) => {
     });
 
     await user.save();
+
+    // Populate event details for receipt
+    const populatedPayment = await Payment.findById(payment._id).populate('event_id');
+
+    // Send payment receipt email (non-blocking)
+    sendPaymentReceipt(user.email, {
+      userName: `${user.first_name} ${user.last_name}`,
+      eventName: populatedPayment.event_id?.name || 'Event',
+      eventType: populatedPayment.event_id?.type || 'Event',
+      amount: payment.amount,
+      paymentMethod: 'stripe',
+      transactionId: payment_intent_id,
+      paymentDate: payment.paid_at,
+      registrationId: payment.registration_id?.toString() || payment._id.toString()
+    }).catch(err => {
+      console.error('Failed to send payment receipt email:', err);
+      // Don't fail the payment if email fails
+    });
 
     res.json({
       success: true,

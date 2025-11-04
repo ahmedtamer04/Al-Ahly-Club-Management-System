@@ -92,3 +92,123 @@ export const sendVerificationEmail = async (email, token, userRole, userName, is
     throw new Error('Failed to send verification email');
   }
 };
+
+export const sendPaymentReceipt = async (email, paymentDetails) => {
+  const {
+    userName,
+    eventName,
+    eventType,
+    amount,
+    paymentMethod,
+    transactionId,
+    paymentDate,
+    registrationId
+  } = paymentDetails;
+
+  const formattedDate = new Date(paymentDate).toLocaleString('en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+
+  const paymentMethodDisplay = paymentMethod === 'wallet' ? '💰 Wallet' : '💳 Credit/Debit Card';
+
+  const mailOptions = {
+    from: process.env.EMAIL_USER,
+    to: email,
+    subject: `Payment Receipt - ${eventName}`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8f9fa;">
+        <div style="background-color: white; border-radius: 10px; padding: 30px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+          <div style="text-align: center; margin-bottom: 30px;">
+            <h1 style="color: #2c3e50; margin: 0;">✅ Payment Successful</h1>
+            <p style="color: #7f8c8d; margin-top: 10px;">GUC Al-Ahly Club</p>
+          </div>
+          
+          <div style="background-color: #e8f5e9; padding: 20px; border-radius: 8px; margin-bottom: 30px;">
+            <h2 style="color: #2e7d32; margin: 0 0 10px 0; font-size: 18px;">Payment Receipt</h2>
+            <p style="color: #1b5e20; margin: 0; font-size: 14px;">Your payment has been processed successfully.</p>
+          </div>
+          
+          <div style="margin-bottom: 30px;">
+            <h3 style="color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px; margin-bottom: 20px;">Payment Details</h3>
+            
+            <table style="width: 100%; border-collapse: collapse;">
+              <tr>
+                <td style="padding: 12px 0; color: #7f8c8d; font-weight: 600; width: 40%;">Recipient:</td>
+                <td style="padding: 12px 0; color: #2c3e50;">${userName}</td>
+              </tr>
+              <tr style="background-color: #f8f9fa;">
+                <td style="padding: 12px 10px; color: #7f8c8d; font-weight: 600;">Event Name:</td>
+                <td style="padding: 12px 10px; color: #2c3e50;">${eventName}</td>
+              </tr>
+              <tr>
+                <td style="padding: 12px 0; color: #7f8c8d; font-weight: 600;">Event Type:</td>
+                <td style="padding: 12px 0; color: #2c3e50;">${eventType}</td>
+              </tr>
+              <tr style="background-color: #f8f9fa;">
+                <td style="padding: 12px 10px; color: #7f8c8d; font-weight: 600;">Amount Paid:</td>
+                <td style="padding: 12px 10px; color: #2c3e50; font-size: 20px; font-weight: bold;">$${amount.toFixed(2)}</td>
+              </tr>
+              <tr>
+                <td style="padding: 12px 0; color: #7f8c8d; font-weight: 600;">Payment Method:</td>
+                <td style="padding: 12px 0; color: #2c3e50;">${paymentMethodDisplay}</td>
+              </tr>
+              <tr style="background-color: #f8f9fa;">
+                <td style="padding: 12px 10px; color: #7f8c8d; font-weight: 600;">Date & Time:</td>
+                <td style="padding: 12px 10px; color: #2c3e50;">${formattedDate}</td>
+              </tr>
+              ${transactionId ? `
+              <tr>
+                <td style="padding: 12px 0; color: #7f8c8d; font-weight: 600;">Transaction ID:</td>
+                <td style="padding: 12px 0; color: #2c3e50; font-family: monospace; font-size: 12px;">${transactionId}</td>
+              </tr>
+              ` : ''}
+              <tr style="background-color: #f8f9fa;">
+                <td style="padding: 12px 10px; color: #7f8c8d; font-weight: 600;">Registration ID:</td>
+                <td style="padding: 12px 10px; color: #2c3e50; font-family: monospace; font-size: 12px;">${registrationId}</td>
+              </tr>
+            </table>
+          </div>
+          
+          <div style="background-color: #fff3cd; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+            <p style="color: #856404; margin: 0; font-size: 14px;">
+              <strong>📋 Important:</strong> Please keep this receipt for your records. You can view your payment history in your dashboard.
+            </p>
+          </div>
+          
+          <div style="text-align: center; margin-top: 30px;">
+            <a href="${process.env.FRONTEND_URL || 'http://localhost:3000'}" 
+               style="background-color: #3498db; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">
+              View Dashboard
+            </a>
+          </div>
+          
+          <hr style="margin: 30px 0; border: none; border-top: 1px solid #ecf0f1;">
+          
+          <p style="color: #95a5a6; font-size: 12px; text-align: center; margin: 0;">
+            This is an automated receipt from GUC Al-Ahly Club.<br>
+            If you have any questions, please contact our support team.<br>
+            <br>
+            © ${new Date().getFullYear()} GUC Al-Ahly Club. All rights reserved.
+          </p>
+        </div>
+      </div>
+    `
+  };
+
+  try {
+    const emailTransporter = getTransporter();
+    const info = await emailTransporter.sendMail(mailOptions);
+    console.log(`✅ Payment receipt sent to ${email}`);
+    console.log(`Message ID: ${info.messageId}`);
+    return true;
+  } catch (error) {
+    console.error('❌ Error sending payment receipt:', error);
+    // Don't throw error - payment was successful, just log email failure
+    return false;
+  }
+};
