@@ -152,12 +152,13 @@ export const getUserById = async (req, res) => {
   }
 };
 
-// Get all pending users (Staff, TA, Professor)
+// Get all pending users (Staff, TA, Professor) - waiting for admin approval
 export const getPendingUsers = async (req, res) => {
   try {
     const pendingUsers = await User.find({ 
       status: "pending",
-      role: { $in: ["Staff", "TA", "Professor"] }
+      role: { $in: ["Staff", "TA", "Professor"] },
+      role_admin_verified: false // Only show users who haven't been approved yet
     }).select('-password_hash -email_verification_token');
 
     res.json({
@@ -190,6 +191,35 @@ export const approveUser = async (req, res) => {
       return res.status(400).json({ message: "Only Staff, TA, and Professor users need approval" });
     }
 
+    // Check if email verification should be skipped in development
+    const isDevelopment = process.env.NODE_ENV === 'development' || process.env.DEVELOPMENT_MODE === 'true';
+    const skipEmailVerification = process.env.SKIP_EMAIL_VERIFICATION === 'true' && isDevelopment;
+    
+    if (skipEmailVerification) {
+      console.log('⚠️ DEVELOPMENT MODE: Skipping email verification for approved user');
+      console.log('✅ User auto-verified and activated for testing');
+      
+      user.role_admin_verified = true;
+      user.is_verified = true; // Auto-verified in dev mode
+      user.status = "active"; // Auto-active in dev mode
+      await user.save();
+      
+      return res.json({ 
+        message: `${user.role} user approved and activated. (Email verification skipped in development mode)`,
+        devMode: true,
+        user: {
+          id: user._id,
+          name: `${user.first_name} ${user.last_name}`,
+          email: user.email,
+          role: user.role,
+          status: user.status,
+          is_verified: user.is_verified,
+          role_admin_verified: user.role_admin_verified
+        }
+      });
+    }
+    
+    // Normal flow with email verification
     // Generate verification token
     const verificationToken = generateVerificationToken();
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
@@ -248,15 +278,35 @@ export const approveUser = async (req, res) => {
 export const verifyEmail = async (req, res) => {
   try {
     const { token } = req.params;
+    
+    console.log('=== EMAIL VERIFICATION DEBUG ===');
+    console.log('Token received:', token);
+    console.log('Token length:', token?.length);
 
     const user = await User.findOne({
       email_verification_token: token,
       email_verification_expires: { $gt: Date.now() }
     });
+    
+    console.log('User found:', user ? 'Yes' : 'No');
+    if (!user) {
+      // Check if token exists but expired
+      const expiredUser = await User.findOne({ email_verification_token: token });
+      console.log('Expired token found:', expiredUser ? 'Yes' : 'No');
+      if (expiredUser) {
+        console.log('Token expired at:', expiredUser.email_verification_expires);
+        console.log('Current time:', new Date());
+      }
+      
+      // Check if user already verified (token was cleared after verification)
+      // We can't find them by token, but maybe they're already active
+      console.log('Checking if this might be a used/already-verified token...');
+    }
+    console.log('===============================');
 
     if (!user) {
       return res.status(400).json({ 
-        message: "Invalid or expired verification token. Please contact admin to resend verification email." 
+        message: "Invalid or expired verification token. If you already verified your email, you can log in directly. Otherwise, please contact admin to resend verification email." 
       });
     }
 
@@ -369,7 +419,15 @@ export const toggleUserBlock = async (req, res) => {
 // Get all users with details
 export const getAllUsers = async (req, res) => {
   try {
-    const users = await User.find()
+    // Exclude Staff/TA/Professor who are pending admin approval
+    // Include: Students (auto-approved), Vendors, Admins, EventsOffice, and approved Staff/TA/Professor
+    const users = await User.find({
+      $or: [
+        { role_admin_verified: true }, // Approved users
+        { role_admin_verified: null }, // Roles that don't need approval (Vendor, Admin, EventsOffice)
+        { role: "Student" } // Students are auto-approved
+      ]
+    })
       .select('-password_hash -email_verification_token')
       .sort({ createdAt: -1 });
 
@@ -387,8 +445,10 @@ export const getAllUsers = async (req, res) => {
         id_number: user.id_number,
         is_verified: user.is_verified,
         role_admin_verified: user.role_admin_verified,
-        created_at: user.createdAt,
-        updated_at: user.updatedAt
+        createdAt: user.createdAt,  // For frontend compatibility
+        created_at: user.createdAt, // Legacy snake_case
+        updatedAt: user.updatedAt,  // For frontend compatibility
+        updated_at: user.updatedAt  // Legacy snake_case
       })),
       total: users.length
     });
