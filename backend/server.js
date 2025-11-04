@@ -20,6 +20,7 @@ import workshopRoutes from "./routes/workshopRoutes.js";
 import vendorRoutes from "./routes/vendorRoutes.js"; // ← Add this
 import eventRoutes from "./routes/eventRoutes.js"; // ← Add this
 import favoriteRoutes from "./routes/favoriteRoutes.js";
+import paymentRoutes from "./routes/paymentRoutes.js"; // ← Add payment routes
 
 
 const app = express();
@@ -76,6 +77,7 @@ app.use("/api/vendor", vendorRoutes);
 app.use("/api/workshop", workshopRoutes);
 app.use("/api/events", eventRoutes);
 app.use("/api/favorites", favoriteRoutes);
+app.use("/api/payment", paymentRoutes); // ← Add payment routes
 
 
 

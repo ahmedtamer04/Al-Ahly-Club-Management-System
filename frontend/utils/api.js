@@ -469,4 +469,57 @@ export const adminAPI = {
   getAllUsers: () => api.get('/admin/users'),
 };
 
+// ================================
+// PAYMENT API
+// ================================
+export const paymentAPI = {
+  // GET /api/payment/wallet/balance
+  // Auth: required
+  // Get user's wallet balance and currency
+  getWalletBalance: () => api.get('/payment/wallet/balance'),
+
+  // POST /api/payment/wallet/top-up
+  // Auth: required
+  // Add funds to wallet
+  // Body: { amount: number }
+  topUpWallet: (amount) => api.post('/payment/wallet/top-up', { amount }),
+
+  // GET /api/payment/wallet/transactions
+  // Auth: required
+  // Get wallet transaction history
+  getWalletTransactions: () => api.get('/payment/wallet/transactions'),
+
+  // POST /api/payment/wallet/pay
+  // Auth: required
+  // Pay from wallet balance
+  // Body: { event_id: string, registration_id: string }
+  payWithWallet: (eventId, registrationId) => api.post('/payment/wallet/pay', { 
+    event_id: eventId, 
+    registration_id: registrationId 
+  }),
+
+  // POST /api/payment/stripe/create-intent
+  // Auth: required
+  // Create Stripe payment intent for card payment
+  // Body: { event_id: string, registration_id: string }
+  createStripeIntent: (eventId, registrationId) => api.post('/payment/stripe/create-intent', {
+    event_id: eventId,
+    registration_id: registrationId
+  }),
+
+  // POST /api/payment/stripe/confirm
+  // Auth: required
+  // Confirm Stripe payment after successful card charge
+  // Body: { payment_id: string, payment_intent_id: string }
+  confirmStripePayment: (paymentId, paymentIntentId) => api.post('/payment/stripe/confirm', {
+    payment_id: paymentId,
+    payment_intent_id: paymentIntentId
+  }),
+
+  // GET /api/payment/history
+  // Auth: required
+  // Get user's payment history with event details
+  getPaymentHistory: () => api.get('/payment/history'),
+};
+
 export default api;

@@ -8,7 +8,20 @@ const registrationSchema = new mongoose.Schema({
   email: { type: String, required: true },
   personalId: { type: String, required: true },
   role: { type: String, enum: ["student", "staff", "TA", "professor", "Student", "Staff", "Professor"], required: true },
-  status: { type: String, enum: ["registered","canceled"], default: "registered" }
+  status: { type: String, enum: ["registered","canceled"], default: "registered" },
+  
+  // Payment fields
+  payment_status: { 
+    type: String, 
+    enum: ["pending", "paid", "refunded", "free"], 
+    default: "pending" 
+  },
+  payment_method: { 
+    type: String, 
+    enum: ["wallet", "stripe", "card", "free"],
+  },
+  paid_at: { type: Date },
+  payment_amount: { type: Number, default: 0 }
 }, { timestamps: true });
 
 registrationSchema.index({ user_id: 1, event_id: 1 }, { unique: true });
