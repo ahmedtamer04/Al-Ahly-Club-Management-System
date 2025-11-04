@@ -152,12 +152,13 @@ export const getUserById = async (req, res) => {
   }
 };
 
-// Get all pending users (Staff, TA, Professor)
+// Get all pending users (Staff, TA, Professor) - waiting for admin approval
 export const getPendingUsers = async (req, res) => {
   try {
     const pendingUsers = await User.find({ 
       status: "pending",
-      role: { $in: ["Staff", "TA", "Professor"] }
+      role: { $in: ["Staff", "TA", "Professor"] },
+      role_admin_verified: false // Only show users who haven't been approved yet
     }).select('-password_hash -email_verification_token');
 
     res.json({
@@ -296,12 +297,16 @@ export const verifyEmail = async (req, res) => {
         console.log('Token expired at:', expiredUser.email_verification_expires);
         console.log('Current time:', new Date());
       }
+      
+      // Check if user already verified (token was cleared after verification)
+      // We can't find them by token, but maybe they're already active
+      console.log('Checking if this might be a used/already-verified token...');
     }
     console.log('===============================');
 
     if (!user) {
       return res.status(400).json({ 
-        message: "Invalid or expired verification token. Please contact admin to resend verification email." 
+        message: "Invalid or expired verification token. If you already verified your email, you can log in directly. Otherwise, please contact admin to resend verification email." 
       });
     }
 
@@ -414,7 +419,15 @@ export const toggleUserBlock = async (req, res) => {
 // Get all users with details
 export const getAllUsers = async (req, res) => {
   try {
-    const users = await User.find()
+    // Exclude Staff/TA/Professor who are pending admin approval
+    // Include: Students (auto-approved), Vendors, Admins, EventsOffice, and approved Staff/TA/Professor
+    const users = await User.find({
+      $or: [
+        { role_admin_verified: true }, // Approved users
+        { role_admin_verified: null }, // Roles that don't need approval (Vendor, Admin, EventsOffice)
+        { role: "Student" } // Students are auto-approved
+      ]
+    })
       .select('-password_hash -email_verification_token')
       .sort({ createdAt: -1 });
 
@@ -432,8 +445,10 @@ export const getAllUsers = async (req, res) => {
         id_number: user.id_number,
         is_verified: user.is_verified,
         role_admin_verified: user.role_admin_verified,
-        created_at: user.createdAt,
-        updated_at: user.updatedAt
+        createdAt: user.createdAt,  // For frontend compatibility
+        created_at: user.createdAt, // Legacy snake_case
+        updatedAt: user.updatedAt,  // For frontend compatibility
+        updated_at: user.updatedAt  // Legacy snake_case
       })),
       total: users.length
     });

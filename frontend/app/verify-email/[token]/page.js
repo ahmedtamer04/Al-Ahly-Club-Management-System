@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import api from '@/utils/api';
 
@@ -9,11 +9,22 @@ export default function VerifyEmailPage() {
   const router = useRouter();
   const [status, setStatus] = useState('verifying'); // verifying, success, error
   const [message, setMessage] = useState('');
+  const hasVerified = useRef(false); // Prevent multiple API calls
 
   useEffect(() => {
+    // Prevent running multiple times
+    if (hasVerified.current) {
+      console.log('Already verified, skipping...');
+      return;
+    }
+    
     const verifyEmail = async () => {
+      hasVerified.current = true; // Set flag immediately
       try {
         const token = params.token;
+        
+        console.log('=== VERIFY EMAIL FRONTEND DEBUG ===');
+        console.log('Token:', token);
         
         if (!token) {
           setStatus('error');
@@ -21,17 +32,33 @@ export default function VerifyEmailPage() {
           return;
         }
 
-        const response = await api.get(`/admin/verify-email/${token}`);
+        console.log('Calling API...');
+        const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+        const apiResponse = await fetch(`${API_BASE_URL}/admin/verify-email/${token}`);
+        console.log('HTTP Status:', apiResponse.status);
+        console.log('HTTP OK:', apiResponse.ok);
+        
+        const response = await apiResponse.json();
+        console.log('API Response:', response);
+        
+        if (!apiResponse.ok) {
+          throw new Error(response.message || 'Verification failed');
+        }
         
         setStatus('success');
         setMessage(response.message || 'Email verified successfully!');
         
         // Redirect to login after 3 seconds
         setTimeout(() => {
-          router.push('/login');
+          router.push('/auth/login');
         }, 3000);
         
       } catch (error) {
+        console.error('=== VERIFICATION ERROR ===');
+        console.error('Error object:', error);
+        console.error('Error response:', error.response);
+        console.error('Error message:', error.message);
+        console.error('========================');
         setStatus('error');
         setMessage(error.response?.data?.message || 'Failed to verify email. The link may be invalid or expired.');
       }
@@ -81,7 +108,7 @@ export default function VerifyEmailPage() {
               Redirecting to login page in 3 seconds...
             </p>
             <button
-              onClick={() => router.push('/login')}
+              onClick={() => router.push('/auth/login')}
               style={{
                 marginTop: '20px',
                 padding: '12px 24px',
@@ -105,7 +132,7 @@ export default function VerifyEmailPage() {
             <p style={{ color: '#666', marginBottom: '20px' }}>{message}</p>
             <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
               <button
-                onClick={() => router.push('/login')}
+                onClick={() => router.push('/auth/login')}
                 style={{
                   padding: '12px 24px',
                   backgroundColor: '#2196f3',
@@ -119,7 +146,7 @@ export default function VerifyEmailPage() {
                 Go to Login
               </button>
               <button
-                onClick={() => router.push('/signup')}
+                onClick={() => router.push('/auth/register')}
                 style={{
                   padding: '12px 24px',
                   backgroundColor: '#fff',

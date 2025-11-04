@@ -227,7 +227,7 @@ const UserDetailsModal = ({ isOpen, onClose, userDetails }) => {
             </div>
             <div>
               <strong>Joined Date:</strong><br/>
-              {new Date(userDetails.created_at || userDetails.createdAt).toLocaleDateString()}
+              {userDetails.createdAt ? new Date(userDetails.createdAt).toLocaleDateString() : 'N/A'}
             </div>
             {userDetails.last_login && (
               <div>
@@ -293,27 +293,37 @@ export default function ManageUsersPage() {
     password: ''
   });
 
-  useEffect(() => {
-    const fetchUsers = async () => {
-      try {
-        console.log('Fetching users...');
-        const { users: allUsers } = await api.get('/admin/users');
-        console.log('Fetched users:', allUsers);
-        console.log('First user example:', allUsers[0]);
-        if (allUsers[0]) {
-          console.log('First user _id:', allUsers[0]._id);
-          console.log('First user _id type:', typeof allUsers[0]._id);
-        }
-        setUsers(allUsers);
-        
-        const { users: pendingUsersData } = await api.get('/admin/pending-users');
-        setPendingUsers(pendingUsersData);
-      } catch (error) {
-        console.error('Error fetching users:', error);
+  // Fetch users function (used for initial load and refresh)
+  const fetchUsers = async () => {
+    try {
+      console.log('Fetching users...');
+      const { users: allUsers } = await api.get('/admin/users');
+      console.log('Fetched users:', allUsers);
+      console.log('First user example:', allUsers[0]);
+      if (allUsers[0]) {
+        console.log('First user _id:', allUsers[0]._id);
+        console.log('First user _id type:', typeof allUsers[0]._id);
       }
-    };
+      setUsers(allUsers);
+      
+      const { users: pendingUsersData } = await api.get('/admin/pending-users');
+      setPendingUsers(pendingUsersData);
+    } catch (error) {
+      console.error('Error fetching users:', error);
+    }
+  };
 
+  // Initial fetch
+  useEffect(() => {
     fetchUsers();
+    
+    // Auto-refresh every 10 seconds to show updated verification status
+    const intervalId = setInterval(() => {
+      fetchUsers();
+    }, 10000); // Refresh every 10 seconds
+    
+    // Cleanup interval on unmount
+    return () => clearInterval(intervalId);
   }, []);
 
   const [adminRole, setAdminRole] = useState('Admin');
@@ -565,12 +575,21 @@ export default function ManageUsersPage() {
         <main className="main-content">
           <div className="page-header">
             <h1>Manage Users 👥</h1>
-            <button 
-              className="btn btn-primary"
-              onClick={() => setShowCreateAdmin(!showCreateAdmin)}
-            >
-              {showCreateAdmin ? '❌ Cancel' : '➕ Create Admin'}
-            </button>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button 
+                className="btn btn-secondary"
+                onClick={fetchUsers}
+                title="Refresh user list"
+              >
+                🔄 Refresh
+              </button>
+              <button 
+                className="btn btn-primary"
+                onClick={() => setShowCreateAdmin(!showCreateAdmin)}
+              >
+                {showCreateAdmin ? '❌ Cancel' : '➕ Create Admin'}
+              </button>
+            </div>
           </div>
 
           {/* Create Admin Form */}
@@ -741,10 +760,10 @@ export default function ManageUsersPage() {
                         </td>
                         <td>
                           <div>
-                            {new Date(user.created_at).toLocaleDateString()}
+                            {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'N/A'}
                             <br/>
                             <small className="text-muted">
-                              {new Date(user.created_at).toLocaleTimeString()}
+                              {user.createdAt ? new Date(user.createdAt).toLocaleTimeString() : ''}
                             </small>
                           </div>
                         </td>
@@ -756,15 +775,13 @@ export default function ManageUsersPage() {
                           >
                             ✅ Approve as {user.role}
                           </button>
-                          {!user.is_verified && (
-                            <button
-                              className="btn btn-info btn-sm ml-2"
-                              onClick={() => handleResendVerification(user._id)}
-                              title="Resend Verification Email"
-                            >
-                              📧 Resend Email
-                            </button>
-                          )}
+                          <button
+                            className="btn btn-danger btn-sm ml-2"
+                            onClick={() => handleDeleteAdmin(user._id)}
+                            title="Reject and Delete User"
+                          >
+                            ❌ Reject
+                          </button>
                         </td>
                       </tr>
                     ))
@@ -869,7 +886,12 @@ export default function ManageUsersPage() {
                           <td>{user.email}</td>
                           <td>{user.role}</td>
                           <td>{user.status}</td>
-                          <td>{new Date(user.created_at).toLocaleDateString()}</td>
+                          <td>
+                            {user.createdAt || user.created_at ? 
+                              new Date(user.createdAt || user.created_at).toLocaleDateString() : 
+                              'No Date'
+                            }
+                          </td>
                           <td>
                             <button 
                               className="btn btn-secondary btn-sm"
@@ -896,8 +918,8 @@ export default function ManageUsersPage() {
                                 {user.status === 'blocked' ? '🔓 Unblock' : '🔒 Block'}
                               </button>
                             )}
-                            {/* Resend verification email for unverified users */}
-                            {!user.is_verified && (
+                            {/* Resend verification email for unverified users (Student, Staff, TA, Professor only) */}
+                            {!user.is_verified && ['Student', 'Staff', 'TA', 'Professor'].includes(user.role) && (
                               <button
                                 className="btn btn-info btn-sm ml-2"
                                 onClick={() => handleResendVerification(user._id)}

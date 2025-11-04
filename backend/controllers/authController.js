@@ -260,28 +260,24 @@ export const loginUser = async (req, res) => {
       return res.status(403).json({ message: "Your account has been blocked. Please contact admin." });
     }
     
+    // Check if account is pending (not yet active)
+    if (user.status === "pending") {
+      return res.status(403).json({ message: "Your account is pending verification. Please check your email." });
+    }
+    
     // For Staff, TA, Professor - check if admin verified their role
     if ((user.role === "Staff" || user.role === "TA" || user.role === "Professor") && !user.role_admin_verified) {
       return res.status(403).json({ message: "Your account is pending admin approval. Please wait for verification." });
     }
     
-    // Check email verification for both students and approved staff/TA/professor
-    if (!user.is_verified) {
-      if (user.role === "Student") {
-        return res.status(403).json({ 
-          message: "Please verify your email address. Check your inbox for the verification link." 
-        });
-      } else if (["Staff", "TA", "Professor"].includes(user.role) && user.role_admin_verified) {
-        return res.status(403).json({ 
-          message: "Your role has been approved. Please check your email to verify your account." 
-        });
-      }
+    // Check email verification for Student, Staff, TA, Professor (roles that require email verification)
+    if (!user.is_verified && ["Student", "Staff", "TA", "Professor"].includes(user.role)) {
+      return res.status(403).json({ 
+        message: "Please verify your email address. Check your inbox for the verification link." 
+      });
     }
     
-    if (user.status === "pending") {
-      return res.status(403).json({ message: "Your account is pending verification. Please check your email." });
-    }
-    
+    // Check if account is active
     if (user.status !== "active") {
       return res.status(403).json({ message: "Your account is not active. Please contact admin." });
     }
