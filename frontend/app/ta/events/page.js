@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import '@/app/dashboard.css';
+import PaymentModal from '@/app/components/PaymentModal';
 
 export default function TAEventsPage() {
   const [events, setEvents] = useState([]);
@@ -23,6 +24,10 @@ export default function TAEventsPage() {
     personalId: ''
   });
   const [registering, setRegistering] = useState(false);
+
+  // Payment modal states
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [paymentData, setPaymentData] = useState(null);
 
   // Search and filter states
   const [searchTerm, setSearchTerm] = useState('');
@@ -231,8 +236,26 @@ export default function TAEventsPage() {
         throw new Error(data.message || 'Registration failed');
       }
 
-      alert('Registration successful! Check "My Events" to see your registration.');
-      setShowRegistrationModal(false);
+      // Check if event requires payment
+      const eventPrice = registrationEvent.workshop?.price || registrationEvent.trip?.price || 0;
+      
+      if (eventPrice > 0) {
+        // Close registration modal and show payment modal
+        setShowRegistrationModal(false);
+        setPaymentData({
+          eventId: registrationEvent._id,
+          registrationId: data.registration._id,
+          amount: eventPrice,
+          eventName: registrationEvent.name,
+          eventType: registrationEvent.type
+        });
+        setShowPaymentModal(true);
+      } else {
+        // Free event - registration complete
+        alert('Registration successful! Check "My Events" to see your registration.');
+        setShowRegistrationModal(false);
+      }
+      
       setRegistrationForm({ name: '', email: '', personalId: '' });
       
     } catch (err) {
@@ -240,6 +263,34 @@ export default function TAEventsPage() {
     } finally {
       setRegistering(false);
     }
+  };
+
+  const handlePaymentSuccess = async (payment) => {
+    console.log('Payment successful:', payment);
+    setShowPaymentModal(false);
+    setPaymentData(null);
+    alert('Payment completed! Registration confirmed.');
+  };
+
+  const handlePaymentModalClose = async () => {
+    if (paymentData?.registrationId) {
+      // User closed modal without paying - cancel the pending registration
+      try {
+        const token = localStorage.getItem('token');
+        await fetch(`http://localhost:5000/api/registration/cancel-unpaid/${paymentData.registrationId}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        console.log('Unpaid registration canceled');
+      } catch (error) {
+        console.error('Error canceling unpaid registration:', error);
+      }
+    }
+    setShowPaymentModal(false);
+    setPaymentData(null);
   };
 
   useEffect(() => {
@@ -1029,6 +1080,20 @@ export default function TAEventsPage() {
             </form>
           </div>
         </div>
+      )}
+
+      {/* Payment Modal */}
+      {showPaymentModal && paymentData && (
+        <PaymentModal
+          isOpen={showPaymentModal}
+          onClose={handlePaymentModalClose}
+          eventId={paymentData.eventId}
+          registrationId={paymentData.registrationId}
+          amount={paymentData.amount}
+          eventName={paymentData.eventName}
+          eventType={paymentData.eventType}
+          onPaymentSuccess={handlePaymentSuccess}
+        />
       )}
     </div>
   );

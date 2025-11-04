@@ -25,6 +25,28 @@ const userSchema = new mongoose.Schema({
   email_verification_token: { type: String },
   email_verification_expires: { type: Date },
   
+  // Wallet and Payment fields
+  wallet: {
+    balance: { type: Number, default: 0, min: 0 },
+    currency: { type: String, default: 'USD' },
+    transactions: [{
+      type: { 
+        type: String, 
+        enum: ['credit', 'debit', 'payment', 'refund', 'top-up'],
+        required: true 
+      },
+      amount: { type: Number, required: true },
+      description: { type: String, required: true },
+      reference: { type: String }, // e.g., event_id, registration_id
+      payment_method: { 
+        type: String, 
+        enum: ['wallet', 'stripe', 'card'],
+      },
+      stripe_payment_id: { type: String },
+      timestamp: { type: Date, default: Date.now }
+    }]
+  },
+  
   vendor_info: {
     company_name: String
   }

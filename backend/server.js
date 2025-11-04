@@ -20,6 +20,8 @@ import workshopRoutes from "./routes/workshopRoutes.js";
 import vendorRoutes from "./routes/vendorRoutes.js"; // ← Add this
 import eventRoutes from "./routes/eventRoutes.js"; // ← Add this
 import favoriteRoutes from "./routes/favoriteRoutes.js";
+import paymentRoutes from "./routes/paymentRoutes.js"; // ← Add payment routes
+import certificateRoutes from "./routes/certificateRoutes.js"; // ← Add certificate routes
 
 
 const app = express();
@@ -29,6 +31,7 @@ console.log("MONGO_URI:", process.env.MONGO_URI ? "✅ Loaded" : "❌ Not found"
 console.log("JWT_SECRET:", process.env.JWT_SECRET ? "✅ Loaded" : "❌ Not found");
 console.log("DEVELOPMENT_MODE:", process.env.DEVELOPMENT_MODE ? `✅ ${process.env.DEVELOPMENT_MODE}` : "❌ Not found");
 console.log("EMAIL_USER:", process.env.EMAIL_USER ? "✅ Loaded" : "❌ Not found");
+console.log("STRIPE_SECRET_KEY:", process.env.STRIPE_SECRET_KEY ? `✅ Loaded (${process.env.STRIPE_SECRET_KEY.substring(0, 20)}...)` : "❌ Not found");
 
 // Middleware
 app.use(cors());
@@ -76,6 +79,8 @@ app.use("/api/vendor", vendorRoutes);
 app.use("/api/workshop", workshopRoutes);
 app.use("/api/events", eventRoutes);
 app.use("/api/favorites", favoriteRoutes);
+app.use("/api/payment", paymentRoutes); // ← Add payment routes
+app.use("/api/certificates", certificateRoutes); // ← Add certificate routes
 
 
 

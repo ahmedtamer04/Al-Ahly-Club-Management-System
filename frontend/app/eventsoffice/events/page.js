@@ -131,16 +131,24 @@ export default function ViewAllEvents() {
     const startDate = new Date(event.start_date);
     const endDate = new Date(event.end_date);
 
+    // Check database status first
     if (event.status === 'cancelled') {
-      return <span className="badge badge-danger">Cancelled</span>;
+      return <span className="badge badge-danger">❌ Cancelled</span>;
     }
-    if (endDate < now) {
-      return <span className="badge badge-secondary">Completed</span>;
+    
+    if (event.status === 'completed') {
+      return <span className="badge" style={{backgroundColor: '#9c27b0', color: 'white'}}>🎓 Completed</span>;
+    }
+    
+    // Fall back to date-based status
+    if (now < startDate) {
+      return <span className="badge badge-primary">🔜 Upcoming</span>;
     }
     if (startDate <= now && endDate >= now) {
-      return <span className="badge badge-success">Active</span>;
+      return <span className="badge badge-success">▶️ Active</span>;
     }
-    return <span className="badge badge-primary">Upcoming</span>;
+    // Past end date but not marked as completed
+    return <span className="badge" style={{backgroundColor: '#ff9800', color: 'white'}}>⌛ Ended</span>;
   };
 
   const getVendorsInfo = (event) => {

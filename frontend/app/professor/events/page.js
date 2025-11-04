@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import '@/app/dashboard.css';
 import { eventAPI, bazaarAPI, registrationAPI, getUser } from '@/utils/api';
+import PaymentModal from '@/app/components/PaymentModal';
 
 function EventCard({ event, onViewDetails, isRegistered }) {
   // Helper function to format dates nicely
@@ -144,6 +145,10 @@ export default function ProfessorEvents() {
   const [registrationLoading, setRegistrationLoading] = useState(false);
   const [registrationMessage, setRegistrationMessage] = useState({ text: '', type: '' });
   const [registeredEventIds, setRegisteredEventIds] = useState(new Set());
+  
+  // Payment modal states
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [paymentData, setPaymentData] = useState(null);
   
   // My Registrations view states
   const [viewMode, setViewMode] = useState('all'); // 'all' or 'registrations'
@@ -530,32 +535,50 @@ export default function ProfessorEvents() {
         role: 'professor' // Backend expects lowercase
       };
 
-      await registrationAPI.register(payload);
+      const response = await registrationAPI.register(payload);
       
-      // Add event to registered set
-      const eventId = selectedEvent._id || selectedEvent.id;
-      const updatedRegistrations = new Set([...registeredEventIds, eventId]);
-      setRegisteredEventIds(updatedRegistrations);
+      // Check if event requires payment
+      const eventPrice = selectedEvent.workshop?.price || selectedEvent.trip?.price || 0;
       
-      // Save to localStorage for persistence
-      const currentUser = getUser();
-      if (currentUser) {
-        localStorage.setItem(
-          `registeredEvents_${currentUser.id_number}`,
-          JSON.stringify([...updatedRegistrations])
-        );
-      }
-      
-      // Refresh registered events list
-      fetchRegisteredEvents(updatedRegistrations);
-      
-      setRegistrationMessage({ text: 'Successfully registered for the event!', type: 'success' });
-      
-      // Close form and reset message after 2 seconds (keep user data)
-      setTimeout(() => {
+      if (eventPrice > 0) {
+        // Close registration form and show payment modal
         setShowRegistrationForm(false);
-        setRegistrationMessage({ text: '', type: '' });
-      }, 2000);
+        setShowDetailsModal(false);
+        setPaymentData({
+          eventId: selectedEvent._id || selectedEvent.id,
+          registrationId: response.registration._id,
+          amount: eventPrice,
+          eventName: selectedEvent.name,
+          eventType: selectedEvent.type
+        });
+        setShowPaymentModal(true);
+      } else {
+        // Free event - registration complete
+        // Add event to registered set
+        const eventId = selectedEvent._id || selectedEvent.id;
+        const updatedRegistrations = new Set([...registeredEventIds, eventId]);
+        setRegisteredEventIds(updatedRegistrations);
+        
+        // Save to localStorage for persistence
+        const currentUser = getUser();
+        if (currentUser) {
+          localStorage.setItem(
+            `registeredEvents_${currentUser.id_number}`,
+            JSON.stringify([...updatedRegistrations])
+          );
+        }
+        
+        // Refresh registered events list
+        fetchRegisteredEvents(updatedRegistrations);
+        
+        setRegistrationMessage({ text: 'Successfully registered for the event!', type: 'success' });
+        
+        // Close form and reset message after 2 seconds (keep user data)
+        setTimeout(() => {
+          setShowRegistrationForm(false);
+          setRegistrationMessage({ text: '', type: '' });
+        }, 2000);
+      }
 
     } catch (error) {
       setRegistrationMessage({ 
@@ -565,6 +588,52 @@ export default function ProfessorEvents() {
     } finally {
       setRegistrationLoading(false);
     }
+  };
+
+  const handlePaymentSuccess = async (payment) => {
+    console.log('Payment successful:', payment);
+    setShowPaymentModal(false);
+    setPaymentData(null);
+    
+    // Add event to registered set
+    const eventId = selectedEvent._id || selectedEvent.id;
+    const updatedRegistrations = new Set([...registeredEventIds, eventId]);
+    setRegisteredEventIds(updatedRegistrations);
+    
+    // Save to localStorage for persistence
+    const currentUser = getUser();
+    if (currentUser) {
+      localStorage.setItem(
+        `registeredEvents_${currentUser.id_number}`,
+        JSON.stringify([...updatedRegistrations])
+      );
+    }
+    
+    // Refresh registered events list
+    fetchRegisteredEvents(updatedRegistrations);
+    
+    alert('Payment completed! Registration confirmed.');
+  };
+
+  const handlePaymentModalClose = async () => {
+    if (paymentData?.registrationId) {
+      // User closed modal without paying - cancel the pending registration
+      try {
+        const token = localStorage.getItem('token');
+        await fetch(`http://localhost:5000/api/registration/cancel-unpaid/${paymentData.registrationId}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        console.log('Unpaid registration canceled');
+      } catch (error) {
+        console.error('Error canceling unpaid registration:', error);
+      }
+    }
+    setShowPaymentModal(false);
+    setPaymentData(null);
   };
 
   // Update filtered events when any search/filter criteria changes
@@ -1876,6 +1945,20 @@ export default function ProfessorEvents() {
           )}
         </main>
       </div>
+
+      {/* Payment Modal */}
+      {showPaymentModal && paymentData && (
+        <PaymentModal
+          isOpen={showPaymentModal}
+          onClose={handlePaymentModalClose}
+          eventId={paymentData.eventId}
+          registrationId={paymentData.registrationId}
+          amount={paymentData.amount}
+          eventName={paymentData.eventName}
+          eventType={paymentData.eventType}
+          onPaymentSuccess={handlePaymentSuccess}
+        />
+      )}
     </div>
   );
 }

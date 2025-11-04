@@ -303,14 +303,23 @@ export default function AllEventsPage() {
     const startDate = new Date(event.start_date);
     const endDate = new Date(event.end_date);
     
+    // Check database status first
     if (event.status === 'cancelled') {
       return <span style={{color: '#f44336', fontWeight: 'bold'}}>❌ Cancelled</span>;
-    } else if (now < startDate) {
+    }
+    
+    if (event.status === 'completed') {
+      return <span style={{color: '#9c27b0', fontWeight: 'bold'}}>🎓 Completed</span>;
+    }
+    
+    // Fall back to date-based status
+    if (now < startDate) {
       return <span style={{color: '#2196f3', fontWeight: 'bold'}}>🔜 Upcoming</span>;
     } else if (now >= startDate && now <= endDate) {
       return <span style={{color: '#4caf50', fontWeight: 'bold'}}>▶️ Active</span>;
     } else {
-      return <span style={{color: '#666', fontWeight: 'bold'}}>✅ Completed</span>;
+      // Past end date but not marked as completed
+      return <span style={{color: '#ff9800', fontWeight: 'bold'}}>⌛ Ended</span>;
     }
   };
 
@@ -535,6 +544,104 @@ export default function AllEventsPage() {
     } catch (error) {
       console.error('Error deleting comment:', error);
       alert('Failed to delete comment: ' + (error.response?.data?.message || error.message));
+    }
+  };
+
+  const handleCompleteWorkshop = async (workshopId, workshopName, endDate) => {
+    const now = new Date();
+    const workshopEndDate = new Date(endDate);
+    const needsForce = workshopEndDate > now;
+
+    let message = `Complete workshop "${workshopName}" and send certificates to all participants?\n\n`;
+    
+    if (needsForce) {
+      message += `⚠️ WARNING: Workshop hasn't ended yet!\n`;
+      message += `End date: ${workshopEndDate.toLocaleDateString()}\n`;
+      message += `Current date: ${now.toLocaleDateString()}\n\n`;
+      message += `This will use FORCE MODE to complete the workshop early.\n`;
+      message += `Certificates will be sent immediately to all participants.\n\n`;
+      message += `Continue anyway?`;
+    } else {
+      message += `Workshop has ended. Certificates will be sent to all eligible participants.`;
+    }
+
+    if (!confirm(message)) {
+      return;
+    }
+
+    try {
+      // Add force=true parameter if workshop hasn't ended
+      const url = needsForce 
+        ? `/workshop/${workshopId}/complete?force=true`
+        : `/workshop/${workshopId}/complete`;
+      
+      const response = await api.patch(url);
+      
+      const successMsg = response.force_mode
+        ? `✅ Workshop completed with FORCE MODE!\n\n`
+        : `✅ Workshop completed successfully!\n\n`;
+      
+      const certificateMsg = `Certificates sent: ${response.certificates.sent}/${response.certificates.total}\n`;
+      const failedMsg = response.certificates.failed > 0
+        ? `Failed: ${response.certificates.failed}\n\n`
+        : '';
+      
+      alert(successMsg + certificateMsg + failedMsg + 'Participants have received their certificates via email.');
+      
+      // Refresh events list
+      const eventsResponse = await api.get('/events/all');
+      let eventsData = eventsResponse;
+      if (typeof eventsResponse === 'string') {
+        eventsData = JSON.parse(eventsResponse);
+      }
+      
+      const nonBoothEvents = eventsData?.filter(e => e.type !== 'Booth') || [];
+      const boothResponse = await api.get('/admin/vendor-requests?status=accepted&kind=booth_event');
+      
+      const boothEvents = (boothResponse.applications || []).map(app => {
+        const startDate = app.preferred_start_date ? new Date(app.preferred_start_date) : new Date(app.applied_at);
+        const endDate = new Date(startDate);
+        endDate.setDate(endDate.getDate() + ((app.duration_weeks || 1) * 7));
+        
+        return {
+          _id: app._id,
+          name: app.vendor?.company_name || `${app.vendor?.name}'s Booth`,
+          type: 'Booth',
+          location: app.application?.booth_location?.description || 
+                   `Zone ${app.application?.booth_location?.zone || 'N/A'} - ${app.platform_position?.wall || 'N/A'} Wall, Slot ${app.platform_position?.slot || 'N/A'}`,
+          short_description: `${app.duration_weeks || 1} week booth - ${app.application?.booth_size || 'Standard size'}`,
+          start_date: startDate,
+          end_date: endDate,
+          time: 'All Day',
+          status: 'active',
+          booth: {
+            vendors: [{
+              vendor_name: app.vendor?.name,
+              company_name: app.vendor?.company_name,
+              contact_info: {
+                email: app.vendor?.email
+              },
+              booth_assignment: `${app.platform_position?.wall || 'N/A'}-${app.platform_position?.slot || 'N/A'} (${app.application?.booth_size || 'N/A'})`,
+              setup_time: `${app.duration_weeks || 1} week(s)`
+            }]
+          },
+          _isBoothApplication: true,
+          _applicationData: app
+        };
+      });
+      
+      const allEvents = [...nonBoothEvents, ...boothEvents];
+      setEvents(allEvents);
+      setFilteredEvents(allEvents);
+      
+      if (nonBoothEvents && nonBoothEvents.length > 0) {
+        await fetchRegistrationCounts(nonBoothEvents);
+      }
+    } catch (error) {
+      console.error('Error completing workshop:', error);
+      const errorMsg = error.response?.data?.message || error.message;
+      const hint = error.response?.data?.hint || '';
+      alert(`Failed to complete workshop:\n\n${errorMsg}\n\n${hint}`);
     }
   };
 
@@ -1259,6 +1366,16 @@ export default function AllEventsPage() {
                           >
                             👁️ View
                           </button>
+                          {event.type === 'Workshop' && event.status !== 'completed' && event.status !== 'cancelled' && (
+                            <button 
+                              className="btn btn-sm"
+                              onClick={() => handleCompleteWorkshop(event._id, event.name, event.end_date)}
+                              title="Complete Workshop & Send Certificates"
+                              style={{marginLeft: '4px', backgroundColor: '#28a745', color: 'white'}}
+                            >
+                              🎓 Complete
+                            </button>
+                          )}
                           <button 
                             className="btn btn-danger btn-sm"
                             onClick={() => handleDeleteEvent(event._id, event.name, event._isBoothApplication)}

@@ -101,6 +101,11 @@ const eventSchema = new mongoose.Schema({
     registration_deadline: {
       type: Date,
       required: function() { return this.type === "Workshop"; }
+    },
+    price: {
+      type: Number,
+      default: 0,
+      min: 0
     }
   },
   
