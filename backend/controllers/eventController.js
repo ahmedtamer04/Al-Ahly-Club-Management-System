@@ -9,6 +9,11 @@ export const getUpcomingEvents = async (req, res) => {
     const events = await Event.find({
       status: "upcoming",
       start_date: { $gt: new Date() },
+      // Exclude workshops that are not accepted (pending/rejected/revision_requested)
+      $or: [
+        { type: { $ne: "Workshop" } }, // Include all non-workshop events
+        { type: "Workshop", "workshop.approval_status": "accepted" } // Only include accepted workshops
+      ]
     })
     .populate('bazaar.vendors_participating.vendor_id', 'first_name last_name email vendor_info')
     .populate('booth.vendors.vendor_id', 'first_name last_name email vendor_info')
@@ -48,7 +53,23 @@ export const filterEvents = async (req, res) => {
         return res.status(400).json({ error: "Invalid filter field" });
     }
 
-    const events = await Event.find(filter)
+    // Add workshop approval filter
+    const workshopFilter = {
+      $or: [
+        { type: { $ne: "Workshop" } }, // Include all non-workshop events
+        { type: "Workshop", "workshop.approval_status": "accepted" } // Only include accepted workshops
+      ]
+    };
+
+    // Combine the original filter with workshop approval filter
+    const finalFilter = {
+      $and: [
+        filter,
+        workshopFilter
+      ]
+    };
+
+    const events = await Event.find(finalFilter)
       .populate('bazaar.vendors_participating.vendor_id', 'company_name email')
       .populate('booth.vendors.vendor_id', 'company_name email')
       .sort({ start_date: 1 });
@@ -65,7 +86,13 @@ export const sortEventsByDate = async (req, res) => {
     const { order } = req.params;
     const sortOrder = order === "desc" ? -1 : 1;
 
-    const events = await Event.find()
+    const events = await Event.find({
+      // Exclude workshops that are not accepted
+      $or: [
+        { type: { $ne: "Workshop" } }, // Include all non-workshop events
+        { type: "Workshop", "workshop.approval_status": "accepted" } // Only include accepted workshops
+      ]
+    })
       .populate('bazaar.vendors_participating.vendor_id', 'company_name email')
       .populate('booth.vendors.vendor_id', 'company_name email')
       .sort({ start_date: sortOrder });
@@ -79,7 +106,13 @@ export const sortEventsByDate = async (req, res) => {
 /* -------------------------- GET /events/all -------------------------- */
 export const getAllEvents = async (req, res) => {
   try {
-    const events = await Event.find()
+    const events = await Event.find({
+      // Exclude workshops that are not accepted (pending/rejected/revision_requested)
+      $or: [
+        { type: { $ne: "Workshop" } }, // Include all non-workshop events
+        { type: "Workshop", "workshop.approval_status": "accepted" } // Only include accepted workshops
+      ]
+    })
       .populate('bazaar.vendors_participating.vendor_id', 'company_name email')
       .populate('booth.vendors.vendor_id', 'company_name email')
       .sort({ start_date: -1 }); // Most recent first
@@ -131,6 +164,27 @@ export const getEventById = async (req, res) => {
   try {
     const event = await Event.findById(req.params.id);
     if (!event) return res.status(404).json({ error: "Event not found" });
+    
+    // Check if it's a workshop and if it's not accepted, don't show it to regular users
+    // (EventsOffice and Professors should still see it through their dedicated endpoints)
+    if (event.type === 'Workshop') {
+      const approvalStatus = event.workshop?.approval_status || 'pending';
+      if (approvalStatus !== 'accepted') {
+        // Check if user is EventsOffice or the professor who created it
+        const userRole = req.user?.role;
+        const createdBy = event.created_by?.toString();
+        const userId = req.user?._id?.toString();
+        
+        // Only allow EventsOffice, Admin, or the workshop creator to view non-accepted workshops
+        if (userRole !== 'EventsOffice' && userRole !== 'Admin' && createdBy !== userId) {
+          return res.status(404).json({ 
+            error: "Event not found",
+            message: "This workshop is not available"
+          });
+        }
+      }
+    }
+    
     res.json(event);
   } catch (err) {
     console.error(err);

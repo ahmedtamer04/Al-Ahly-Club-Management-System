@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { workshopAPI } from '@/utils/api';
+import NotificationBell from '@/app/components/NotificationBell';
 import '@/app/dashboard.css';
 
 export default function MyWorkshopsPage() {
@@ -78,6 +79,7 @@ export default function MyWorkshopsPage() {
         <div className="nav-container">
           <h1 className="nav-brand">Al-Ahly Events</h1>
           <div className="nav-links">
+            <NotificationBell />
             <span className="nav-user">👨‍🏫 Professor Dashboard</span>
             <Link href="/">Logout</Link>
           </div>
@@ -137,46 +139,94 @@ export default function MyWorkshopsPage() {
                       <th>Location</th>
                       <th>Date</th>
                       <th>Capacity</th>
-                      <th>Status</th>
+                      <th>Approval Status</th>
+                      <th>Event Status</th>
                       <th>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {workshops.map((workshop) => (
-                      <tr key={workshop._id}>
-                        <td>
-                          <strong>{workshop.name}</strong>
-                          <br />
-                          <small style={{ color: '#666' }}>
-                            {workshop.short_description?.substring(0, 50)}...
-                          </small>
-                        </td>
-                        <td>{workshop.location}</td>
-                        <td>
-                          {formatDate(workshop.start_date)}
-                          {workshop.start_date !== workshop.end_date && (
-                            <> - {formatDate(workshop.end_date)}</>
-                          )}
-                          <br />
-                          <small>{workshop.time}</small>
-                        </td>
-                        <td>{workshop.workshop?.capacity || 'N/A'}</td>
-                        <td>
-                          <span className={`status-badge status-${workshop.status}`}>
-                            {workshop.status}
-                          </span>
-                        </td>
-                        <td>
-                          <button
-                            onClick={() => handleEdit(workshop)}
-                            className="btn-icon"
-                            title="Edit"
-                          >
-                            ✏️
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
+                    {workshops.map((workshop) => {
+                      const approvalStatus = workshop.workshop?.approval_status || 'pending';
+                      const approvalBadgeColors = {
+                        pending: '#ffc107',
+                        accepted: '#28a745',
+                        rejected: '#dc3545',
+                        revision_requested: '#ff9800'
+                      };
+                      
+                      return (
+                        <tr key={workshop._id}>
+                          <td>
+                            <strong>{workshop.name}</strong>
+                            <br />
+                            <small style={{ color: '#666' }}>
+                              {workshop.short_description?.substring(0, 50)}...
+                            </small>
+                            {workshop.workshop?.requested_edits && (
+                              <>
+                                <br />
+                                <small style={{ color: '#ff9800', fontWeight: 'bold' }}>
+                                  ✏️ Edits Requested: {workshop.workshop.requested_edits}
+                                </small>
+                              </>
+                            )}
+                            {workshop.workshop?.rejection_reason && (
+                              <>
+                                <br />
+                                <small style={{ color: '#dc3545', fontWeight: 'bold' }}>
+                                  ❌ Rejected: {workshop.workshop.rejection_reason}
+                                </small>
+                              </>
+                            )}
+                          </td>
+                          <td>{workshop.location}</td>
+                          <td>
+                            {formatDate(workshop.start_date)}
+                            {workshop.start_date !== workshop.end_date && (
+                              <> - {formatDate(workshop.end_date)}</>
+                            )}
+                            <br />
+                            <small>{workshop.time}</small>
+                          </td>
+                          <td>{workshop.workshop?.capacity || 'N/A'}</td>
+                          <td>
+                            <span 
+                              className="status-badge" 
+                              style={{ backgroundColor: approvalBadgeColors[approvalStatus], color: 'white' }}
+                            >
+                              {approvalStatus.replace('_', ' ')}
+                            </span>
+                          </td>
+                          <td>
+                            <span className={`status-badge status-${workshop.status}`}>
+                              {workshop.status}
+                            </span>
+                          </td>
+                          <td>
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                              {approvalStatus === 'accepted' && (
+                                <Link
+                                  href={`/professor/workshops/${workshop._id}/participants`}
+                                  className="btn-icon"
+                                  title="View Participants"
+                                >
+                                  👥
+                                </Link>
+                              )}
+                              {(approvalStatus === 'pending' || approvalStatus === 'revision_requested') && (
+                                <button
+                                  onClick={() => handleEdit(workshop)}
+                                  className="btn-icon"
+                                  title="Edit"
+                                >
+                                  ✏️
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
