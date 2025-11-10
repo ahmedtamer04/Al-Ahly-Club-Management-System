@@ -52,6 +52,18 @@ export const registerForEvent = async (req, res) => {
 
     console.log('Found event:', { id: event._id, name: event.name, type: event.type });
 
+    // CHECK: Prevent registration for workshops that are not accepted
+    if (event.type === 'Workshop') {
+      const approvalStatus = event.workshop?.approval_status || 'pending';
+      if (approvalStatus !== 'accepted') {
+        console.log('Workshop not accepted - Status:', approvalStatus);
+        return res.status(403).json({ 
+          message: "This workshop is not available for registration.", 
+          approval_status: approvalStatus 
+        });
+      }
+    }
+
     // CHECK: Allow registration for all event types (removing restriction)
     console.log('Event type check - Type:', event.type);
 

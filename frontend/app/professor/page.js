@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { getUser } from '@/utils/api';
+import NotificationBell from '@/app/components/NotificationBell';
 import '@/app/dashboard.css';
 
 export default function ProfessorDashboard() {
@@ -21,6 +22,7 @@ export default function ProfessorDashboard() {
         <div className="nav-container">
           <h1 className="nav-brand">Al-Ahly Events</h1>
           <div className="nav-links">
+            <NotificationBell />
             <span className="nav-user">👨‍🏫 Professor Dashboard</span>
             <Link href="/">Logout</Link>
           </div>

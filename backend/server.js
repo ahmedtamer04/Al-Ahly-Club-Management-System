@@ -17,11 +17,12 @@ import conferenceRoutes from "./routes/conferenceRoutes.js";
 import bazaarRoutes from "./routes/bazaarRoutes.js";
 import registrationRoutes from "./routes/registrationRoutes.js";
 import workshopRoutes from "./routes/workshopRoutes.js";
-import vendorRoutes from "./routes/vendorRoutes.js"; // ← Add this
-import eventRoutes from "./routes/eventRoutes.js"; // ← Add this
+import vendorRoutes from "./routes/vendorRoutes.js";
+import eventRoutes from "./routes/eventRoutes.js";
 import favoriteRoutes from "./routes/favoriteRoutes.js";
-import paymentRoutes from "./routes/paymentRoutes.js"; // ← Add payment routes
-import certificateRoutes from "./routes/certificateRoutes.js"; // ← Add certificate routes
+import paymentRoutes from "./routes/paymentRoutes.js";
+import certificateRoutes from "./routes/certificateRoutes.js";
+import notificationRoutes from "./routes/notificationRoutes.js"; // ← Add notification routes
 
 
 const app = express();
@@ -79,8 +80,9 @@ app.use("/api/vendor", vendorRoutes);
 app.use("/api/workshop", workshopRoutes);
 app.use("/api/events", eventRoutes);
 app.use("/api/favorites", favoriteRoutes);
-app.use("/api/payment", paymentRoutes); // ← Add payment routes
-app.use("/api/certificates", certificateRoutes); // ← Add certificate routes
+app.use("/api/payment", paymentRoutes);
+app.use("/api/certificates", certificateRoutes);
+app.use("/api/notifications", notificationRoutes); // ← Add notification routes
 
 
 

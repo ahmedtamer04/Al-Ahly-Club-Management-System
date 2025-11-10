@@ -106,6 +106,27 @@ const eventSchema = new mongoose.Schema({
       type: Number,
       default: 0,
       min: 0
+    },
+    // Approval workflow fields
+    approval_status: {
+      type: String,
+      enum: ["pending", "accepted", "rejected", "revision_requested"],
+      default: "pending"
+    },
+    requested_edits: {
+      type: String,
+      trim: true
+    },
+    rejection_reason: {
+      type: String,
+      trim: true
+    },
+    reviewed_by: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User"
+    },
+    reviewed_at: {
+      type: Date
     }
   },
   
