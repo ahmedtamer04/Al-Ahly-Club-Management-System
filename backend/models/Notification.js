@@ -11,10 +11,11 @@ const notificationSchema = new mongoose.Schema({
   type: {
     type: String,
     enum: [
-      "workshop_submitted",      // For EventsOffice when professor submits
-      "workshop_accepted",        // For Professor when workshop accepted
-      "workshop_rejected",        // For Professor when workshop rejected
-      "workshop_revision_requested" // For Professor when edits requested
+      "workshop_submitted",           // For EventsOffice when professor submits
+      "workshop_accepted",            // For Professor when workshop accepted
+      "workshop_rejected",            // For Professor when workshop rejected
+      "workshop_revision_requested",  // For Professor when edits requested
+      "event_added"                   // For all users when new event is added
     ],
     required: true
   },
@@ -26,7 +27,7 @@ const notificationSchema = new mongoose.Schema({
   },
   
   link: {
-    type: String,  // URL to navigate to when notification clicked
+    type: String,
     trim: true
   },
   
@@ -42,13 +43,22 @@ const notificationSchema = new mongoose.Schema({
     ref: "Event"
   },
   
+  event_id: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Event"
+  },
+  
   // Additional metadata
   metadata: {
     workshop_name: String,
     professor_name: String,
     requested_edits: String,
     rejection_reason: String,
-    reviewed_by: String
+    reviewed_by: String,
+    event_name: String,
+    event_type: String,
+    event_date: Date,
+    event_location: String
   }
   
 }, { 
@@ -59,6 +69,7 @@ const notificationSchema = new mongoose.Schema({
 notificationSchema.index({ user_id: 1, is_read: 1 });
 notificationSchema.index({ user_id: 1, createdAt: -1 });
 notificationSchema.index({ workshop_id: 1 });
+notificationSchema.index({ event_id: 1 });
 
 // Static method to get unread count
 notificationSchema.statics.getUnreadCount = function(userId) {

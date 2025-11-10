@@ -1,5 +1,6 @@
 import Event from "../models/Events.js";
 import mongoose from "mongoose";
+import { notifyUsersNewEvent } from "../services/notificationService.js";
 
 const parsePagination = (req) => {
   const page = Math.max(1, parseInt(req.query.page || "1", 10));
@@ -55,6 +56,11 @@ export const createTrip = async (req, res) => {
         registration_deadline: regDeadline
       }
     });
+
+    // Notify all users about the new trip
+    notifyUsersNewEvent(trip).catch(err => 
+      console.error('Failed to send trip notifications:', err)
+    );
 
     res.status(201).json({ 
       message: "Trip created successfully", 

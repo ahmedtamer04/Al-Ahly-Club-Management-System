@@ -254,3 +254,52 @@ export const getUnreadCount = async (userId) => {
     throw error;
   }
 };
+
+/**
+ * Notify all active users when a new event is added
+ * @param {Object} event - The newly created event object
+ * @param {Array<String>} targetRoles - Roles to notify (default: all)
+ */
+export const notifyUsersNewEvent = async (event, targetRoles = ["Student", "Staff", "EventsOffice", "TA", "Professor"]) => {
+  try {
+    // Find all active users with target roles
+    const users = await User.find({ 
+      role: { $in: targetRoles },
+      status: "active" 
+    }).select('_id role');
+
+    if (users.length === 0) {
+      console.log('⚠️ No active users found to notify about new event');
+      return;
+    }
+
+    const eventDate = new Date(event.start_date).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    });
+
+    // Create notifications for all users
+    const notificationPromises = users.map(user => 
+      createNotification(
+        user._id,
+        "event_added",
+        `🎉 New ${event.type}: "${event.name}" has been added! Check it out.`,
+        `/${user.role.toLowerCase()}/events/${event._id}`,
+        {
+          event_name: event.name,
+          event_type: event.type,
+          event_date: event.start_date,
+          event_location: event.location
+        }
+      )
+    );
+
+    await Promise.all(notificationPromises);
+
+    console.log(`✅ Notified ${users.length} users about new event: ${event.name}`);
+  } catch (error) {
+    console.error('❌ Error notifying users about new event:', error);
+    // Don't throw - notifications shouldn't block event creation
+  }
+};

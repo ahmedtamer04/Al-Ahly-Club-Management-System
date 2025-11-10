@@ -1,4 +1,5 @@
 import Event from "../models/Events.js";
+import { notifyUsersNewEvent } from "../services/notificationService.js";
 
 export const createConference = async (req, res) => {
   try {
@@ -57,6 +58,11 @@ export const createConference = async (req, res) => {
         extra_required_sources
       }
     });
+
+    // 🔔 ADD THIS: Notify all users about the new conference
+    notifyUsersNewEvent(conference).catch(err => 
+      console.error('Failed to send conference notifications:', err)
+    );
 
     res.status(201).json({ 
       message: "Conference created successfully", 

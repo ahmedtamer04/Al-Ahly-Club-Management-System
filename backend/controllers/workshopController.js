@@ -7,7 +7,8 @@ import {
   notifyEventsOfficeWorkshopSubmitted,
   notifyProfessorWorkshopAccepted,
   notifyProfessorWorkshopRejected,
-  notifyProfessorEditsRequested
+  notifyProfessorEditsRequested,
+  notifyUsersNewEvent
 } from "../services/notificationService.js";
 
 export const createWorkshop = async (req, res) => {
@@ -492,5 +493,59 @@ export const completeWorkshop = async (req, res) => {
   } catch (err) {
     console.error('Error completing workshop:', err);
     res.status(500).json({ message: err.message });
+  }
+};
+
+/**
+ * Accept a workshop (set approval status to accepted)
+ * PATCH /api/workshop/:id/accept
+ */
+export const acceptWorkshop = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const workshop = await Workshop.findById(id);
+    if (!workshop) {
+      return res.status(404).json({ message: "Workshop not found" });
+    }
+
+    if (workshop.approval_status !== "pending") {
+      return res.status(400).json({ 
+        message: `Workshop is already ${workshop.approval_status}` 
+      });
+    }
+
+    workshop.approval_status = "accepted";
+    workshop.reviewed_by = req.user.userId;
+    workshop.reviewed_at = new Date();
+    await workshop.save();
+
+    const event = await Event.findOne({ workshop: workshop._id })
+      .populate('workshop')
+      .populate('created_by', 'first_name last_name email');
+
+    if (event) {
+      event.status = "upcoming";
+      await event.save();
+      
+      // Notify all users about the newly approved workshop
+      const populatedEvent = await Event.findById(event._id)
+        .populate('workshop')
+        .populate('created_by', 'first_name last_name email');
+      
+      notifyUsersNewEvent(populatedEvent).catch(err => 
+        console.error('Failed to send workshop approval notifications:', err)
+      );
+    }
+
+    await notifyProfessorWorkshopAccepted(workshop);
+
+    res.status(200).json({
+      message: "Workshop accepted successfully",
+      workshop
+    });
+  } catch (error) {
+    console.error("Error accepting workshop:", error);
+    res.status(500).json({ message: "Server error", error: error.message });
   }
 };

@@ -4,6 +4,7 @@ import Link from 'next/link';
 import '@/app/dashboard.css';
 import { useEffect, useState } from 'react';
 import { eventAPI } from '@/utils/api';
+import NotificationBell from '../components/NotificationBell';
 
 export default function StaffDashboard() {
   const [events, setEvents] = useState([]);
@@ -26,6 +27,7 @@ export default function StaffDashboard() {
         <div className="nav-container">
           <h1 className="nav-brand">Al-Ahly Events</h1>
           <div className="nav-links">
+            <NotificationBell />
             <span className="nav-user">👨‍💼 Staff Dashboard</span>
             <Link href="/">Logout</Link>
           </div>

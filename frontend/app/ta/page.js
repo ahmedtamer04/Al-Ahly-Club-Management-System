@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import '@/app/dashboard.css';
+import NotificationBell from '../components/NotificationBell';
 
 export default function TADashboard() {
   const [upcomingEventsCount, setUpcomingEventsCount] = useState(0);
@@ -102,6 +103,7 @@ export default function TADashboard() {
         <div className="nav-container">
           <h1 className="nav-brand">Al-Ahly Events</h1>
           <div className="nav-links">
+            <NotificationBell />
             <span className="nav-user">👨‍🏫 TA Dashboard</span>
             <Link href="/">Logout</Link>
           </div>

@@ -88,17 +88,13 @@ export default function NotificationBell() {
   };
 
   const getNotificationIcon = (type) => {
-    switch (type) {
-      case 'workshop_submitted':
-        return '📝';
-      case 'workshop_accepted':
-        return '✅';
-      case 'workshop_rejected':
-        return '❌';
-      case 'workshop_revision_requested':
-        return '✏️';
-      default:
-        return '📬';
+    switch(type) {
+      case 'workshop_submitted': return '📝';
+      case 'workshop_accepted': return '✅';
+      case 'workshop_rejected': return '❌';
+      case 'workshop_revision_requested': return '✏️';
+      case 'event_added': return '🎉';
+      default: return '🔔';
     }
   };
 
