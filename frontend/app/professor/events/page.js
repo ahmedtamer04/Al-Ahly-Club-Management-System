@@ -6,7 +6,7 @@ import '@/app/dashboard.css';
 import { eventAPI, bazaarAPI, registrationAPI, getUser } from '@/utils/api';
 import PaymentModal from '@/app/components/PaymentModal';
 
-function EventCard({ event, onViewDetails, isRegistered }) {
+function EventCard({ event, onViewDetails, isRegistered, isFavorite, onToggleFavorite }) {
   // Helper function to format dates nicely
   const formatDate = (dateStr) => {
     const date = new Date(dateStr);
@@ -110,6 +110,27 @@ function EventCard({ event, onViewDetails, isRegistered }) {
             {isRegistered ? '✓ Registered' : '✍️ Register'}
           </button>
         )}
+        {/* NEW: Favorite button */}
+        <button 
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleFavorite(event);
+          }}
+          style={{
+            padding: '8px 16px',
+            backgroundColor: isFavorite ? '#ffd700' : '#fff',
+            color: isFavorite ? '#000' : '#666',
+            border: '2px solid #ffd700',
+            borderRadius: '6px',
+            cursor: 'pointer',
+            fontSize: '1.2rem',
+            transition: 'all 0.3s ease',
+            minWidth: '50px'
+          }}
+          title={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+        >
+          {isFavorite ? '⭐' : '☆'}
+        </button>
       </div>
     </div>
   );
@@ -154,6 +175,9 @@ export default function ProfessorEvents() {
   const [viewMode, setViewMode] = useState('all'); // 'all' or 'registrations'
   const [registeredEvents, setRegisteredEvents] = useState([]);
   const [registeredEventsLoading, setRegisteredEventsLoading] = useState(false);
+
+  // NEW: Favorites state
+  const [favorites, setFavorites] = useState(new Set());
 
   // Function to sort events by date
   const sortEvents = (events, order) => {
@@ -224,6 +248,93 @@ export default function ProfessorEvents() {
     }
   };
 
+  // NEW: Load user's favorites
+  const loadFavorites = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+
+      const response = await fetch('http://localhost:5000/api/favorites', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const favoriteEvents = await response.json();
+        const favoriteIds = new Set(favoriteEvents.map(event => event._id));
+        setFavorites(favoriteIds);
+      }
+    } catch (err) {
+      console.error('Error loading favorites:', err);
+    }
+  };
+
+  // NEW: Toggle favorite status
+  const toggleFavorite = async (event) => {
+    try {
+      const token = localStorage.getItem('token');
+      const isFav = favorites.has(event._id);
+
+      if (isFav) {
+        // Remove from favorites
+        const response = await fetch(`http://localhost:5000/api/favorites/${event._id}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (response.ok) {
+          const newFavorites = new Set(favorites);
+          newFavorites.delete(event._id);
+          setFavorites(newFavorites);
+          
+          // Show notification
+          const notification = document.createElement('div');
+          notification.textContent = '⭐ Removed from favorites!';
+          notification.style.cssText = 'position: fixed; top: 20px; right: 20px; background: #dc3545; color: white; padding: 1rem 2rem; border-radius: 8px; z-index: 10000; box-shadow: 0 4px 6px rgba(0,0,0,0.1);';
+          document.body.appendChild(notification);
+          setTimeout(() => notification.remove(), 3000);
+        }
+      } else {
+        // Add to favorites
+        const response = await fetch('http://localhost:5000/api/favorites', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ event_id: event._id })
+        });
+
+        if (response.ok) {
+          const newFavorites = new Set(favorites);
+          newFavorites.add(event._id);
+          setFavorites(newFavorites);
+          
+          // Show notification
+          const notification = document.createElement('div');
+          notification.textContent = '⭐ Added to favorites!';
+          notification.style.cssText = 'position: fixed; top: 20px; right: 20px; background: #28a745; color: white; padding: 1rem 2rem; border-radius: 8px; z-index: 10000; box-shadow: 0 4px 6px rgba(0,0,0,0.1);';
+          document.body.appendChild(notification);
+          setTimeout(() => notification.remove(), 3000);
+        }
+      }
+    } catch (err) {
+      console.error('Error toggling favorite:', err);
+      alert('Failed to update favorites. Please try again.');
+    }
+  };
+
+  // NEW: Check if event is in favorites
+  const isFavorite = (eventId) => {
+    return favorites.has(eventId);
+  };
+
   // Load user data and auto-fill form + load registered events from localStorage
   useEffect(() => {
     const user = getUser();
@@ -250,6 +361,9 @@ export default function ProfessorEvents() {
         }
       }
     }
+
+    // NEW: Load favorites
+    loadFavorites();
   }, []);
 
   useEffect(() => {
@@ -658,7 +772,9 @@ export default function ProfessorEvents() {
           <ul className="sidebar-menu">
             <li><Link href="/professor">🏠 Dashboard</Link></li>
             <li><Link href="/professor/events">📅 Events</Link></li>
+            <li><Link href="/professor/favorites">⭐ My Favorites</Link></li>
             <li><Link href="/professor/workshops">🎨 My Workshops</Link></li>
+            <li><Link href="/professor/payment-history">💰 Payment History</Link></li>
             <li><Link href="/professor/gym">💪 Gym Schedule</Link></li>
             <li><Link href="/professor/profile">👤 Profile</Link></li>
           </ul>
@@ -1064,6 +1180,8 @@ export default function ProfessorEvents() {
                         event={ev}
                         onViewDetails={handleViewDetails}
                         isRegistered={isAlreadyRegistered(ev)}
+                        isFavorite={isFavorite(ev._id)}
+                        onToggleFavorite={toggleFavorite}
                       />
                     ))}
                   </div>
@@ -1128,6 +1246,8 @@ export default function ProfessorEvents() {
                             event={ev}
                             onViewDetails={handleViewDetails}
                             isRegistered={true}
+                            isFavorite={isFavorite(ev._id)}
+                            onToggleFavorite={toggleFavorite}
                           />
                         ))}
                       </div>
@@ -1154,6 +1274,8 @@ export default function ProfessorEvents() {
                             event={ev}
                             onViewDetails={handleViewDetails}
                             isRegistered={true}
+                            isFavorite={isFavorite(ev._id)}
+                            onToggleFavorite={toggleFavorite}
                           />
                         ))}
                       </div>
@@ -1893,6 +2015,7 @@ export default function ProfessorEvents() {
                               color: 'white',
                               transition: 'all 0.3s',
                               opacity: registrationLoading ? 0.6 : 1
+                           
                             }}
                             onMouseOver={(e) => !registrationLoading && (e.target.style.background = '#218838')}
                             onMouseOut={(e) => !registrationLoading && (e.target.style.background = '#28a745')}

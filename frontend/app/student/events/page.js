@@ -13,8 +13,9 @@ export default function BrowseEventsPage() {
   const [filteredEvents, setFilteredEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [sortOrder, setSortOrder] = useState('desc'); // 'desc' for newest first, 'asc' for oldest first
+  const [sortOrder, setSortOrder] = useState('desc');
   const [registering, setRegistering] = useState(null);
+  const [favorites, setFavorites] = useState(new Set()); // NEW: Track favorites
   
   // Payment modal states
   const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -30,6 +31,7 @@ export default function BrowseEventsPage() {
   // Fetch events when component mounts
   useEffect(() => {
     fetchEvents();
+    loadFavorites(); // NEW: Load favorites on mount
   }, []);
 
   const fetchEvents = async () => {
@@ -49,6 +51,93 @@ export default function BrowseEventsPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  // NEW: Load user's favorites
+  const loadFavorites = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+
+      const response = await fetch('http://localhost:5000/api/favorites', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const favoriteEvents = await response.json();
+        const favoriteIds = new Set(favoriteEvents.map(event => event._id));
+        setFavorites(favoriteIds);
+      }
+    } catch (err) {
+      console.error('Error loading favorites:', err);
+    }
+  };
+
+  // NEW: Toggle favorite status
+  const toggleFavorite = async (event) => {
+    try {
+      const token = localStorage.getItem('token');
+      const isFav = favorites.has(event._id);
+
+      if (isFav) {
+        // Remove from favorites
+        const response = await fetch(`http://localhost:5000/api/favorites/${event._id}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (response.ok) {
+          const newFavorites = new Set(favorites);
+          newFavorites.delete(event._id);
+          setFavorites(newFavorites);
+          
+          // Show notification
+          const notification = document.createElement('div');
+          notification.textContent = '⭐ Removed from favorites!';
+          notification.style.cssText = 'position: fixed; top: 20px; right: 20px; background: #dc3545; color: white; padding: 1rem 2rem; border-radius: 8px; z-index: 10000; box-shadow: 0 4px 6px rgba(0,0,0,0.1);';
+          document.body.appendChild(notification);
+          setTimeout(() => notification.remove(), 3000);
+        }
+      } else {
+        // Add to favorites
+        const response = await fetch('http://localhost:5000/api/favorites', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ event_id: event._id })
+        });
+
+        if (response.ok) {
+          const newFavorites = new Set(favorites);
+          newFavorites.add(event._id);
+          setFavorites(newFavorites);
+          
+          // Show notification
+          const notification = document.createElement('div');
+          notification.textContent = '⭐ Added to favorites!';
+          notification.style.cssText = 'position: fixed; top: 20px; right: 20px; background: #28a745; color: white; padding: 1rem 2rem; border-radius: 8px; z-index: 10000; box-shadow: 0 4px 6px rgba(0,0,0,0.1);';
+          document.body.appendChild(notification);
+          setTimeout(() => notification.remove(), 3000);
+        }
+      }
+    } catch (err) {
+      console.error('Error toggling favorite:', err);
+      alert('Failed to update favorites. Please try again.');
+    }
+  };
+
+  // NEW: Check if event is in favorites
+  const isFavorite = (eventId) => {
+    return favorites.has(eventId);
   };
 
   // Format date with time
@@ -303,6 +392,7 @@ export default function BrowseEventsPage() {
           <ul className="sidebar-menu">
             <li><Link href="/student">🏠 Dashboard</Link></li>
             <li><Link href="/student/events">📅 Browse Events</Link></li>
+            <li><Link href="/student/favorites">⭐ My Favorites</Link></li>
             <li><Link href="/student/my-registrations">🎫 My Registrations</Link></li>
             <li><Link href="/student/facilities">🏢 Facilities</Link></li>
             <li><Link href="/student/gym/schedule">💪 Gym Schedule</Link></li>
@@ -686,23 +776,46 @@ export default function BrowseEventsPage() {
                     </div>
                     
                     <div className="event-actions">
-                      {event.registration_open && !event.is_full ? (
+                      {/* NEW: Favorite button and Register button side by side */}
+                      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                        {event.registration_open && !event.is_full ? (
+                          <button 
+                            className="register-btn"
+                            onClick={() => handleRegister(event)}
+                            disabled={registering === event._id}
+                            style={{ flex: 1 }}
+                          >
+                            {registering === event._id ? 'Registering...' : 'Register Now'}
+                          </button>
+                        ) : event.is_full ? (
+                          <div className="event-full-notice" style={{ flex: 1, textAlign: 'center' }}>
+                            This event is full
+                          </div>
+                        ) : (
+                          <div className="registration-closed-notice" style={{ flex: 1, textAlign: 'center' }}>
+                            Registration closed
+                          </div>
+                        )}
+                        
+                        {/* NEW: Favorite button */}
                         <button 
-                          className="register-btn"
-                          onClick={() => handleRegister(event)}
-                          disabled={registering === event._id}
+                          onClick={() => toggleFavorite(event)}
+                          style={{
+                            padding: '0.5rem 1rem',
+                            backgroundColor: isFavorite(event._id) ? '#ffd700' : '#fff',
+                            color: isFavorite(event._id) ? '#000' : '#666',
+                            border: '2px solid #ffd700',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            fontSize: '1.2rem',
+                            transition: 'all 0.3s ease',
+                            minWidth: '50px'
+                          }}
+                          title={isFavorite(event._id) ? 'Remove from favorites' : 'Add to favorites'}
                         >
-                          {registering === event._id ? 'Registering...' : 'Register Now'}
+                          {isFavorite(event._id) ? '⭐' : '☆'}
                         </button>
-                      ) : event.is_full ? (
-                        <div className="event-full-notice">
-                          This event is full
-                        </div>
-                      ) : (
-                        <div className="registration-closed-notice">
-                          Registration closed
-                        </div>
-                      )}
+                      </div>
                     </div>
                   </div>
                 ))

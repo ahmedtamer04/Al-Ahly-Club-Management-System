@@ -66,6 +66,7 @@ export default function StaffProfilePage() {
             <ul className="sidebar-menu">
               <li><Link href="/staff">🏠 Dashboard</Link></li>
               <li><Link href="/staff/events">📅 Browse Events</Link></li>
+              <li><Link href="/staff/favorites">⭐ My Favorites</Link></li>
               <li><Link href="/staff/gym/schedule">💪 Gym Schedule</Link></li>
               <li><Link href="/staff/profile">👤 Profile</Link></li>
             </ul>
@@ -96,6 +97,7 @@ export default function StaffProfilePage() {
           <ul className="sidebar-menu">
             <li><Link href="/staff">🏠 Dashboard</Link></li>
             <li><Link href="/staff/events">📅 Browse Events</Link></li>
+            <li><Link href="/staff/favorites">⭐ My Favorites</Link></li>
             <li><Link href="/staff/gym/schedule">💪 Gym Schedule</Link></li>
             <li><Link href="/staff/profile">👤 Profile</Link></li>
           </ul>
