@@ -95,6 +95,8 @@ export default function ApplyBoothPage() {
             <li><Link href="/vendor/applications">📋 My Applications</Link></li>
             <li><Link href="/vendor/bazaars">🎪 Browse Bazaars</Link></li>
             <li><Link href="/vendor/booths">🏪 My Booths</Link></li>
+            <li><Link href="/vendor/polls">📊 Polls</Link></li>
+            <li><Link href="/vendor/loyalty-program">🎁 Loyalty Program</Link></li>
             <li><Link href="/vendor/profile">👤 Profile</Link></li>
           </ul>
         </aside>

@@ -9,11 +9,16 @@ export default function GymSchedulePage() {
   const [selectedMonth, setSelectedMonth] = useState('2025-10');
   const [selectedType, setSelectedType] = useState('');
   const [sessions, setSessions] = useState([]);
+  const [myRegistrations, setMyRegistrations] = useState([]);
   const [loading, setLoading] = useState(false);
   const [selectedSession, setSelectedSession] = useState(null);
+  const [registering, setRegistering] = useState({});
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
 
   useEffect(() => {
     fetchSessions();
+    fetchMyRegistrations();
   }, [selectedMonth, selectedType]);
 
   const fetchSessions = async () => {
@@ -31,6 +36,67 @@ export default function GymSchedulePage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchMyRegistrations = async () => {
+    try {
+      const res = await gymAPI.getMyRegistrations();
+      setMyRegistrations(res.registrations || []);
+    } catch (err) {
+      console.error('Failed to fetch registrations:', err);
+      setMyRegistrations([]);
+    }
+  };
+
+  const handleRegister = async (sessionId) => {
+    setRegistering(prev => ({ ...prev, [sessionId]: true }));
+    setError('');
+    setSuccess('');
+
+    try {
+      await gymAPI.register(sessionId);
+      setSuccess('Successfully registered for gym session!');
+      fetchMyRegistrations();
+      fetchSessions(); // Refresh to update capacity
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to register for session');
+    } finally {
+      setRegistering(prev => ({ ...prev, [sessionId]: false }));
+    }
+  };
+
+  const handleCancelRegistration = async (registrationId) => {
+    if (!confirm('Are you sure you want to cancel your registration?')) {
+      return;
+    }
+
+    try {
+      await gymAPI.cancelRegistration(registrationId);
+      setSuccess('Registration cancelled successfully!');
+      fetchMyRegistrations();
+      fetchSessions();
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to cancel registration');
+    }
+  };
+
+  const isRegistered = (sessionId) => {
+    return myRegistrations.some(reg => 
+      reg.session._id === sessionId && reg.status === 'registered'
+    );
+  };
+
+  const getRegistrationId = (sessionId) => {
+    const reg = myRegistrations.find(reg => 
+      reg.session._id === sessionId && reg.status === 'registered'
+    );
+    return reg?._id;
+  };
+
+  const getCurrentParticipants = async (sessionId) => {
+    // This would need to be added to the backend
+    // For now, we'll just show maxParticipants
+    return null;
   };
 
   const formatDate = (dateString) => {
@@ -98,13 +164,45 @@ export default function GymSchedulePage() {
             <li><Link href="/student/events">📅 Browse Events</Link></li>
             <li><Link href="/student/my-registrations">🎫 My Registrations</Link></li>
             <li><Link href="/student/facilities">🏢 Facilities</Link></li>
-            <li><Link href="/student/gym/schedule">💪 Gym Schedule</Link></li>
+            <li><Link href="/student/gym/schedule" className="active">💪 Gym Schedule</Link></li>
+            <li><Link href="/student/courts/reserve">🏀 Reserve Court</Link></li>
+            <li><Link href="/polls-voting">📊 Vote for Vendors</Link></li>
+            <li><Link href="/loyalty-program">🎁 Loyalty Program</Link></li>
             <li><Link href="/student/profile">👤 Profile</Link></li>
           </ul>
         </aside>
 
         <main className="main-content">
           <h1>Gym Schedule 🏋️</h1>
+          <p style={{ color: '#666', marginBottom: '2rem' }}>
+            View gym sessions and register to attend. You'll receive email notifications if a session you're registered for is cancelled or edited.
+          </p>
+
+          {error && (
+            <div style={{
+              padding: '1rem',
+              marginBottom: '1rem',
+              background: '#fee',
+              color: '#dc3545',
+              borderRadius: '8px',
+              border: '1px solid #dc3545'
+            }}>
+              {error}
+            </div>
+          )}
+
+          {success && (
+            <div style={{
+              padding: '1rem',
+              marginBottom: '1rem',
+              background: '#d4edda',
+              color: '#155724',
+              borderRadius: '8px',
+              border: '1px solid #28a745'
+            }}>
+              ✅ {success}
+            </div>
+          )}
 
           <section className="section">
             <div className="form-row">
@@ -165,39 +263,101 @@ export default function GymSchedulePage() {
                           <th>Time</th>
                           <th>Type</th>
                           <th>Duration</th>
-                          <th>Max Participants</th>
+                          <th>Status</th>
                           <th>Actions</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {sessions.map((session) => (
-                          <tr key={session._id}>
-                            <td>{formatDate(session.date)}</td>
-                            <td>{session.time}</td>
-                            <td>
-                              <span style={{
-                                padding: '0.25rem 0.75rem',
-                                borderRadius: '12px',
-                                background: getSessionTypeColor(session.type),
-                                color: 'white',
-                                fontSize: '0.85rem',
-                                fontWeight: '600'
-                              }}>
-                                {session.type}
-                              </span>
-                            </td>
-                            <td>{session.duration} min</td>
-                            <td>{session.maxParticipants}</td>
-                            <td>
-                              <button
-                                onClick={() => setSelectedSession(session)}
-                                className="btn-secondary btn-sm"
-                              >
-                                View Details
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
+                        {sessions.map((session) => {
+                          const registered = isRegistered(session._id);
+                          const registrationId = getRegistrationId(session._id);
+                          const isPast = new Date(session.date) < new Date();
+                          const isCancelled = session.status === 'cancelled';
+                          
+                          return (
+                            <tr key={session._id} style={{
+                              opacity: isPast || isCancelled ? 0.6 : 1
+                            }}>
+                              <td>{formatDate(session.date)}</td>
+                              <td>{session.time}</td>
+                              <td>
+                                <span style={{
+                                  padding: '0.25rem 0.75rem',
+                                  borderRadius: '12px',
+                                  background: getSessionTypeColor(session.type),
+                                  color: 'white',
+                                  fontSize: '0.85rem',
+                                  fontWeight: '600'
+                                }}>
+                                  {session.type}
+                                </span>
+                              </td>
+                              <td>{session.duration} min</td>
+                              <td>
+                                {isCancelled ? (
+                                  <span style={{
+                                    padding: '4px 8px',
+                                    borderRadius: '4px',
+                                    background: '#dc3545',
+                                    color: 'white',
+                                    fontSize: '0.85rem'
+                                  }}>
+                                    Cancelled
+                                  </span>
+                                ) : registered ? (
+                                  <span style={{
+                                    padding: '4px 8px',
+                                    borderRadius: '4px',
+                                    background: '#28a745',
+                                    color: 'white',
+                                    fontSize: '0.85rem'
+                                  }}>
+                                    ✓ Registered
+                                  </span>
+                                ) : (
+                                  <span style={{
+                                    padding: '4px 8px',
+                                    borderRadius: '4px',
+                                    background: '#6c757d',
+                                    color: 'white',
+                                    fontSize: '0.85rem'
+                                  }}>
+                                    Available
+                                  </span>
+                                )}
+                              </td>
+                              <td>
+                                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                  <button
+                                    onClick={() => setSelectedSession(session)}
+                                    className="btn-secondary btn-sm"
+                                  >
+                                    Details
+                                  </button>
+                                  {!isPast && !isCancelled && (
+                                    registered ? (
+                                      <button
+                                        onClick={() => handleCancelRegistration(registrationId)}
+                                        className="btn-secondary btn-sm"
+                                        style={{ background: '#dc3545', color: 'white' }}
+                                      >
+                                        Cancel
+                                      </button>
+                                    ) : (
+                                      <button
+                                        onClick={() => handleRegister(session._id)}
+                                        disabled={registering[session._id]}
+                                        className="btn-primary btn-sm"
+                                      >
+                                        {registering[session._id] ? 'Registering...' : 'Register'}
+                                      </button>
+                                    )
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>
@@ -245,10 +405,49 @@ export default function GymSchedulePage() {
                       <strong style={{color: '#666'}}>👥 Max Participants:</strong>
                       <p style={{margin: '0.25rem 0 0 0', fontSize: '1.1rem'}}>{selectedSession.maxParticipants} people</p>
                     </div>
+                    {selectedSession.status === 'cancelled' && (
+                      <div style={{
+                        padding: '1rem',
+                        background: '#fee',
+                        borderRadius: '8px',
+                        marginTop: '1rem',
+                        border: '1px solid #dc3545'
+                      }}>
+                        <p style={{ margin: 0, color: '#dc3545', fontWeight: '600' }}>
+                          ⚠️ This session has been cancelled
+                        </p>
+                      </div>
+                    )}
                   </div>
 
-                  <div style={{marginTop: '2rem', textAlign: 'right'}}>
-                    <button onClick={() => setSelectedSession(null)} className="btn-primary">
+                  <div style={{marginTop: '2rem', display: 'flex', gap: '1rem', justifyContent: 'flex-end'}}>
+                    {!isRegistered(selectedSession._id) && 
+                     selectedSession.status !== 'cancelled' && 
+                     new Date(selectedSession.date) >= new Date() && (
+                      <button 
+                        onClick={() => {
+                          handleRegister(selectedSession._id);
+                          setSelectedSession(null);
+                        }}
+                        disabled={registering[selectedSession._id]}
+                        className="btn-primary"
+                      >
+                        {registering[selectedSession._id] ? 'Registering...' : 'Register for Session'}
+                      </button>
+                    )}
+                    {isRegistered(selectedSession._id) && (
+                      <button
+                        onClick={() => {
+                          handleCancelRegistration(getRegistrationId(selectedSession._id));
+                          setSelectedSession(null);
+                        }}
+                        className="btn-secondary"
+                        style={{ background: '#dc3545', color: 'white' }}
+                      >
+                        Cancel Registration
+                      </button>
+                    )}
+                    <button onClick={() => setSelectedSession(null)} className="btn-secondary">
                       Close
                     </button>
                   </div>

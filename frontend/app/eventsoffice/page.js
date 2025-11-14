@@ -100,10 +100,12 @@ export default function EventsOfficeDashboard() {
             <li><Link href="/eventsoffice/conferences/create">➕ Create Conference</Link></li>
             <li><Link href="/eventsoffice/trips">✈️ Trips</Link></li>
             <li><Link href="/eventsoffice/bazaars">🛍️ Bazaars</Link></li>
+            <li><Link href="/eventsoffice/polls">📊 Polls</Link></li>
             <li><Link href="/eventsoffice/gym">💪 Gym Sessions</Link></li>
             <li><Link href="/eventsoffice/facilities">🏢 Facilities</Link></li>
             <li><Link href="/eventsoffice/vendors">👥 Vendor Requests</Link></li>
             <li><Link href="/eventsoffice/registrations">📋 Registrations</Link></li>
+            <li><Link href="/loyalty-program">🎁 Loyalty Program</Link></li>
             <li><Link href="/eventsoffice/profile">👤 Profile</Link></li>
           </ul>
         </aside>

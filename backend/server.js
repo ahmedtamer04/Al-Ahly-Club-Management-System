@@ -22,6 +22,7 @@ import eventRoutes from "./routes/eventRoutes.js"; // ← Add this
 import favoriteRoutes from "./routes/favoriteRoutes.js";
 import paymentRoutes from "./routes/paymentRoutes.js"; // ← Add payment routes
 import certificateRoutes from "./routes/certificateRoutes.js"; // ← Add certificate routes
+import pollRoutes from "./routes/pollRoutes.js"; // ← Add poll routes
 
 
 const app = express();
@@ -81,6 +82,7 @@ app.use("/api/events", eventRoutes);
 app.use("/api/favorites", favoriteRoutes);
 app.use("/api/payment", paymentRoutes); // ← Add payment routes
 app.use("/api/certificates", certificateRoutes); // ← Add certificate routes
+app.use("/api/polls", pollRoutes); // ← Add poll routes
 
 
 

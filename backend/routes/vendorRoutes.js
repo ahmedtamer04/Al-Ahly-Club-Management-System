@@ -1,5 +1,5 @@
 import express from "express";
-import { auth, requireVendor, requireAdmin } from "../middleware/auth.js";
+import { auth, requireVendor, requireAdmin, requireStudentOrAbove } from "../middleware/auth.js";
 import {
   getUpcomingBazaars,
   applyToBazaar,
@@ -10,7 +10,16 @@ import {
   getMyApplications,
   cancelApplication,
   getBoothAvailability,
-  getAllVendorApplications
+  getAllVendorApplications,
+  payVendorApplicationWithWallet,
+  createVendorStripePayment,
+  confirmVendorStripePayment,
+  getVendorPaymentInfo,
+  sendQRCodesToVendor,
+  applyToLoyaltyProgram,
+  getLoyaltyProgramStatus,
+  cancelLoyaltyProgram,
+  getAllLoyaltyProgramVendors
 } from "../controllers/vendorController.js";
 
 const router = express.Router();
@@ -46,11 +55,42 @@ router.patch("/applications/:applicationId/cancel", auth, requireVendor, cancelA
 // 9. Get booth availability for platform map
 router.get("/booth-availability", auth, requireVendor, getBoothAvailability);
 
+// 10. Get payment info for accepted application
+router.get("/applications/:applicationId/payment", auth, requireVendor, getVendorPaymentInfo);
+
+// 11. Pay vendor application fee with wallet
+router.post("/pay/wallet", auth, requireVendor, payVendorApplicationWithWallet);
+
+// 12. Create Stripe payment intent for vendor application
+router.post("/pay/stripe/create", auth, requireVendor, createVendorStripePayment);
+
+// 13. Confirm Stripe payment for vendor application
+router.post("/pay/stripe/confirm", auth, requireVendor, confirmVendorStripePayment);
+
+// 14. Send QR codes for registered visitors
+router.post("/applications/:application_id/send-qr-codes", auth, requireVendor, sendQRCodesToVendor);
+
+// 15. Apply to GUC Loyalty Program
+router.post("/loyalty-program/apply", auth, requireVendor, applyToLoyaltyProgram);
+
+// 16. Get loyalty program status
+router.get("/loyalty-program/status", auth, requireVendor, getLoyaltyProgramStatus);
+
+// 17. Cancel loyalty program participation
+router.post("/loyalty-program/cancel", auth, requireVendor, cancelLoyaltyProgram);
+
+// ========================================
+// PUBLIC ROUTES (For Students, Staff, TA, Professor, EventsOffice, Admin)
+// ========================================
+
+// 18. Get all active loyalty program vendors (Public view)
+router.get("/loyalty-program/vendors", auth, requireStudentOrAbove, getAllLoyaltyProgramVendors);
+
 // ========================================
 // ADMIN ROUTES (Get all vendor applications)
 // ========================================
 
-// 10. Get all vendor applications (Admin only)
+// 19. Get all vendor applications (Admin only)
 router.get("/applications/all", auth, requireAdmin, getAllVendorApplications);
 
 export default router;

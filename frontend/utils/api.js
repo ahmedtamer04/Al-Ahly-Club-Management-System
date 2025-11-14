@@ -263,6 +263,32 @@ export const conferenceAPI = {
 export const gymAPI = {
   // GET /api/gym-sessions/schedule
   // Auth: requireStudentOrAbove
+  // Query params: month?, year?, type?
+  // View gym schedule
+  getSchedule: (params = {}) => {
+    const queryString = new URLSearchParams(params).toString();
+    return api.get(`/gym-sessions/schedule${queryString ? `?${queryString}` : ''}`);
+  },
+
+  // POST /api/gym-sessions/register/:sessionId
+  // Auth: requireStudentOrAbove
+  // Register for a gym session
+  register: (sessionId) => api.post(`/gym-sessions/register/${sessionId}`, {}),
+
+  // GET /api/gym-sessions/my-registrations
+  // Auth: requireStudentOrAbove
+  // Get user's gym session registrations
+  getMyRegistrations: () => api.get('/gym-sessions/my-registrations'),
+
+  // DELETE /api/gym-sessions/registrations/:registrationId
+  // Auth: requireStudentOrAbove
+  // Cancel gym session registration
+  cancelRegistration: (registrationId) => api.delete(`/gym-sessions/registrations/${registrationId}`)
+};
+
+export const gymSessionAPI = {
+  // GET /api/gym-sessions/schedule
+  // Auth: requireStudentOrAbove
   // Query params: month, year, type
   getSchedule: (params = {}) => {
     const queryString = new URLSearchParams(params).toString();
@@ -281,11 +307,53 @@ export const gymAPI = {
   // PATCH /api/gym-sessions/cancel/:id
   // Auth: requireAdminOrEventsOffice
   cancel: (id) => api.patch(`/gym-sessions/cancel/${id}`, {}),
+
+  // POST /api/gym-sessions/register/:sessionId
+  // Auth: requireStudentOrAbove
+  // Register for a gym session
+  register: (sessionId) => api.post(`/gym-sessions/register/${sessionId}`, {}),
+
+  // GET /api/gym-sessions/my-registrations
+  // Auth: requireStudentOrAbove
+  // Get user's gym session registrations
+  getMyRegistrations: () => api.get('/gym-sessions/my-registrations'),
+
+  // DELETE /api/gym-sessions/registrations/:registrationId
+  // Auth: requireStudentOrAbove
+  // Cancel gym session registration
+  cancelRegistration: (registrationId) => api.delete(`/gym-sessions/registrations/${registrationId}`)
 };
 
 // ================================
 // FACILITY APIs (EventsOffice can add, Students can view)
 // ================================
+
+export const courtReservationAPI = {
+  // GET /api/facilities/courts/available
+  // Auth: requireStudent
+  // Query params: sport?, date?
+  // Get available courts with free time slots
+  getAvailableCourts: (params = {}) => {
+    const queryString = new URLSearchParams(params).toString();
+    return api.get(`/facilities/courts/available${queryString ? `?${queryString}` : ''}`);
+  },
+
+  // POST /api/facilities/courts/reserve
+  // Auth: requireStudent
+  // Body: { facility_id, reservation_date, reservation_time }
+  // Create court reservation
+  createReservation: (data) => api.post('/facilities/courts/reserve', data),
+
+  // GET /api/facilities/courts/my-reservations
+  // Auth: requireStudent
+  // Get student's court reservations
+  getMyReservations: () => api.get('/facilities/courts/my-reservations'),
+
+  // DELETE /api/facilities/courts/reservations/:reservationId
+  // Auth: requireStudent
+  // Cancel court reservation
+  cancelReservation: (reservationId) => api.delete(`/facilities/courts/reservations/${reservationId}`)
+};
 
 export const facilityAPI = {
   // GET /api/facilities/getAll
@@ -412,8 +480,152 @@ export const vendorAPI = {
   // Query params: start_date (YYYY-MM-DD), duration_weeks (1-4)
   // Returns occupied booth positions
   getBoothAvailability: (startDate, durationWeeks) => {
-    return api.get(`/vendor/booth-availability?start_date=${startDate}&duration_weeks=${durationWeeks}`);
+    const queryString = `?start_date=${startDate}&duration_weeks=${durationWeeks}`;
+    return api.get(`/vendor/booth-availability${queryString}`);
   },
+
+  // GET /api/vendor/applications/:applicationId/payment
+  // Auth: requireVendor
+  // Returns payment information for accepted application
+  getPaymentInfo: (applicationId) => api.get(`/vendor/applications/${applicationId}/payment`),
+
+  // POST /api/vendor/pay/wallet
+  // Auth: requireVendor
+  // Body: { application_id }
+  // Pay participation fee with wallet
+  payWithWallet: (applicationId) => api.post('/vendor/pay/wallet', { application_id: applicationId }),
+
+  // POST /api/vendor/pay/stripe/create
+  // Auth: requireVendor
+  // Body: { application_id }
+  // Create Stripe payment intent
+  createStripePayment: (applicationId) => api.post('/vendor/pay/stripe/create', { application_id: applicationId }),
+
+  // POST /api/vendor/pay/stripe/confirm
+  // Auth: requireVendor
+  // Body: { payment_id, payment_intent_id }
+  // Confirm Stripe payment
+  confirmStripePayment: (paymentId, paymentIntentId) => api.post('/vendor/pay/stripe/confirm', {
+    payment_id: paymentId,
+    payment_intent_id: paymentIntentId
+  }),
+
+  // POST /api/vendor/applications/:application_id/send-qr-codes
+  // Auth: requireVendor
+  // Send QR codes for registered visitors
+  sendQRCodes: (applicationId) => api.post(`/vendor/applications/${applicationId}/send-qr-codes`, {}),
+
+  // POST /api/vendor/loyalty-program/apply
+  // Auth: requireVendor
+  // Body: { discount_rate, promo_code, terms_and_conditions }
+  // Apply to GUC Loyalty Program
+  applyToLoyaltyProgram: (data) => api.post('/vendor/loyalty-program/apply', data),
+
+  // GET /api/vendor/loyalty-program/status
+  // Auth: requireVendor
+  // Get loyalty program status
+  getLoyaltyProgramStatus: () => api.get('/vendor/loyalty-program/status'),
+
+  // POST /api/vendor/loyalty-program/cancel
+  // Auth: requireVendor
+  // Body: { cancellation_reason? }
+  // Cancel loyalty program participation
+  cancelLoyaltyProgram: (reason) => api.post('/vendor/loyalty-program/cancel', { cancellation_reason: reason })
+};
+
+// ================================
+// PUBLIC APIs (Loyalty Program - For Students, Staff, TA, Professor, EventsOffice, Admin)
+// ================================
+
+export const loyaltyProgramAPI = {
+  // GET /api/vendor/loyalty-program/vendors
+  // Auth: requireStudentOrAbove
+  // Get all active loyalty program vendors
+  getAllLoyaltyVendors: () => api.get('/vendor/loyalty-program/vendors')
+};
+
+// ================================
+// POLL APIs (Events Office & Vendors)
+// ================================
+
+export const pollAPI = {
+  // POST /api/polls/create
+  // Auth: requireEventsOffice
+  // Body: { title, description, start_date, end_date, application_deadline, max_vendors, available_positions }
+  // Create a new poll
+  createPoll: (data) => api.post('/polls/create', data),
+
+  // GET /api/polls/all
+  // Auth: requireEventsOffice
+  // Query params: status?
+  // Get all polls
+  getAllPolls: (params = {}) => {
+    const queryString = new URLSearchParams(params).toString();
+    return api.get(`/polls/all${queryString ? `?${queryString}` : ''}`);
+  },
+
+  // GET /api/polls/:pollId
+  // Auth: requireEventsOffice
+  // Get poll by ID with applications
+  getPollById: (pollId) => api.get(`/polls/${pollId}`),
+
+  // PUT /api/polls/:pollId
+  // Auth: requireEventsOffice
+  // Update poll
+  updatePoll: (pollId, data) => api.put(`/polls/${pollId}`, data),
+
+  // POST /api/polls/:pollId/open
+  // Auth: requireEventsOffice
+  // Open poll (make it available for applications)
+  openPoll: (pollId) => api.post(`/polls/${pollId}/open`, {}),
+
+  // POST /api/polls/:pollId/close
+  // Auth: requireEventsOffice
+  // Body: { selected_vendors: [{ application_id, assigned_position }] }
+  // Close poll and select vendors
+  closePoll: (pollId, data) => api.post(`/polls/${pollId}/close`, data),
+
+  // POST /api/polls/:pollId/cancel
+  // Auth: requireEventsOffice
+  // Body: { cancellation_reason? }
+  // Cancel poll
+  cancelPoll: (pollId, reason) => api.post(`/polls/${pollId}/cancel`, { cancellation_reason: reason }),
+
+  // GET /api/polls/vendor/open
+  // Auth: requireVendor
+  // Get all open polls (for vendors)
+  getOpenPolls: () => api.get('/polls/vendor/open'),
+
+  // POST /api/polls/vendor/:pollId/apply
+  // Auth: requireVendor
+  // Body: { business_name, business_type, business_description, products_offered, contact_phone, contact_email, staff, preferred_booth_size, preferred_positions, notes }
+  // Apply to a poll
+  applyToPoll: (pollId, data) => api.post(`/polls/vendor/${pollId}/apply`, data),
+
+  // GET /api/polls/vendor/applications
+  // Auth: requireVendor
+  // Get vendor's poll applications
+  getMyPollApplications: () => api.get('/polls/vendor/applications'),
+
+  // GET /api/polls/voting/open
+  // Auth: requireStudentOrAbove
+  // Get open polls with applications for voting
+  getPollsForVoting: () => api.get('/polls/voting/open'),
+
+  // POST /api/polls/voting/:pollId/vote/:applicationId
+  // Auth: requireStudentOrAbove
+  // Vote for a vendor application
+  voteForApplication: (pollId, applicationId) => api.post(`/polls/voting/${pollId}/vote/${applicationId}`, {}),
+
+  // DELETE /api/polls/voting/:pollId/vote/:applicationId
+  // Auth: requireStudentOrAbove
+  // Remove vote (unvote)
+  removeVote: (pollId, applicationId) => api.delete(`/polls/voting/${pollId}/vote/${applicationId}`),
+
+  // GET /api/polls/voting/:pollId/my-votes
+  // Auth: requireStudentOrAbove
+  // Get user's votes for a poll
+  getMyVotes: (pollId) => api.get(`/polls/voting/${pollId}/my-votes`)
 };
 
 // ================================

@@ -1,5 +1,10 @@
 import Event from "../models/Events.js";
 import VendorApplication from "../models/VendorApplication.js";
+import VendorLoyaltyProgram from "../models/VendorLoyaltyProgram.js";
+import Payment from "../models/Payment.js";
+import User from "../models/User.js";
+import Stripe from "stripe";
+import { sendVendorPaymentReceipt, sendVendorAcceptanceEmail, sendVendorQRCodes } from "../services/emailService.js";
 
 // Get upcoming bazaars
 export const getUpcomingBazaars = async (req, res) => {
@@ -360,6 +365,10 @@ export const getAcceptedApplications = async (req, res) => {
       _id: app._id,
       kind: app.kind,
       status: app.status,
+      payment_status: app.payment_status,
+      participation_fee: app.participation_fee,
+      payment_deadline: app.payment_deadline,
+      payment_date: app.payment_date,
       booth_size: app.application?.booth_size,
       setup_duration_weeks: app.application?.setup_duration_weeks,
       booth_location: app.application?.booth_location,
@@ -431,6 +440,10 @@ export const getPendingAndRejectedApplications = async (req, res) => {
         _id: app._id,
         kind: app.kind,
         status: app.status,
+        payment_status: app.payment_status,
+        participation_fee: app.participation_fee,
+        payment_deadline: app.payment_deadline,
+        payment_date: app.payment_date,
         booth_size: app.application?.booth_size,
         setup_duration_weeks: app.application?.setup_duration_weeks,
         booth_location: app.application?.booth_location,
@@ -502,6 +515,9 @@ export const getMyApplications = async (req, res) => {
         kind: app.kind,
         status: app.status,
         payment_status: app.payment_status,
+        participation_fee: app.participation_fee,
+        payment_deadline: app.payment_deadline,
+        payment_date: app.payment_date,
         // Business information (for booth events)
         business_name: app.business_name,
         business_type: app.business_type,
@@ -685,6 +701,749 @@ export const getBoothAvailability = async (req, res) => {
     });
   } catch (error) {
     console.error('Error fetching booth availability:', error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Pay vendor application fee with wallet
+export const payVendorApplicationWithWallet = async (req, res) => {
+  try {
+    const { application_id } = req.body;
+
+    if (!application_id) {
+      return res.status(400).json({ message: "Application ID is required" });
+    }
+
+    const application = await VendorApplication.findById(application_id)
+      .populate('vendor_user_id', 'first_name last_name email wallet')
+      .populate('bazaar_id', 'name location start_date');
+
+    if (!application) {
+      return res.status(404).json({ message: "Application not found" });
+    }
+
+    if (application.vendor_user_id._id.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: "Unauthorized" });
+    }
+
+    if (application.status !== 'accepted') {
+      return res.status(400).json({ message: "Application must be accepted before payment" });
+    }
+
+    if (application.payment_status === 'paid') {
+      return res.status(400).json({ message: "Payment already completed" });
+    }
+
+    if (!application.participation_fee || application.participation_fee <= 0) {
+      return res.status(400).json({ message: "No participation fee set for this application" });
+    }
+
+    // Check payment deadline
+    if (application.payment_deadline && new Date() > application.payment_deadline) {
+      return res.status(400).json({ 
+        message: "Payment deadline has passed. Please contact support." 
+      });
+    }
+
+    const user = application.vendor_user_id;
+    const amount = application.participation_fee;
+
+    // Check wallet balance
+    const currentBalance = user.wallet?.balance || 0;
+    if (currentBalance < amount) {
+      return res.status(400).json({ 
+        message: "Insufficient wallet balance",
+        required: amount,
+        available: currentBalance
+      });
+    }
+
+    // Deduct from wallet
+    if (!user.wallet) {
+      user.wallet = { balance: 0, currency: 'USD', transactions: [] };
+    }
+    user.wallet.balance -= amount;
+    user.wallet.transactions.push({
+      type: 'payment',
+      amount: -amount,
+      description: `Vendor participation fee - ${application.kind === 'bazaar' ? application.bazaar_id?.name : 'Booth Event'}`,
+      reference: application_id,
+      payment_method: 'wallet',
+      timestamp: new Date()
+    });
+    await user.save();
+
+    // Create payment record
+    const payment = await Payment.create({
+      user_id: req.user._id,
+      vendor_application_id: application_id,
+      event_id: application.bazaar_id?._id,
+      amount: amount,
+      payment_method: 'wallet',
+      payment_status: 'completed',
+      description: `Vendor participation fee - ${application.kind === 'bazaar' ? application.bazaar_id?.name : 'Booth Event'}`,
+      paid_at: new Date()
+    });
+
+    // Update application payment status
+    application.payment_status = 'paid';
+    application.payment_date = new Date();
+    await application.save();
+
+    // Send payment receipt email (non-blocking)
+    const eventName = application.kind === 'bazaar' 
+      ? application.bazaar_id?.name || 'Bazaar'
+      : 'Booth Event';
+    
+    const locationInfo = application.kind === 'bazaar'
+      ? application.bazaar_id?.location || 'TBA'
+      : `${application.platform_position?.wall?.toUpperCase() || ''} Wall - Slot ${application.platform_position?.slot || 'TBA'}`;
+    
+    const durationInfo = application.kind === 'booth_event'
+      ? `${application.duration_weeks} week(s)`
+      : null;
+
+    sendVendorPaymentReceipt(user.email, {
+      userName: `${user.first_name} ${user.last_name}`,
+      applicationType: application.kind === 'bazaar' ? 'Bazaar' : 'Booth Event',
+      eventName: eventName,
+      location: locationInfo,
+      boothSize: application.application?.booth_size || 'N/A',
+      duration: durationInfo,
+      amount: amount,
+      paymentMethod: 'wallet',
+      transactionId: payment._id.toString(),
+      paymentDate: payment.paid_at,
+      applicationId: application_id
+    }).catch(err => {
+      console.error('Failed to send payment receipt email:', err);
+    });
+
+    res.json({
+      success: true,
+      message: "Payment successful",
+      payment: payment,
+      new_balance: user.wallet.balance,
+      application: {
+        _id: application._id,
+        payment_status: application.payment_status,
+        payment_date: application.payment_date
+      }
+    });
+  } catch (error) {
+    console.error('Error processing vendor payment:', error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Create Stripe payment intent for vendor application
+export const createVendorStripePayment = async (req, res) => {
+  try {
+    const { application_id } = req.body;
+
+    if (!application_id) {
+      return res.status(400).json({ message: "Application ID is required" });
+    }
+
+    const application = await VendorApplication.findById(application_id)
+      .populate('vendor_user_id', 'first_name last_name email')
+      .populate('bazaar_id', 'name location');
+
+    if (!application) {
+      return res.status(404).json({ message: "Application not found" });
+    }
+
+    if (application.vendor_user_id._id.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: "Unauthorized" });
+    }
+
+    if (application.status !== 'accepted') {
+      return res.status(400).json({ message: "Application must be accepted before payment" });
+    }
+
+    if (application.payment_status === 'paid') {
+      return res.status(400).json({ message: "Payment already completed" });
+    }
+
+    if (!application.participation_fee || application.participation_fee <= 0) {
+      return res.status(400).json({ message: "No participation fee set for this application" });
+    }
+
+    // Check payment deadline
+    if (application.payment_deadline && new Date() > application.payment_deadline) {
+      return res.status(400).json({ 
+        message: "Payment deadline has passed. Please contact support." 
+      });
+    }
+
+    const amount = application.participation_fee;
+
+    // Initialize Stripe
+    let stripe = null;
+    if (process.env.STRIPE_SECRET_KEY) {
+      stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+    }
+
+    if (!stripe) {
+      return res.status(500).json({ 
+        message: "Stripe is not configured. Please set STRIPE_SECRET_KEY in environment variables." 
+      });
+    }
+
+    const eventName = application.kind === 'bazaar' 
+      ? application.bazaar_id?.name || 'Bazaar'
+      : 'Booth Event';
+
+    // Create Stripe payment intent
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: Math.round(amount * 100), // Stripe uses cents
+      currency: 'usd',
+      metadata: {
+        application_id: application_id,
+        user_id: req.user._id.toString(),
+        application_type: application.kind,
+        event_name: eventName
+      },
+      automatic_payment_methods: {
+        enabled: true,
+      },
+    });
+
+    // Create pending payment record
+    const payment = await Payment.create({
+      user_id: req.user._id,
+      vendor_application_id: application_id,
+      event_id: application.bazaar_id?._id,
+      amount: amount,
+      payment_method: 'stripe',
+      payment_status: 'pending',
+      description: `Vendor participation fee - ${eventName}`,
+      stripe_payment_intent_id: paymentIntent.id,
+      stripe_client_secret: paymentIntent.client_secret
+    });
+
+    res.json({
+      success: true,
+      message: "Payment intent created",
+      client_secret: paymentIntent.client_secret,
+      payment_id: payment._id,
+      amount: amount
+    });
+  } catch (error) {
+    console.error('Stripe payment error:', error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Confirm Stripe payment for vendor application
+export const confirmVendorStripePayment = async (req, res) => {
+  try {
+    const { payment_id, payment_intent_id } = req.body;
+
+    if (!payment_id) {
+      return res.status(400).json({ message: "Payment ID is required" });
+    }
+
+    const payment = await Payment.findById(payment_id)
+      .populate('vendor_application_id');
+
+    if (!payment) {
+      return res.status(404).json({ message: "Payment not found" });
+    }
+
+    if (payment.user_id.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: "Unauthorized" });
+    }
+
+    if (!payment.vendor_application_id) {
+      return res.status(400).json({ message: "Payment is not linked to a vendor application" });
+    }
+
+    const application = payment.vendor_application_id;
+
+    // Verify payment with Stripe
+    let stripe = null;
+    if (process.env.STRIPE_SECRET_KEY) {
+      stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+    }
+
+    if (stripe && payment_intent_id) {
+      try {
+        const paymentIntent = await stripe.paymentIntents.retrieve(payment_intent_id);
+        
+        if (paymentIntent.status !== 'succeeded') {
+          return res.status(400).json({ 
+            message: "Payment not completed. Status: " + paymentIntent.status 
+          });
+        }
+      } catch (stripeError) {
+        console.error('Stripe verification error:', stripeError);
+        return res.status(500).json({ 
+          message: "Failed to verify payment with Stripe",
+          error: stripeError.message 
+        });
+      }
+    }
+
+    // Mark payment as completed
+    payment.payment_status = 'completed';
+    payment.paid_at = new Date();
+    await payment.save();
+
+    // Update application payment status
+    application.payment_status = 'paid';
+    application.payment_date = new Date();
+    await application.save();
+
+    // Get user for email
+    const user = await User.findById(req.user._id);
+    
+    // Populate application details
+    await application.populate('bazaar_id', 'name location');
+    await application.populate('vendor_user_id', 'first_name last_name email');
+
+    // Send payment receipt email (non-blocking)
+    const eventName = application.kind === 'bazaar' 
+      ? application.bazaar_id?.name || 'Bazaar'
+      : 'Booth Event';
+    
+    const locationInfo = application.kind === 'bazaar'
+      ? application.bazaar_id?.location || 'TBA'
+      : `${application.platform_position?.wall?.toUpperCase() || ''} Wall - Slot ${application.platform_position?.slot || 'TBA'}`;
+    
+    const durationInfo = application.kind === 'booth_event'
+      ? `${application.duration_weeks} week(s)`
+      : null;
+
+    sendVendorPaymentReceipt(user.email, {
+      userName: `${user.first_name} ${user.last_name}`,
+      applicationType: application.kind === 'bazaar' ? 'Bazaar' : 'Booth Event',
+      eventName: eventName,
+      location: locationInfo,
+      boothSize: application.application?.booth_size || 'N/A',
+      duration: durationInfo,
+      amount: payment.amount,
+      paymentMethod: 'stripe',
+      transactionId: payment_intent_id || payment._id.toString(),
+      paymentDate: payment.paid_at,
+      applicationId: application._id.toString()
+    }).catch(err => {
+      console.error('Failed to send payment receipt email:', err);
+    });
+
+    res.json({
+      success: true,
+      message: "Payment confirmed successfully",
+      payment: payment,
+      application: {
+        _id: application._id,
+        payment_status: application.payment_status,
+        payment_date: application.payment_date
+      }
+    });
+  } catch (error) {
+    console.error('Payment confirmation error:', error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Get payment info for accepted applications
+export const getVendorPaymentInfo = async (req, res) => {
+  try {
+    const { application_id } = req.params;
+
+    const application = await VendorApplication.findById(application_id)
+      .populate('bazaar_id', 'name location start_date')
+      .populate('vendor_user_id', 'first_name last_name email');
+
+    if (!application) {
+      return res.status(404).json({ message: "Application not found" });
+    }
+
+    if (application.vendor_user_id._id.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: "Unauthorized" });
+    }
+
+    if (application.status !== 'accepted') {
+      return res.status(400).json({ message: "Application must be accepted to view payment info" });
+    }
+
+    // Get payment if exists
+    const payment = await Payment.findOne({ vendor_application_id: application_id })
+      .sort({ createdAt: -1 });
+
+    const locationInfo = application.kind === 'bazaar'
+      ? application.bazaar_id?.location || 'TBA'
+      : `${application.platform_position?.wall?.toUpperCase() || ''} Wall - Slot ${application.platform_position?.slot || 'TBA'}`;
+    
+    const durationInfo = application.kind === 'booth_event'
+      ? `${application.duration_weeks} week(s)`
+      : null;
+
+    const eventName = application.kind === 'bazaar' 
+      ? application.bazaar_id?.name || 'Bazaar'
+      : 'Booth Event';
+
+    res.json({
+      application: {
+        _id: application._id,
+        kind: application.kind,
+        status: application.status,
+        payment_status: application.payment_status,
+        participation_fee: application.participation_fee,
+        payment_deadline: application.payment_deadline,
+        payment_date: application.payment_date,
+        event_name: eventName,
+        location: locationInfo,
+        booth_size: application.application?.booth_size,
+        duration: durationInfo
+      },
+      payment: payment ? {
+        _id: payment._id,
+        amount: payment.amount,
+        payment_method: payment.payment_method,
+        payment_status: payment.payment_status,
+        paid_at: payment.paid_at
+      } : null,
+      days_until_deadline: application.payment_deadline 
+        ? Math.ceil((application.payment_deadline - new Date()) / (1000 * 60 * 60 * 24))
+        : null,
+      is_deadline_passed: application.payment_deadline 
+        ? new Date() > application.payment_deadline
+        : false
+    });
+  } catch (error) {
+    console.error('Error fetching payment info:', error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Send QR codes for registered visitors (can be called when visitors register or manually)
+export const sendQRCodesToVendor = async (req, res) => {
+  try {
+    const { application_id } = req.params;
+
+    const application = await VendorApplication.findById(application_id)
+      .populate('vendor_user_id', 'first_name last_name email')
+      .populate('bazaar_id', 'name location');
+
+    if (!application) {
+      return res.status(404).json({ message: "Application not found" });
+    }
+
+    if (application.status !== 'accepted') {
+      return res.status(400).json({ message: "Application must be accepted to send QR codes" });
+    }
+
+    // Get event ID (either from bazaar_id or find created booth event)
+    let eventId = application.bazaar_id?._id;
+    
+    if (!eventId && application.kind === 'booth_event') {
+      // Find the created booth event
+      const boothEvent = await Event.findOne({
+        type: 'Booth',
+        'booth.vendors.vendor_id': application.vendor_user_id._id
+      }).sort({ createdAt: -1 });
+      
+      if (boothEvent) {
+        eventId = boothEvent._id;
+      }
+    }
+
+    if (!eventId) {
+      return res.status(400).json({ message: "No associated event found for this application" });
+    }
+
+    // Get all registrations for this event
+    const registrations = await Registration.find({
+      event_id: eventId,
+      status: 'registered'
+    }).populate('user_id', 'first_name last_name email');
+
+    if (registrations.length === 0) {
+      return res.status(400).json({ 
+        message: "No registered visitors found for this event",
+        visitors_count: 0
+      });
+    }
+
+    // Prepare visitor data for QR codes
+    const visitors = registrations.map(reg => ({
+      registration_id: reg._id.toString(),
+      name: reg.name || `${reg.user_id?.first_name || ''} ${reg.user_id?.last_name || ''}`.trim(),
+      email: reg.email || reg.user_id?.email || '',
+      vendor_application_id: application_id
+    }));
+
+    const eventName = application.kind === 'bazaar' 
+      ? application.bazaar_id?.name || 'Bazaar'
+      : 'Booth Event';
+    
+    const locationInfo = application.kind === 'bazaar'
+      ? application.bazaar_id?.location || 'TBA'
+      : `${application.platform_position?.wall?.toUpperCase() || ''} Wall - Slot ${application.platform_position?.slot || 'TBA'}`;
+
+    // Send QR codes email (non-blocking)
+    sendVendorQRCodes(application.vendor_user_id.email, {
+      userName: `${application.vendor_user_id.first_name} ${application.vendor_user_id.last_name}`,
+      applicationType: application.kind === 'bazaar' ? 'Bazaar' : 'Booth Event',
+      eventName: eventName,
+      location: locationInfo,
+      visitors: visitors
+    }).catch(err => {
+      console.error('Failed to send QR codes email:', err);
+    });
+
+    res.json({
+      success: true,
+      message: `QR codes sent to vendor for ${visitors.length} registered visitor(s)`,
+      visitors_count: visitors.length,
+      event_name: eventName
+    });
+  } catch (error) {
+    console.error('Error sending QR codes:', error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Apply to GUC Loyalty Program
+export const applyToLoyaltyProgram = async (req, res) => {
+  try {
+    const { discount_rate, promo_code, terms_and_conditions } = req.body;
+
+    // Validate required fields
+    if (!discount_rate || !promo_code || !terms_and_conditions) {
+      return res.status(400).json({ 
+        message: "Discount rate, promo code, and terms & conditions are required" 
+      });
+    }
+
+    // Validate discount rate
+    if (typeof discount_rate !== 'number' || discount_rate < 0 || discount_rate > 100) {
+      return res.status(400).json({ 
+        message: "Discount rate must be a number between 0 and 100" 
+      });
+    }
+
+    // Validate promo code format
+    const promoCodeRegex = /^[A-Z0-9]{4,20}$/;
+    if (!promoCodeRegex.test(promo_code.toUpperCase())) {
+      return res.status(400).json({ 
+        message: "Promo code must be 4-20 alphanumeric characters" 
+      });
+    }
+
+    // Validate terms and conditions length
+    if (terms_and_conditions.trim().length === 0 || terms_and_conditions.length > 2000) {
+      return res.status(400).json({ 
+        message: "Terms and conditions must be between 1 and 2000 characters" 
+      });
+    }
+
+    // Check if vendor already has a loyalty program application
+    const existingApplication = await VendorLoyaltyProgram.findOne({
+      vendor_user_id: req.user._id
+    });
+
+    if (existingApplication) {
+      if (existingApplication.status === 'pending') {
+        return res.status(400).json({ 
+          message: "You already have a pending loyalty program application",
+          application: {
+            _id: existingApplication._id,
+            status: existingApplication.status,
+            applied_at: existingApplication.applied_at
+          }
+        });
+      }
+      
+      if (existingApplication.status === 'active') {
+        return res.status(400).json({ 
+          message: "You are already participating in the GUC Loyalty Program",
+          application: {
+            _id: existingApplication._id,
+            status: existingApplication.status,
+            promo_code: existingApplication.promo_code,
+            discount_rate: existingApplication.discount_rate
+          }
+        });
+      }
+    }
+
+    // Check if promo code is already taken
+    const promoCodeExists = await VendorLoyaltyProgram.findOne({
+      promo_code: promo_code.toUpperCase(),
+      status: { $in: ['pending', 'active'] }
+    });
+
+    if (promoCodeExists) {
+      return res.status(400).json({ 
+        message: "This promo code is already taken. Please choose a different one." 
+      });
+    }
+
+    // Create new loyalty program application
+    const loyaltyApplication = new VendorLoyaltyProgram({
+      vendor_user_id: req.user._id,
+      discount_rate: discount_rate,
+      promo_code: promo_code.toUpperCase(),
+      terms_and_conditions: terms_and_conditions.trim(),
+      status: 'pending'
+    });
+
+    await loyaltyApplication.save();
+
+    await loyaltyApplication.populate('vendor_user_id', 'first_name last_name email vendor_info');
+
+    res.status(201).json({
+      message: "Loyalty program application submitted successfully",
+      application: {
+        _id: loyaltyApplication._id,
+        status: loyaltyApplication.status,
+        discount_rate: loyaltyApplication.discount_rate,
+        promo_code: loyaltyApplication.promo_code,
+        applied_at: loyaltyApplication.applied_at
+      }
+    });
+  } catch (error) {
+    console.error('Error applying to loyalty program:', error);
+    
+    if (error.code === 11000) {
+      if (error.keyPattern?.vendor_user_id) {
+        return res.status(409).json({ 
+          message: "You already have a loyalty program application" 
+        });
+      }
+      if (error.keyPattern?.promo_code) {
+        return res.status(409).json({ 
+          message: "This promo code is already taken. Please choose a different one." 
+        });
+      }
+    }
+
+    if (error.name === 'ValidationError') {
+      const errors = Object.values(error.errors).map(e => e.message);
+      return res.status(400).json({ 
+        message: "Validation failed", 
+        errors 
+      });
+    }
+    
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Get vendor's loyalty program status
+export const getLoyaltyProgramStatus = async (req, res) => {
+  try {
+    const loyaltyProgram = await VendorLoyaltyProgram.findOne({
+      vendor_user_id: req.user._id
+    })
+    .populate('approved_by', 'first_name last_name email role');
+
+    if (!loyaltyProgram) {
+      return res.json({
+        message: "No loyalty program application found",
+        has_application: false,
+        application: null
+      });
+    }
+
+    res.json({
+      message: "Loyalty program status retrieved successfully",
+      has_application: true,
+      application: {
+        _id: loyaltyProgram._id,
+        status: loyaltyProgram.status,
+        discount_rate: loyaltyProgram.discount_rate,
+        promo_code: loyaltyProgram.promo_code,
+        terms_and_conditions: loyaltyProgram.terms_and_conditions,
+        applied_at: loyaltyProgram.applied_at,
+        approved_at: loyaltyProgram.approved_at,
+        cancelled_at: loyaltyProgram.cancelled_at,
+        cancellation_reason: loyaltyProgram.cancellation_reason,
+        approved_by: loyaltyProgram.approved_by ? {
+          name: `${loyaltyProgram.approved_by.first_name} ${loyaltyProgram.approved_by.last_name}`,
+          email: loyaltyProgram.approved_by.email,
+          role: loyaltyProgram.approved_by.role
+        } : null,
+        created_at: loyaltyProgram.createdAt,
+        updated_at: loyaltyProgram.updatedAt
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching loyalty program status:', error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Cancel loyalty program participation
+export const cancelLoyaltyProgram = async (req, res) => {
+  try {
+    const { cancellation_reason } = req.body;
+
+    const loyaltyProgram = await VendorLoyaltyProgram.findOne({
+      vendor_user_id: req.user._id,
+      status: 'active'
+    });
+
+    if (!loyaltyProgram) {
+      return res.status(404).json({ 
+        message: "No active loyalty program participation found" 
+      });
+    }
+
+    // Cancel the participation
+    await loyaltyProgram.cancel(cancellation_reason);
+
+    res.json({
+      message: "Loyalty program participation cancelled successfully",
+      application: {
+        _id: loyaltyProgram._id,
+        status: loyaltyProgram.status,
+        cancelled_at: loyaltyProgram.cancelled_at,
+        cancellation_reason: loyaltyProgram.cancellation_reason
+      }
+    });
+  } catch (error) {
+    console.error('Error cancelling loyalty program:', error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Get all active loyalty program vendors (Public - for Students, Staff, TA, Professor, EventsOffice, Admin)
+export const getAllLoyaltyProgramVendors = async (req, res) => {
+  try {
+    const loyaltyPrograms = await VendorLoyaltyProgram.find({
+      status: 'active'
+    })
+    .populate('vendor_user_id', 'first_name last_name email vendor_info')
+    .sort({ approved_at: -1 }); // Sort by most recently approved first
+
+    const vendors = loyaltyPrograms.map(lp => ({
+      _id: lp._id,
+      vendor: {
+        _id: lp.vendor_user_id._id,
+        name: lp.vendor_user_id.vendor_info?.company_name || 
+              `${lp.vendor_user_id.first_name} ${lp.vendor_user_id.last_name}`,
+        email: lp.vendor_user_id.email,
+        company_name: lp.vendor_user_id.vendor_info?.company_name || null
+      },
+      discount_rate: lp.discount_rate,
+      promo_code: lp.promo_code,
+      terms_and_conditions: lp.terms_and_conditions,
+      approved_at: lp.approved_at,
+      created_at: lp.createdAt
+    }));
+
+    res.json({
+      success: true,
+      message: "Loyalty program vendors retrieved successfully",
+      count: vendors.length,
+      vendors: vendors
+    });
+  } catch (error) {
+    console.error('Error fetching loyalty program vendors:', error);
     res.status(500).json({ message: error.message });
   }
 };

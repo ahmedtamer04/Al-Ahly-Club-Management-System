@@ -4,7 +4,7 @@ import Comment from "../models/Comment.js";
 import Registration from "../models/Registration.js";
 import Event from "../models/Events.js";
 import bcrypt from "bcryptjs";
-import { generateVerificationToken, sendVerificationEmail } from "../services/emailService.js";
+import { generateVerificationToken, sendVerificationEmail, sendVendorAcceptanceEmail } from "../services/emailService.js";
 
 // Create Admin or EventsOffice user
 export const createAdminUser = async (req, res) => {
@@ -725,8 +725,39 @@ export const acceptVendorRequest = async (req, res) => {
       });
     }
 
-    // Use the model's approve method
+    // Use the model's approve method (this sets payment_deadline and participation_fee)
     await application.approve(req.user._id);
+
+    // Reload application to get updated fields
+    await application.populate('vendor_user_id', 'first_name last_name email');
+    await application.populate('bazaar_id', 'name location');
+
+    // Send acceptance email with payment information (non-blocking)
+    const eventName = application.kind === 'bazaar' 
+      ? application.bazaar_id?.name || 'Bazaar'
+      : 'Booth Event';
+    
+    const locationInfo = application.kind === 'bazaar'
+      ? application.bazaar_id?.location || 'TBA'
+      : `${application.platform_position?.wall?.toUpperCase() || ''} Wall - Slot ${application.platform_position?.slot || 'TBA'}`;
+    
+    const durationInfo = application.kind === 'booth_event'
+      ? `${application.duration_weeks} week(s)`
+      : null;
+
+    sendVendorAcceptanceEmail(application.vendor_user_id.email, {
+      userName: `${application.vendor_user_id.first_name} ${application.vendor_user_id.last_name}`,
+      applicationType: application.kind === 'bazaar' ? 'Bazaar' : 'Booth Event',
+      eventName: eventName,
+      location: locationInfo,
+      boothSize: application.application?.booth_size || 'N/A',
+      duration: durationInfo,
+      participationFee: application.participation_fee,
+      paymentDeadline: application.payment_deadline,
+      applicationId: application._id.toString()
+    }).catch(err => {
+      console.error('Failed to send acceptance email:', err);
+    });
 
     // If this is a booth_event application, create an Event entry
     let createdEvent = null;
