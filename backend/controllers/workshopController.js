@@ -179,7 +179,8 @@ export const getPendingWorkshops = async (req, res) => {
   try {
     const pendingWorkshops = await Event.find({
       type: "Workshop",
-      "workshop.approval_status": "pending"
+      // Include both newly submitted and those that have requested revisions
+      "workshop.approval_status": { $in: ["pending", "revision_requested"] }
     })
     .populate('created_by', 'first_name last_name email')
     .sort({ createdAt: -1 });
