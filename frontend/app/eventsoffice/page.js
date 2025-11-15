@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { conferenceAPI, tripAPI, bazaarAPI, registrationAPI } from '@/utils/api';
+import NotificationBell from '@/app/components/NotificationBell';
 import '@/app/dashboard.css';
 
 export default function EventsOfficeDashboard() {
@@ -85,6 +86,7 @@ export default function EventsOfficeDashboard() {
         <div className="nav-container">
           <h1 className="nav-brand">Al-Ahly Events</h1>
           <div className="nav-links">
+            <NotificationBell />
             <span className="nav-user">🎯 Events Office Dashboard</span>
             <Link href="/">Logout</Link>
           </div>
@@ -96,6 +98,7 @@ export default function EventsOfficeDashboard() {
           <ul className="sidebar-menu">
             <li><Link href="/eventsoffice">🏠 Dashboard</Link></li>
             <li><Link href="/eventsoffice/events">📅 View All Events</Link></li>
+            <li><Link href="/eventsoffice/workshops/pending">🎨 Pending Workshops</Link></li>
             <li><Link href="/eventsoffice/conferences">🎓 Conferences</Link></li>
             <li><Link href="/eventsoffice/conferences/create">➕ Create Conference</Link></li>
             <li><Link href="/eventsoffice/trips">✈️ Trips</Link></li>

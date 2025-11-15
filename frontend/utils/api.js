@@ -149,26 +149,57 @@ export const authAPI = {
 };
 
 // ================================
-// WORKSHOP APIs (EventsOffice only)
+// WORKSHOP APIs (Professor & EventsOffice)
 // ================================
 
 export const workshopAPI = {
   // POST /api/workshop/
-  // Auth: requireEventsOffice
+  // Auth: requireProfessor
+  // Create a new workshop (submitted for approval)
   // Required: { name, location, short_description, start_date, end_date, time, full_agenda, 
   //             faculty_responsible, professors_participating, required_budget, funding_source, 
   //             extra_resources, capacity, registration_deadline }
   create: (workshopData) => api.post('/workshop/', workshopData),
 
   // PUT /api/workshop/:id
-  // Auth: requireEventsOffice
-  // Updates workshop fields
+  // Auth: requireProfessor
+  // Updates workshop fields (only before start date)
   edit: (id, updates) => api.put(`/workshop/${id}`, updates),
 
   // GET /api/workshop/my
-  // Auth: requireEventsOffice
-  // Returns workshops created by logged-in user
+  // Auth: requireProfessor
+  // Returns workshops created by logged-in professor
   getMyWorkshops: () => api.get('/workshop/my'),
+
+  // GET /api/workshop/:id/participants
+  // Auth: requireProfessor
+  // Get participants list for a workshop (professor's own workshops only)
+  getParticipants: (id) => api.get(`/workshop/${id}/participants`),
+
+  // GET /api/workshop/pending
+  // Auth: requireAdminOrEventsOffice
+  // Get all pending workshops for review
+  getPending: () => api.get('/workshop/pending'),
+
+  // PATCH /api/workshop/:id/review
+  // Auth: requireAdminOrEventsOffice
+  // Review workshop (accept/reject/request edits)
+  // Body: { action: 'accept' | 'reject' | 'request_edits', rejection_reason?: string, requested_edits?: string }
+  review: (id, action, reason = null) => {
+    const body = { action };
+    if (action === 'reject' && reason) {
+      body.rejection_reason = reason;
+    } else if (action === 'request_edits' && reason) {
+      body.requested_edits = reason;
+    }
+    return api.patch(`/workshop/${id}/review`, body);
+  },
+
+  // PATCH /api/workshop/:id/complete
+  // Auth: requireAdminOrEventsOffice
+  // Mark workshop as completed and send certificates
+  complete: (id, force = false) => 
+    api.patch(`/workshop/${id}/complete${force ? '?force=true' : ''}`, {}),
 };
 
 // ================================
@@ -520,6 +551,38 @@ export const paymentAPI = {
   // Auth: required
   // Get user's payment history with event details
   getPaymentHistory: () => api.get('/payment/history'),
+};
+
+// ================================
+// NOTIFICATION API
+// ================================
+export const notificationAPI = {
+  // GET /api/notifications
+  // Auth: required
+  // Get all notifications for logged-in user
+  // Query: ?unread_only=true (optional)
+  getNotifications: (unreadOnly = false) => 
+    api.get(`/notifications${unreadOnly ? '?unread_only=true' : ''}`),
+
+  // GET /api/notifications/unread-count
+  // Auth: required
+  // Get count of unread notifications
+  getUnreadCount: () => api.get('/notifications/unread-count'),
+
+  // PATCH /api/notifications/:id/read
+  // Auth: required
+  // Mark a specific notification as read
+  markAsRead: (notificationId) => api.patch(`/notifications/${notificationId}/read`, {}),
+
+  // PATCH /api/notifications/mark-all-read
+  // Auth: required
+  // Mark all notifications as read
+  markAllAsRead: () => api.patch('/notifications/mark-all-read', {}),
+
+  // DELETE /api/notifications/:id
+  // Auth: required
+  // Delete a notification
+  deleteNotification: (notificationId) => api.delete(`/notifications/${notificationId}`),
 };
 
 export default api;

@@ -1,7 +1,14 @@
 import Event from "../models/Events.js";
 import Registration from "../models/Registration.js";
+import User from "../models/User.js";
 import { generateCertificate, formatCertificateDate } from "../services/certificateService.js";
 import { sendCertificateEmail } from "../services/emailService.js";
+import { 
+  notifyEventsOfficeWorkshopSubmitted,
+  notifyProfessorWorkshopAccepted,
+  notifyProfessorWorkshopRejected,
+  notifyProfessorEditsRequested
+} from "../services/notificationService.js";
 
 export const createWorkshop = async (req, res) => {
   try {
@@ -51,12 +58,21 @@ export const createWorkshop = async (req, res) => {
         funding_source,
         extra_resources,
         capacity: Number(capacity),
-        registration_deadline: new Date(registration_deadline)
+        registration_deadline: new Date(registration_deadline),
+        approval_status: "pending" // New workshops need approval
       }
     });
 
+    // Notify EventsOffice about new workshop submission
+    try {
+      await notifyEventsOfficeWorkshopSubmitted(workshop, req.user);
+    } catch (notifError) {
+      console.error('Failed to send notification:', notifError);
+      // Don't fail the request if notification fails
+    }
+
     res.status(201).json({
-      message: "Workshop created successfully",
+      message: "Workshop created successfully and submitted for review",
       workshop
     });
 
@@ -151,6 +167,213 @@ export const getMyWorkshops = async (req, res) => {
 
   } catch (err) {
     console.error('Error fetching workshops:', err);
+    res.status(500).json({ message: err.message });
+  }
+};
+
+/**
+ * Get pending workshops for EventsOffice review
+ * GET /api/workshop/pending
+ */
+export const getPendingWorkshops = async (req, res) => {
+  try {
+    const pendingWorkshops = await Event.find({
+      type: "Workshop",
+      // Include both newly submitted and those that have requested revisions
+      "workshop.approval_status": { $in: ["pending", "revision_requested"] }
+    })
+    .populate('created_by', 'first_name last_name email')
+    .sort({ createdAt: -1 });
+
+    res.json({
+      message: "Pending workshops retrieved successfully",
+      workshops: pendingWorkshops,
+      total: pendingWorkshops.length
+    });
+
+  } catch (err) {
+    console.error('Error fetching pending workshops:', err);
+    res.status(500).json({ message: err.message });
+  }
+};
+
+/**
+ * Review a workshop (accept/reject/request edits)
+ * PATCH /api/workshop/:id/review
+ */
+export const reviewWorkshop = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { action, rejection_reason, requested_edits } = req.body;
+
+    // Validate action
+    if (!['accept', 'reject', 'request_edits'].includes(action)) {
+      return res.status(400).json({
+        message: "Invalid action. Must be 'accept', 'reject', or 'request_edits'"
+      });
+    }
+
+    const workshop = await Event.findOne({
+      _id: id,
+      type: "Workshop"
+    }).populate('created_by', 'first_name last_name email');
+
+    if (!workshop) {
+      return res.status(404).json({
+        message: "Workshop not found"
+      });
+    }
+
+    if (workshop.workshop.approval_status !== 'pending' && workshop.workshop.approval_status !== 'revision_requested') {
+      return res.status(400).json({
+        message: `Cannot review workshop. Current status: ${workshop.workshop.approval_status}`
+      });
+    }
+
+    // Update workshop based on action
+    if (action === 'accept') {
+      workshop.workshop.approval_status = 'accepted';
+      workshop.workshop.reviewed_by = req.user._id;
+      workshop.workshop.reviewed_at = new Date();
+      workshop.workshop.requested_edits = undefined;
+      workshop.workshop.rejection_reason = undefined;
+
+      await workshop.save();
+
+      // Notify professor about acceptance
+      try {
+        await notifyProfessorWorkshopAccepted(workshop, req.user);
+      } catch (notifError) {
+        console.error('Failed to send acceptance notification:', notifError);
+      }
+
+      res.json({
+        message: "Workshop accepted and published successfully",
+        workshop
+      });
+
+    } else if (action === 'reject') {
+      if (!rejection_reason || rejection_reason.trim().length === 0) {
+        return res.status(400).json({
+          message: "Rejection reason is required"
+        });
+      }
+
+      workshop.workshop.approval_status = 'rejected';
+      workshop.workshop.rejection_reason = rejection_reason.trim();
+      workshop.workshop.reviewed_by = req.user._id;
+      workshop.workshop.reviewed_at = new Date();
+      workshop.workshop.requested_edits = undefined;
+
+      await workshop.save();
+
+      // Notify professor about rejection
+      try {
+        await notifyProfessorWorkshopRejected(workshop, req.user, rejection_reason);
+      } catch (notifError) {
+        console.error('Failed to send rejection notification:', notifError);
+      }
+
+      res.json({
+        message: "Workshop rejected",
+        workshop
+      });
+
+    } else if (action === 'request_edits') {
+      if (!requested_edits || requested_edits.trim().length === 0) {
+        return res.status(400).json({
+          message: "Requested edits description is required"
+        });
+      }
+
+      workshop.workshop.approval_status = 'revision_requested';
+      workshop.workshop.requested_edits = requested_edits.trim();
+      workshop.workshop.reviewed_by = req.user._id;
+      workshop.workshop.reviewed_at = new Date();
+      workshop.workshop.rejection_reason = undefined;
+
+      await workshop.save();
+
+      // Notify professor about requested edits
+      try {
+        await notifyProfessorEditsRequested(workshop, req.user, requested_edits);
+      } catch (notifError) {
+        console.error('Failed to send edit request notification:', notifError);
+      }
+
+      res.json({
+        message: "Edit request sent to professor",
+        workshop
+      });
+    }
+
+  } catch (err) {
+    console.error('Error reviewing workshop:', err);
+    res.status(500).json({ message: err.message });
+  }
+};
+
+/**
+ * Get workshop participants list
+ * GET /api/workshop/:id/participants
+ */
+export const getWorkshopParticipants = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const workshop = await Event.findOne({
+      _id: id,
+      type: "Workshop",
+      created_by: req.user._id  // Ensure professor can only see their own workshops
+    });
+
+    if (!workshop) {
+      return res.status(404).json({
+        message: "Workshop not found or you don't have permission to view it"
+      });
+    }
+
+    // Get all registered participants
+    const registrations = await Registration.find({
+      event_id: id,
+      status: 'registered'
+    })
+    .populate('user_id', 'first_name last_name email role id_number')
+    .sort({ createdAt: 1 });
+
+    const capacity = workshop.workshop.capacity || 0;
+    const registered = registrations.length;
+    const remaining = Math.max(0, capacity - registered);
+
+    res.json({
+      message: "Workshop participants retrieved successfully",
+      workshop: {
+        _id: workshop._id,
+        name: workshop.name,
+        capacity: capacity,
+        start_date: workshop.start_date,
+        end_date: workshop.end_date,
+        location: workshop.location
+      },
+      participants: registrations.map(reg => ({
+        _id: reg._id,
+        name: `${reg.user_id.first_name} ${reg.user_id.last_name}`,
+        email: reg.user_id.email,
+        role: reg.user_id.role,
+        id_number: reg.user_id.id_number,
+        registered_at: reg.createdAt,
+        payment_status: reg.payment_status
+      })),
+      stats: {
+        capacity: capacity,
+        registered: registered,
+        remaining: remaining,
+        percentage_filled: capacity > 0 ? Math.round((registered / capacity) * 100) : 0
+      }
+    });
+
+  } catch (err) {
+    console.error('Error fetching workshop participants:', err);
     res.status(500).json({ message: err.message });
   }
 };
