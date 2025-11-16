@@ -29,6 +29,8 @@ export const createBazaar = async (req, res) => {
       return res.status(400).json({ message: "Invalid date format. Use YYYY-MM-DD format" });
     }
 
+    const { allowed_roles } = req.body;
+    
     // Create the bazaar using Events model
     const bazaar = await Event.create({
       type: "Bazaar", // ← REQUIRED: Specify event type
@@ -40,6 +42,7 @@ export const createBazaar = async (req, res) => {
       time,
       created_by: req.user._id,
       status: "upcoming",
+      allowed_roles: Array.isArray(allowed_roles) ? allowed_roles : [],
       bazaar: { // ← REQUIRED: Bazaar-specific fields
         registration_deadline: regDeadline,
         vendors_participating: []

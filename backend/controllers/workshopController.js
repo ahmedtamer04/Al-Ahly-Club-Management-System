@@ -38,6 +38,8 @@ export const createWorkshop = async (req, res) => {
       });
     }
 
+    const { allowed_roles } = req.body;
+    
     const workshop = await Event.create({
       type: "Workshop", // ← REQUIRED: Specify event type
       name,
@@ -48,6 +50,7 @@ export const createWorkshop = async (req, res) => {
       time,
       created_by: req.user._id,
       status: "upcoming",
+      allowed_roles: Array.isArray(allowed_roles) ? allowed_roles : [],
       workshop: { // ← REQUIRED: Workshop-specific fields
         full_agenda,
         faculty_responsible,

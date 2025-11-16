@@ -64,6 +64,17 @@ export const registerForEvent = async (req, res) => {
       }
     }
 
+    // CHECK: Verify user role is allowed for this event
+    const userRole = req.user?.role;
+    if (event.allowed_roles && event.allowed_roles.length > 0) {
+      if (!event.allowed_roles.includes(userRole)) {
+        return res.status(403).json({ 
+          message: "You do not have permission to register for this event.",
+          allowed_roles: event.allowed_roles
+        });
+      }
+    }
+
     // CHECK: Allow registration for all event types (removing restriction)
     console.log('Event type check - Type:', event.type);
 

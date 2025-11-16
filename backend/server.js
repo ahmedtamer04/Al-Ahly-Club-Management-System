@@ -23,6 +23,8 @@ import favoriteRoutes from "./routes/favoriteRoutes.js";
 import paymentRoutes from "./routes/paymentRoutes.js";
 import certificateRoutes from "./routes/certificateRoutes.js";
 import notificationRoutes from "./routes/notificationRoutes.js"; // ← Add notification routes
+import salesReportRoutes from "./routes/salesReportRoutes.js";
+import documentRoutes from "./routes/documentRoutes.js";
 
 
 const app = express();
@@ -83,6 +85,8 @@ app.use("/api/favorites", favoriteRoutes);
 app.use("/api/payment", paymentRoutes);
 app.use("/api/certificates", certificateRoutes);
 app.use("/api/notifications", notificationRoutes); // ← Add notification routes
+app.use("/api/sales-report", salesReportRoutes);
+app.use("/api/documents", documentRoutes);
 
 
 

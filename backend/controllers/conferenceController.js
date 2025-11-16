@@ -35,6 +35,8 @@ export const createConference = async (req, res) => {
       return res.status(400).json({ message: "Start date must be in the future" });
     }
 
+    const { allowed_roles } = req.body;
+    
     const conference = await Event.create({
       type: "Conference", // ← REQUIRED: Specify event type
       name,
@@ -45,6 +47,7 @@ export const createConference = async (req, res) => {
       time,
       created_by: req.user._id,
       status: "upcoming",
+      allowed_roles: Array.isArray(allowed_roles) ? allowed_roles : [],
       conference: { // ← REQUIRED: Conference-specific fields
         campus,
         professors_participating: Array.isArray(professors_participating) 

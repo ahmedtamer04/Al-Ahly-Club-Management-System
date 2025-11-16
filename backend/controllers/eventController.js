@@ -3,10 +3,26 @@ import Registration from "../models/Registration.js";
 import VendorApplication from "../models/VendorApplication.js";
 import Comment from "../models/Comment.js";
 
+// Helper function to check if user role is allowed for an event
+const isRoleAllowed = (event, userRole) => {
+  // If no restrictions (empty array), all roles can access
+  if (!event.allowed_roles || event.allowed_roles.length === 0) {
+    return true;
+  }
+  // Check if user's role is in the allowed list
+  return event.allowed_roles.includes(userRole);
+};
+
+// Helper function to filter events by role restrictions
+const filterEventsByRole = (events, userRole) => {
+  return events.filter(event => isRoleAllowed(event, userRole));
+};
+
 /* -------------------------- GET /events/upcoming -------------------------- */
 export const getUpcomingEvents = async (req, res) => {
   try {
-    const events = await Event.find({
+    const userRole = req.user?.role;
+    let events = await Event.find({
       status: "upcoming",
       start_date: { $gt: new Date() },
       // Exclude workshops that are not accepted (pending/rejected/revision_requested)
@@ -18,6 +34,12 @@ export const getUpcomingEvents = async (req, res) => {
     .populate('bazaar.vendors_participating.vendor_id', 'first_name last_name email vendor_info')
     .populate('booth.vendors.vendor_id', 'first_name last_name email vendor_info')
     .sort({ start_date: 1 });
+    
+    // Filter by role restrictions (unless user is Admin or EventsOffice)
+    if (userRole !== 'Admin' && userRole !== 'EventsOffice') {
+      events = filterEventsByRole(events, userRole);
+    }
+    
     res.status(200).send(JSON.stringify(events, null, 2));
   } catch (err) {
     console.error(err);
@@ -69,10 +91,17 @@ export const filterEvents = async (req, res) => {
       ]
     };
 
-    const events = await Event.find(finalFilter)
+    let events = await Event.find(finalFilter)
       .populate('bazaar.vendors_participating.vendor_id', 'company_name email')
       .populate('booth.vendors.vendor_id', 'company_name email')
       .sort({ start_date: 1 });
+    
+    // Filter by role restrictions (unless user is Admin or EventsOffice)
+    const userRole = req.user?.role;
+    if (userRole !== 'Admin' && userRole !== 'EventsOffice') {
+      events = filterEventsByRole(events, userRole);
+    }
+    
     res.status(200).send(JSON.stringify(events, null, 2));
   } catch (err) {
     console.error(err);
@@ -86,7 +115,7 @@ export const sortEventsByDate = async (req, res) => {
     const { order } = req.params;
     const sortOrder = order === "desc" ? -1 : 1;
 
-    const events = await Event.find({
+    let events = await Event.find({
       // Exclude workshops that are not accepted
       $or: [
         { type: { $ne: "Workshop" } }, // Include all non-workshop events
@@ -96,6 +125,13 @@ export const sortEventsByDate = async (req, res) => {
       .populate('bazaar.vendors_participating.vendor_id', 'company_name email')
       .populate('booth.vendors.vendor_id', 'company_name email')
       .sort({ start_date: sortOrder });
+    
+    // Filter by role restrictions (unless user is Admin or EventsOffice)
+    const userRole = req.user?.role;
+    if (userRole !== 'Admin' && userRole !== 'EventsOffice') {
+      events = filterEventsByRole(events, userRole);
+    }
+    
     res.status(200).send(JSON.stringify(events, null, 2));
   } catch (err) {
     console.error(err);
@@ -106,7 +142,7 @@ export const sortEventsByDate = async (req, res) => {
 /* -------------------------- GET /events/all -------------------------- */
 export const getAllEvents = async (req, res) => {
   try {
-    const events = await Event.find({
+    let events = await Event.find({
       // Exclude workshops that are not accepted (pending/rejected/revision_requested)
       $or: [
         { type: { $ne: "Workshop" } }, // Include all non-workshop events
@@ -116,6 +152,10 @@ export const getAllEvents = async (req, res) => {
       .populate('bazaar.vendors_participating.vendor_id', 'company_name email')
       .populate('booth.vendors.vendor_id', 'company_name email')
       .sort({ start_date: -1 }); // Most recent first
+    
+    // Note: getAllEvents is for Admin/EventsOffice only, so no role filtering needed
+    // But we'll keep it consistent in case permissions change
+    
     res.status(200).send(JSON.stringify(events, null, 2));
   } catch (err) {
     console.error(err);
@@ -165,13 +205,14 @@ export const getEventById = async (req, res) => {
     const event = await Event.findById(req.params.id);
     if (!event) return res.status(404).json({ error: "Event not found" });
     
+    const userRole = req.user?.role;
+    
     // Check if it's a workshop and if it's not accepted, don't show it to regular users
     // (EventsOffice and Professors should still see it through their dedicated endpoints)
     if (event.type === 'Workshop') {
       const approvalStatus = event.workshop?.approval_status || 'pending';
       if (approvalStatus !== 'accepted') {
         // Check if user is EventsOffice or the professor who created it
-        const userRole = req.user?.role;
         const createdBy = event.created_by?.toString();
         const userId = req.user?._id?.toString();
         
@@ -182,6 +223,16 @@ export const getEventById = async (req, res) => {
             message: "This workshop is not available"
           });
         }
+      }
+    }
+    
+    // Check role restrictions (unless user is Admin or EventsOffice)
+    if (userRole !== 'Admin' && userRole !== 'EventsOffice') {
+      if (!isRoleAllowed(event, userRole)) {
+        return res.status(403).json({ 
+          error: "Access denied",
+          message: "This event is restricted to specific user roles"
+        });
       }
     }
     

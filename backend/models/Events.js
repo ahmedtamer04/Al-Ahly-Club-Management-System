@@ -60,6 +60,13 @@ const eventSchema = new mongoose.Schema({
     required: true
   },
   
+  // Event access restrictions - which roles can view/register
+  allowed_roles: {
+    type: [String],
+    enum: ["Student", "Staff", "TA", "Professor", "Vendor", "Admin", "EventsOffice"],
+    default: [] // Empty array means all roles can access
+  },
+  
   // ========================================
   // WORKSHOP SPECIFIC FIELDS
   // ========================================

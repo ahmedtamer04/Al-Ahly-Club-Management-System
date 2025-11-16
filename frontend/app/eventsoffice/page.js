@@ -107,6 +107,8 @@ export default function EventsOfficeDashboard() {
             <li><Link href="/eventsoffice/facilities">🏢 Facilities</Link></li>
             <li><Link href="/eventsoffice/vendors">👥 Vendor Requests</Link></li>
             <li><Link href="/eventsoffice/registrations">📋 Registrations</Link></li>
+            <li><Link href="/eventsoffice/sales-report">💰 Sales Report</Link></li>
+            <li><Link href="/eventsoffice/documents">📄 Documents</Link></li>
             <li><Link href="/eventsoffice/profile">👤 Profile</Link></li>
           </ul>
         </aside>

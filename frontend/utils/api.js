@@ -585,4 +585,76 @@ export const notificationAPI = {
   deleteNotification: (notificationId) => api.delete(`/notifications/${notificationId}`),
 };
 
+// ================================
+// SALES REPORT API
+// ================================
+export const salesReportAPI = {
+  // GET /api/sales-report
+  // Auth: requireAdminOrEventsOffice
+  // Query params: event_type, start_date, end_date, sort_by, sort_order
+  getSalesReport: (params = {}) => {
+    const queryString = new URLSearchParams(params).toString();
+    return api.get(`/sales-report${queryString ? `?${queryString}` : ''}`);
+  },
+};
+
+// ================================
+// DOCUMENT API
+// ================================
+export const documentAPI = {
+  // POST /api/documents/upload
+  // Auth: requireAdminOrEventsOffice
+  // FormData: { file, description?, event_id?, category? }
+  upload: async (formData) => {
+    const token = getToken();
+    const response = await fetch(`${API_BASE_URL}/documents/upload`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`
+        // Don't set Content-Type, let browser set it with boundary for FormData
+      },
+      body: formData
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.message || 'Upload failed');
+    }
+    return data;
+  },
+
+  // GET /api/documents
+  // Auth: requireAdminOrEventsOffice
+  // Query: event_id?, category?, uploaded_by?
+  getAll: (params = {}) => {
+    const queryString = new URLSearchParams(params).toString();
+    return api.get(`/documents${queryString ? `?${queryString}` : ''}`);
+  },
+
+  // GET /api/documents/:id/download
+  // Auth: requireAdminOrEventsOffice
+  download: (documentId) => {
+    const token = getToken();
+    return fetch(`${API_BASE_URL}/documents/${documentId}/download`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    }).then(res => {
+      if (!res.ok) throw new Error('Download failed');
+      return res.blob();
+    });
+  },
+
+  // GET /api/documents/:id/view
+  // Auth: requireAdminOrEventsOffice
+  view: (documentId) => {
+    const token = getToken();
+    return `${API_BASE_URL}/documents/${documentId}/view?token=${token}`;
+  },
+
+  // DELETE /api/documents/:id
+  // Auth: requireAdminOrEventsOffice
+  delete: (documentId) => api.delete(`/documents/${documentId}`),
+};
+
 export default api;
