@@ -15,7 +15,9 @@ const notificationSchema = new mongoose.Schema({
       "workshop_accepted",            // For Professor when workshop accepted
       "workshop_rejected",            // For Professor when workshop rejected
       "workshop_revision_requested",  // For Professor when edits requested
-      "event_added"                   // For all users when new event is added
+      "event_added",                   // For all users when new event is added
+      "event_reminder_1day",      // NEW: 1 day before event
+      "event_reminder_1hour"      // NEW: 1 hour before event
     ],
     required: true
   },
@@ -48,6 +50,11 @@ const notificationSchema = new mongoose.Schema({
     ref: "Event"
   },
   
+  registration_id: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Registration"
+  },
+  
   // Additional metadata
   metadata: {
     workshop_name: String,
@@ -58,7 +65,8 @@ const notificationSchema = new mongoose.Schema({
     event_name: String,
     event_type: String,
     event_date: Date,
-    event_location: String
+    event_location: String,
+    event_time: String
   }
   
 }, { 
@@ -70,6 +78,7 @@ notificationSchema.index({ user_id: 1, is_read: 1 });
 notificationSchema.index({ user_id: 1, createdAt: -1 });
 notificationSchema.index({ workshop_id: 1 });
 notificationSchema.index({ event_id: 1 });
+notificationSchema.index({ registration_id: 1 });
 
 // Static method to get unread count
 notificationSchema.statics.getUnreadCount = function(userId) {

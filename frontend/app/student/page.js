@@ -30,7 +30,7 @@ export default function StudentDashboard() {
       const eventsResponse = await eventAPI.getUpcoming();
       console.log('Dashboard events response:', eventsResponse);
       const eventsData = Array.isArray(eventsResponse) ? eventsResponse : [];
-      setEvents(eventsData.slice(0, 3)); // Show only first 3 events
+      setEvents(eventsData.slice(0, 3));
 
       // Fetch user registrations if user is logged in
       const user = getUser();
@@ -46,7 +46,7 @@ export default function StudentDashboard() {
             registrationData = registrationsResponse;
           }
           
-          setRegistrations(registrationData.slice(0, 3)); // Show only first 3 registrations
+          setRegistrations(registrationData.slice(0, 3));
           
           // Calculate stats
           const now = new Date();
@@ -69,7 +69,6 @@ export default function StudentDashboard() {
 
         } catch (regError) {
           console.error('Error fetching registrations:', regError);
-          // Set stats with just events data
           setStats({
             upcomingEvents: eventsData.length,
             myRegistrations: 0,

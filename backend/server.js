@@ -22,7 +22,10 @@ import eventRoutes from "./routes/eventRoutes.js";
 import favoriteRoutes from "./routes/favoriteRoutes.js";
 import paymentRoutes from "./routes/paymentRoutes.js";
 import certificateRoutes from "./routes/certificateRoutes.js";
-import notificationRoutes from "./routes/notificationRoutes.js"; // ← Add notification routes
+import notificationRoutes from "./routes/notificationRoutes.js";
+
+// ✅ ADD THIS: Import reminder service
+import { startReminderScheduler } from "./services/eventReminderService.js";
 
 
 const app = express();
@@ -47,6 +50,9 @@ const startServer = async () => {
 
     app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
+      
+      // ✅ ADD THIS: Start reminder scheduler after server starts
+      startReminderScheduler();
     });
   } catch (err) {
     console.error('Failed to start server due to DB connection error:', err.message);
@@ -82,7 +88,7 @@ app.use("/api/events", eventRoutes);
 app.use("/api/favorites", favoriteRoutes);
 app.use("/api/payment", paymentRoutes);
 app.use("/api/certificates", certificateRoutes);
-app.use("/api/notifications", notificationRoutes); // ← Add notification routes
+app.use("/api/notifications", notificationRoutes);
 
 
 

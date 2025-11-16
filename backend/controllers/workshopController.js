@@ -39,17 +39,40 @@ export const createWorkshop = async (req, res) => {
       });
     }
 
+    // ✅ FIX: Combine date and time properly
+    const startDate = new Date(start_date);
+    const endDate = new Date(end_date);
+    const regDeadline = new Date(registration_deadline);
+    
+    // Parse time (format: "HH:MM" or "HH:MM AM/PM")
+    const timeParts = time.match(/(\d{1,2}):(\d{2})\s*(AM|PM)?/i);
+    if (timeParts) {
+      let hours = parseInt(timeParts[1]);
+      const minutes = parseInt(timeParts[2]);
+      const meridiem = timeParts[3];
+      
+      // Convert to 24-hour format if PM
+      if (meridiem && meridiem.toUpperCase() === 'PM' && hours !== 12) {
+        hours += 12;
+      } else if (meridiem && meridiem.toUpperCase() === 'AM' && hours === 12) {
+        hours = 0;
+      }
+      
+      startDate.setHours(hours, minutes, 0, 0);
+      endDate.setHours(hours, minutes, 0, 0);
+    }
+
     const workshop = await Event.create({
-      type: "Workshop", // ← REQUIRED: Specify event type
+      type: "Workshop",
       name,
       location,
       short_description,
-      start_date: new Date(start_date),
-      end_date: new Date(end_date),
+      start_date: startDate,
+      end_date: endDate,
       time,
       created_by: req.user._id,
       status: "upcoming",
-      workshop: { // ← REQUIRED: Workshop-specific fields
+      workshop: {
         full_agenda,
         faculty_responsible,
         professors_participating: Array.isArray(professors_participating) 
@@ -59,8 +82,8 @@ export const createWorkshop = async (req, res) => {
         funding_source,
         extra_resources,
         capacity: Number(capacity),
-        registration_deadline: new Date(registration_deadline),
-        approval_status: "pending" // New workshops need approval
+        registration_deadline: regDeadline,
+        approval_status: "pending"
       }
     });
 
@@ -69,7 +92,6 @@ export const createWorkshop = async (req, res) => {
       await notifyEventsOfficeWorkshopSubmitted(workshop, req.user);
     } catch (notifError) {
       console.error('Failed to send notification:', notifError);
-      // Don't fail the request if notification fails
     }
 
     res.status(201).json({

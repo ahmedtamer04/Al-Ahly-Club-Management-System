@@ -58,7 +58,7 @@ export const markAsRead = async (req, res) => {
 
     const notification = await Notification.findOne({
       _id: id,
-      user_id: req.user._id  // Ensure user can only mark their own notifications
+      user_id: req.user._id
     });
 
     if (!notification) {
@@ -109,7 +109,7 @@ export const deleteNotification = async (req, res) => {
 
     const notification = await Notification.findOne({
       _id: id,
-      user_id: req.user._id  // Ensure user can only delete their own notifications
+      user_id: req.user._id
     });
 
     if (!notification) {

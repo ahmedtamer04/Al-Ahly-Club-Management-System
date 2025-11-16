@@ -14,12 +14,12 @@ export const createTrip = async (req, res) => {
       name,
       location,
       price,
-      start_date, // ← Changed field name
-      end_date,   // ← Changed field name
+      start_date,
+      end_date,
       time,
-      short_description, // ← Changed field name
+      short_description,
       capacity,
-      registration_deadline // ← Changed field name
+      registration_deadline
     } = req.body;
 
     // Validate required fields
@@ -29,10 +29,28 @@ export const createTrip = async (req, res) => {
       });
     }
 
-    // Convert dates
+    // ✅ FIX: Combine date and time properly
     const startDate = new Date(start_date);
     const endDate = new Date(end_date);
     const regDeadline = new Date(registration_deadline);
+    
+    // Parse time (format: "HH:MM" or "HH:MM AM/PM")
+    const timeParts = time.match(/(\d{1,2}):(\d{2})\s*(AM|PM)?/i);
+    if (timeParts) {
+      let hours = parseInt(timeParts[1]);
+      const minutes = parseInt(timeParts[2]);
+      const meridiem = timeParts[3];
+      
+      // Convert to 24-hour format if PM
+      if (meridiem && meridiem.toUpperCase() === 'PM' && hours !== 12) {
+        hours += 12;
+      } else if (meridiem && meridiem.toUpperCase() === 'AM' && hours === 12) {
+        hours = 0;
+      }
+      
+      startDate.setHours(hours, minutes, 0, 0);
+      endDate.setHours(hours, minutes, 0, 0);
+    }
 
     // Validate dates
     if (isNaN(startDate.getTime()) || isNaN(endDate.getTime()) || isNaN(regDeadline.getTime())) {
@@ -41,7 +59,7 @@ export const createTrip = async (req, res) => {
 
     // Create trip using Events model
     const trip = await Event.create({
-      type: "Trip", // ← REQUIRED: Specify event type
+      type: "Trip",
       name,
       location,
       short_description,
@@ -50,7 +68,7 @@ export const createTrip = async (req, res) => {
       time,
       created_by: req.user._id,
       status: "upcoming",
-      trip: { // ← REQUIRED: Trip-specific fields
+      trip: {
         price: Number(price),
         capacity: Number(capacity),
         registration_deadline: regDeadline
