@@ -129,6 +129,11 @@ export const updateTrip = async (req, res) => {
       updates.end_date = new Date(updates.end_date);
     }
 
+    // Handle allowed_roles update
+    if (updates.allowed_roles !== undefined) {
+      updates.allowed_roles = Array.isArray(updates.allowed_roles) ? updates.allowed_roles : [];
+    }
+
     const updated = await Event.findByIdAndUpdate(
       tripId, 
       updates, 

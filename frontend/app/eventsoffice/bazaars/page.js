@@ -12,6 +12,7 @@ export default function BazaarsPage() {
   const [editingBazaar, setEditingBazaar] = useState(null); // stores bazaar id
   const [editFormData, setEditFormData] = useState({});
   const [message, setMessage] = useState({ text: '', type: '' });
+  const availableRoles = ['Student', 'Staff', 'TA', 'Professor'];
 
   useEffect(() => {
     fetchBazaars();
@@ -53,6 +54,7 @@ export default function BazaarsPage() {
       start_date: bazaar.start_date ? bazaar.start_date.split('T')[0] : '',
       end_date: bazaar.end_date ? bazaar.end_date.split('T')[0] : '',
       registration_deadline: bazaar.bazaar?.registration_deadline ? bazaar.bazaar.registration_deadline.split('T')[0] : '',
+      allowed_roles: Array.isArray(bazaar.allowed_roles) ? bazaar.allowed_roles : [],
     });
     setMessage({ text: '', type: '' }); // Clear any previous messages
   };
@@ -186,6 +188,7 @@ export default function BazaarsPage() {
                       <th>Date</th>
                       <th>Booths</th>
                       <th>Applications</th>
+                      <th>Restrictions</th>
                       <th>Status</th>
                       <th>Actions</th>
                     </tr>
@@ -197,6 +200,22 @@ export default function BazaarsPage() {
                         <td>{formatDate(b.start_date)}</td>
                         <td>{b.bazaar?.vendors_participating?.length || 0}</td>
                         <td>{b.bazaar?.vendors_participating?.length || 0}</td>
+                        <td>
+                          {Array.isArray(b.allowed_roles) && b.allowed_roles.length > 0 ? (
+                            <span style={{ 
+                              fontSize: '11px', 
+                              padding: '4px 8px', 
+                              backgroundColor: '#fff3cd', 
+                              color: '#856404',
+                              borderRadius: '4px',
+                              display: 'inline-block'
+                            }} title={`Restricted to: ${b.allowed_roles.join(', ')}`}>
+                              🔒 {b.allowed_roles.length} role{b.allowed_roles.length > 1 ? 's' : ''}
+                            </span>
+                          ) : (
+                            <span style={{ fontSize: '11px', color: '#6c757d' }}>All roles</span>
+                          )}
+                        </td>
                         <td>
                           <span className={`badge ${new Date(b.start_date) > new Date() ? 'badge-success' : 'badge-secondary'}`}>
                             {new Date(b.start_date) > new Date() ? 'Upcoming' : 'Past'}
@@ -316,6 +335,42 @@ export default function BazaarsPage() {
                       onChange={(e) => setEditFormData({ ...editFormData, registration_deadline: e.target.value })}
                       style={{ padding: '0.75rem', borderRadius: '8px', border: '2px solid #E5E5E5', width: '100%' }}
                     />
+                  </div>
+
+                  <div className="form-group">
+                    <label>Restrict to Specific Roles (Optional)</label>
+                    <p style={{ fontSize: '14px', color: '#666', marginBottom: '12px' }}>
+                      Select which user roles can view and register for this event. Leave empty to allow all roles.
+                    </p>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
+                      {availableRoles.map(role => (
+                        <label key={role} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                          <input
+                            type="checkbox"
+                            checked={editFormData.allowed_roles?.includes(role) || false}
+                            onChange={(e) => {
+                              const currentRoles = editFormData.allowed_roles || [];
+                              if (e.target.checked) {
+                                setEditFormData({...editFormData, allowed_roles: [...currentRoles, role]});
+                              } else {
+                                setEditFormData({...editFormData, allowed_roles: currentRoles.filter(r => r !== role)});
+                              }
+                            }}
+                          />
+                          <span>{role}</span>
+                        </label>
+                      ))}
+                    </div>
+                    {editFormData.allowed_roles?.length > 0 && (
+                      <p style={{ fontSize: '12px', color: '#28a745', marginTop: '8px' }}>
+                        ✓ Restricted to: {editFormData.allowed_roles.join(', ')}
+                      </p>
+                    )}
+                    {(!editFormData.allowed_roles || editFormData.allowed_roles.length === 0) && (
+                      <p style={{ fontSize: '12px', color: '#666', marginTop: '8px' }}>
+                        All roles can access this event
+                      </p>
+                    )}
                   </div>
 
                   <div className="form-actions">

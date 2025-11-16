@@ -42,6 +42,8 @@ export default function ConferencesPage() {
     return !conference.registrations || conference.registrations.length === 0;
   };
 
+  const availableRoles = ['Student', 'Staff', 'TA', 'Professor'];
+
   const handleEdit = (conference) => {
     if (!canEdit(conference)) {
       setMessage({ text: 'Cannot edit a conference that has already started', type: 'error' });
@@ -62,7 +64,8 @@ export default function ConferencesPage() {
       conference_website: conference.conference?.conference_website || '',
       required_budget: conference.conference?.required_budget || 0,
       funding_source: conference.conference?.funding_source || '',
-      extra_required_sources: conference.conference?.extra_required_sources || ''
+      extra_required_sources: conference.conference?.extra_required_sources || '',
+      allowed_roles: Array.isArray(conference.allowed_roles) ? conference.allowed_roles : [],
     });
   };
 
@@ -182,6 +185,7 @@ export default function ConferencesPage() {
                       <th>Date</th>
                       <th>Website</th>
                       <th>Budget</th>
+                      <th>Restrictions</th>
                       <th>Status</th>
                       <th>Actions</th>
                     </tr>
@@ -220,6 +224,22 @@ export default function ConferencesPage() {
                           )}
                         </td>
                         <td>${conference.conference?.required_budget || 0}</td>
+                        <td>
+                          {Array.isArray(conference.allowed_roles) && conference.allowed_roles.length > 0 ? (
+                            <span style={{ 
+                              fontSize: '11px', 
+                              padding: '4px 8px', 
+                              backgroundColor: '#fff3cd', 
+                              color: '#856404',
+                              borderRadius: '4px',
+                              display: 'inline-block'
+                            }} title={`Restricted to: ${conference.allowed_roles.join(', ')}`}>
+                              🔒 {conference.allowed_roles.length} role{conference.allowed_roles.length > 1 ? 's' : ''}
+                            </span>
+                          ) : (
+                            <span style={{ fontSize: '11px', color: '#6c757d' }}>All roles</span>
+                          )}
+                        </td>
                         <td>
                           <span className={`status-badge status-${conference.status}`}>
                             {conference.status}
@@ -414,6 +434,42 @@ export default function ConferencesPage() {
                       onChange={(e) => setEditFormData({...editFormData, extra_required_sources: e.target.value})}
                       placeholder="Any additional resources needed (optional)"
                     />
+                  </div>
+
+                  <div className="form-group">
+                    <label>Restrict to Specific Roles (Optional)</label>
+                    <p style={{ fontSize: '14px', color: '#666', marginBottom: '12px' }}>
+                      Select which user roles can view and register for this event. Leave empty to allow all roles.
+                    </p>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
+                      {availableRoles.map(role => (
+                        <label key={role} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                          <input
+                            type="checkbox"
+                            checked={editFormData.allowed_roles?.includes(role) || false}
+                            onChange={(e) => {
+                              const currentRoles = editFormData.allowed_roles || [];
+                              if (e.target.checked) {
+                                setEditFormData({...editFormData, allowed_roles: [...currentRoles, role]});
+                              } else {
+                                setEditFormData({...editFormData, allowed_roles: currentRoles.filter(r => r !== role)});
+                              }
+                            }}
+                          />
+                          <span>{role}</span>
+                        </label>
+                      ))}
+                    </div>
+                    {editFormData.allowed_roles?.length > 0 && (
+                      <p style={{ fontSize: '12px', color: '#28a745', marginTop: '8px' }}>
+                        ✓ Restricted to: {editFormData.allowed_roles.join(', ')}
+                      </p>
+                    )}
+                    {(!editFormData.allowed_roles || editFormData.allowed_roles.length === 0) && (
+                      <p style={{ fontSize: '12px', color: '#666', marginTop: '8px' }}>
+                        All roles can access this event
+                      </p>
+                    )}
                   </div>
 
                   <div className="form-actions">

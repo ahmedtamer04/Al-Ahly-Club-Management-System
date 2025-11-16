@@ -12,6 +12,7 @@ export default function TripsPage() {
   const [editingTrip, setEditingTrip] = useState(null);
   const [editFormData, setEditFormData] = useState({});
   const [message, setMessage] = useState({ text: '', type: '' });
+  const availableRoles = ['Student', 'Staff', 'TA', 'Professor'];
 
   useEffect(() => {
     fetchTrips();
@@ -42,6 +43,7 @@ export default function TripsPage() {
       short_description: trip.short_description,
       capacity: trip.trip?.capacity || '',
       registration_deadline: trip.trip?.registration_deadline?.split('T')[0] || '',
+      allowed_roles: Array.isArray(trip.allowed_roles) ? trip.allowed_roles : [],
     });
     setMessage({ text: '', type: '' });
   };
@@ -197,6 +199,7 @@ export default function TripsPage() {
                       <th>Date</th>
                       <th>Price</th>
                       <th>Capacity</th>
+                      <th>Restrictions</th>
                       <th>Status</th>
                       <th>Actions</th>
                     </tr>
@@ -209,6 +212,22 @@ export default function TripsPage() {
                         <td>{formatDate(trip.start_date)}</td>
                         <td>{trip.trip?.price || 'N/A'} EGP</td>
                         <td>{trip.registrations?.length || 0}/{trip.trip?.capacity || 0}</td>
+                        <td>
+                          {Array.isArray(trip.allowed_roles) && trip.allowed_roles.length > 0 ? (
+                            <span style={{ 
+                              fontSize: '11px', 
+                              padding: '4px 8px', 
+                              backgroundColor: '#fff3cd', 
+                              color: '#856404',
+                              borderRadius: '4px',
+                              display: 'inline-block'
+                            }} title={`Restricted to: ${trip.allowed_roles.join(', ')}`}>
+                              🔒 {trip.allowed_roles.length} role{trip.allowed_roles.length > 1 ? 's' : ''}
+                            </span>
+                          ) : (
+                            <span style={{ fontSize: '11px', color: '#6c757d' }}>All roles</span>
+                          )}
+                        </td>
                         <td>
                           <span className={`badge ${
                             new Date(trip.start_date) > new Date() ? 'badge-success' : 'badge-secondary'
@@ -349,6 +368,42 @@ export default function TripsPage() {
                       value={editFormData.registration_deadline}
                       onChange={(e) => setEditFormData({...editFormData, registration_deadline: e.target.value})}
                     />
+                  </div>
+
+                  <div className="form-group">
+                    <label>Restrict to Specific Roles (Optional)</label>
+                    <p style={{ fontSize: '14px', color: '#666', marginBottom: '12px' }}>
+                      Select which user roles can view and register for this event. Leave empty to allow all roles.
+                    </p>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
+                      {availableRoles.map(role => (
+                        <label key={role} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                          <input
+                            type="checkbox"
+                            checked={editFormData.allowed_roles?.includes(role) || false}
+                            onChange={(e) => {
+                              const currentRoles = editFormData.allowed_roles || [];
+                              if (e.target.checked) {
+                                setEditFormData({...editFormData, allowed_roles: [...currentRoles, role]});
+                              } else {
+                                setEditFormData({...editFormData, allowed_roles: currentRoles.filter(r => r !== role)});
+                              }
+                            }}
+                          />
+                          <span>{role}</span>
+                        </label>
+                      ))}
+                    </div>
+                    {editFormData.allowed_roles?.length > 0 && (
+                      <p style={{ fontSize: '12px', color: '#28a745', marginTop: '8px' }}>
+                        ✓ Restricted to: {editFormData.allowed_roles.join(', ')}
+                      </p>
+                    )}
+                    {(!editFormData.allowed_roles || editFormData.allowed_roles.length === 0) && (
+                      <p style={{ fontSize: '12px', color: '#666', marginTop: '8px' }}>
+                        All roles can access this event
+                      </p>
+                    )}
                   </div>
 
                   <div className="form-actions">

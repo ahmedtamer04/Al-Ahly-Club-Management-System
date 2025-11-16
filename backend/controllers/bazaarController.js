@@ -101,6 +101,11 @@ export const editBazaar = async (req, res) => {
       updates.bazaar.registration_deadline = new Date(updates.registration_deadline);
     }
 
+    // Handle allowed_roles update
+    if (updates.allowed_roles !== undefined) {
+      updates.allowed_roles = Array.isArray(updates.allowed_roles) ? updates.allowed_roles : [];
+    }
+
     const updatedBazaar = await Event.findByIdAndUpdate(
       id, 
       updates, 

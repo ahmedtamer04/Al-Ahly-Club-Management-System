@@ -15,8 +15,11 @@ export default function CreateBazaarPage() {
     start_date: '',
     end_date: '',
     time: '',
-    registration_deadline: ''
+    registration_deadline: '',
+    allowed_roles: [], // Array of allowed roles
   });
+  
+  const availableRoles = ['Student', 'Staff', 'TA', 'Professor'];
   const [message, setMessage] = useState({ text: '', type: '' });
   const [loading, setLoading] = useState(false);
 
@@ -36,7 +39,8 @@ export default function CreateBazaarPage() {
         start_date: '',
         end_date: '',
         time: '',
-        registration_deadline: ''
+        registration_deadline: '',
+        allowed_roles: []
       });
       // Redirect to bazaars list after 2 seconds
       setTimeout(() => {
@@ -170,6 +174,41 @@ export default function CreateBazaarPage() {
                 />
               </div>
 
+              <div className="form-group">
+                <label>Restrict to Specific Roles (Optional)</label>
+                <p style={{ fontSize: '14px', color: '#666', marginBottom: '12px' }}>
+                  Select which user roles can view and register for this event. Leave empty to allow all roles.
+                </p>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
+                  {availableRoles.map(role => (
+                    <label key={role} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                      <input
+                        type="checkbox"
+                        checked={formData.allowed_roles.includes(role)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setFormData({...formData, allowed_roles: [...formData.allowed_roles, role]});
+                          } else {
+                            setFormData({...formData, allowed_roles: formData.allowed_roles.filter(r => r !== role)});
+                          }
+                        }}
+                      />
+                      <span>{role}</span>
+                    </label>
+                  ))}
+                </div>
+                {formData.allowed_roles.length > 0 && (
+                  <p style={{ fontSize: '12px', color: '#28a745', marginTop: '8px' }}>
+                    ✓ Restricted to: {formData.allowed_roles.join(', ')}
+                  </p>
+                )}
+                {formData.allowed_roles.length === 0 && (
+                  <p style={{ fontSize: '12px', color: '#666', marginTop: '8px' }}>
+                    All roles can access this event
+                  </p>
+                )}
+              </div>
+
               <div className="form-actions">
                 <button type="submit" className="btn btn-primary" disabled={loading}>
                   {loading ? 'Creating...' : 'Create Bazaar'}
@@ -184,7 +223,8 @@ export default function CreateBazaarPage() {
                     start_date: '',
                     end_date: '',
                     time: '',
-                    registration_deadline: ''
+                    registration_deadline: '',
+                    allowed_roles: []
                   })}
                   disabled={loading}
                 >

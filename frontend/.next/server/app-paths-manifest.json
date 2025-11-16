@@ -1,9 +1,9 @@
 {
-  "/auth/login/page": "app/auth/login/page.js",
+  "/eventsoffice/events/page": "app/eventsoffice/events/page.js",
+  "/eventsoffice/conferences/create/page": "app/eventsoffice/conferences/create/page.js",
   "/eventsoffice/page": "app/eventsoffice/page.js",
   "/eventsoffice/sales-report/page": "app/eventsoffice/sales-report/page.js",
   "/eventsoffice/documents/page": "app/eventsoffice/documents/page.js",
-  "/eventsoffice/registrations/page": "app/eventsoffice/registrations/page.js",
-  "/eventsoffice/events/page": "app/eventsoffice/events/page.js",
-  "/eventsoffice/trips/page": "app/eventsoffice/trips/page.js"
+  "/eventsoffice/bazaars/page": "app/eventsoffice/bazaars/page.js",
+  "/eventsoffice/conferences/page": "app/eventsoffice/conferences/page.js"
 }
