@@ -3,7 +3,7 @@ import {
   createAdminUser, 
   deleteAdminUser, 
   getAdminUsers, 
-  getUserById,
+  getUserById, 
   getAllUsers,
   toggleUserBlock,
   deleteComment,
@@ -18,7 +18,12 @@ import {
   getVendorRequestsStats,
   getAllRegistrations,
   getEventRegistrationCount,
-  getAllEventRegistrationCounts
+  getAllEventRegistrationCounts,
+  getAllLoyaltyProgramApplications,
+  getLoyaltyProgramApplicationById,
+  acceptLoyaltyProgramApplication,
+  rejectLoyaltyProgramApplication,
+  getLoyaltyProgramStats
 } from "../controllers/adminController.js";
 import { auth, requireAdmin, requireAdminOrEventsOffice } from "../middleware/auth.js";
 
@@ -60,6 +65,13 @@ router.post("/resend-verification/:userId", requireAdmin, resendVerificationEmai
 router.get("/registrations", requireAdmin, getAllRegistrations);
 router.get("/registrations/counts", requireAdmin, getAllEventRegistrationCounts);
 router.get("/registrations/event/:eventId/count", requireAdmin, getEventRegistrationCount);
+
+// Loyalty Program management
+router.get("/loyalty-program/applications", requireAdmin, getAllLoyaltyProgramApplications);
+router.get("/loyalty-program/applications/stats", requireAdmin, getLoyaltyProgramStats);
+router.get("/loyalty-program/applications/:applicationId", requireAdmin, getLoyaltyProgramApplicationById);
+router.post("/loyalty-program/applications/:applicationId/accept", requireAdmin, acceptLoyaltyProgramApplication);
+router.post("/loyalty-program/applications/:applicationId/reject", requireAdmin, rejectLoyaltyProgramApplication);
 
 export default router;
 

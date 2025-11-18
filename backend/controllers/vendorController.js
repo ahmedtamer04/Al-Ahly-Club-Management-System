@@ -1047,7 +1047,7 @@ export const confirmVendorStripePayment = async (req, res) => {
   }
 };
 
-// Get payment info for accepted applications
+// Get payment info for accepted applications (works for both bazaar and booth_event)
 export const getVendorPaymentInfo = async (req, res) => {
   try {
     const { application_id } = req.params;
@@ -1066,6 +1066,24 @@ export const getVendorPaymentInfo = async (req, res) => {
 
     if (application.status !== 'accepted') {
       return res.status(400).json({ message: "Application must be accepted to view payment info" });
+    }
+
+    // Ensure participation_fee and payment_deadline are set (should be set during approval, but double-check)
+    if (!application.participation_fee || application.participation_fee <= 0) {
+      // If fee not set, calculate it based on booth size (for both bazaar and booth_event)
+      const feeMap = {
+        '2x2': 150,
+        '4x4': 400
+      };
+      application.participation_fee = feeMap[application.application?.booth_size] || 150;
+    }
+
+    if (!application.payment_deadline) {
+      // Set payment deadline: 3 days from approval date or current date
+      const deadline = new Date();
+      deadline.setDate(deadline.getDate() + 3);
+      application.payment_deadline = deadline;
+      await application.save();
     }
 
     // Get payment if exists
@@ -1118,7 +1136,8 @@ export const getVendorPaymentInfo = async (req, res) => {
   }
 };
 
-// Send QR codes for registered visitors (can be called when visitors register or manually)
+// Send QR codes for registered visitors (works for both bazaar and booth_event applications)
+// Can be called manually by vendor after payment is completed
 export const sendQRCodesToVendor = async (req, res) => {
   try {
     const { application_id } = req.params;
@@ -1136,10 +1155,11 @@ export const sendQRCodesToVendor = async (req, res) => {
     }
 
     // Get event ID (either from bazaar_id or find created booth event)
+    // Works for both bazaar and booth_event applications
     let eventId = application.bazaar_id?._id;
     
     if (!eventId && application.kind === 'booth_event') {
-      // Find the created booth event
+      // Find the created booth event for booth_event applications
       const boothEvent = await Event.findOne({
         type: 'Booth',
         'booth.vendors.vendor_id': application.vendor_user_id._id
@@ -1151,7 +1171,9 @@ export const sendQRCodesToVendor = async (req, res) => {
     }
 
     if (!eventId) {
-      return res.status(400).json({ message: "No associated event found for this application" });
+      return res.status(400).json({ 
+        message: "No associated event found for this application. Please ensure the event exists." 
+      });
     }
 
     // Get all registrations for this event
@@ -1377,27 +1399,34 @@ export const getLoyaltyProgramStatus = async (req, res) => {
   }
 };
 
-// Cancel loyalty program participation
+// Cancel loyalty program participation (works for both pending and active statuses)
 export const cancelLoyaltyProgram = async (req, res) => {
   try {
     const { cancellation_reason } = req.body;
 
     const loyaltyProgram = await VendorLoyaltyProgram.findOne({
       vendor_user_id: req.user._id,
-      status: 'active'
+      status: { $in: ['active', 'pending'] } // Allow cancellation for both active and pending
     });
 
     if (!loyaltyProgram) {
       return res.status(404).json({ 
-        message: "No active loyalty program participation found" 
+        message: "No active or pending loyalty program application found. Only active or pending applications can be cancelled." 
       });
     }
 
-    // Cancel the participation
+    // Store the original status before cancellation
+    const originalStatus = loyaltyProgram.status;
+
+    // Cancel the participation (works for both pending and active)
     await loyaltyProgram.cancel(cancellation_reason);
 
+    const actionMessage = originalStatus === 'pending' 
+      ? "Loyalty program application withdrawn successfully"
+      : "Loyalty program participation cancelled successfully";
+
     res.json({
-      message: "Loyalty program participation cancelled successfully",
+      message: actionMessage,
       application: {
         _id: loyaltyProgram._id,
         status: loyaltyProgram.status,

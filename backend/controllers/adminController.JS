@@ -1,10 +1,11 @@
 import User from "../models/User.js";
 import VendorApplication from "../models/VendorApplication.js";
+import VendorLoyaltyProgram from "../models/VendorLoyaltyProgram.js";
 import Comment from "../models/Comment.js";
 import Registration from "../models/Registration.js";
 import Event from "../models/Events.js";
 import bcrypt from "bcryptjs";
-import { generateVerificationToken, sendVerificationEmail, sendVendorAcceptanceEmail } from "../services/emailService.js";
+import { generateVerificationToken, sendVerificationEmail, sendVendorAcceptanceEmail, sendNewLoyaltyPartnerNotification } from "../services/emailService.js";
 
 // Create Admin or EventsOffice user
 export const createAdminUser = async (req, res) => {
@@ -1020,6 +1021,311 @@ export const getAllEventRegistrationCounts = async (req, res) => {
 
   } catch (err) {
     console.error('Error fetching all registration counts:', err);
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// ================================
+// LOYALTY PROGRAM MANAGEMENT
+// ================================
+
+// Get all loyalty program applications
+export const getAllLoyaltyProgramApplications = async (req, res) => {
+  try {
+    const { status, page = 1, limit = 50 } = req.query;
+    
+    // Build filter object
+    let filter = {};
+    
+    if (status && ['pending', 'active', 'cancelled', 'rejected'].includes(status)) {
+      filter.status = status;
+    }
+
+    // Calculate pagination
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    // Fetch all loyalty program applications with populated vendor details
+    const applications = await VendorLoyaltyProgram.find(filter)
+      .populate('vendor_user_id', 'first_name last_name email vendor_info role')
+      .populate('approved_by', 'first_name last_name email role')
+      .sort({ createdAt: -1 }) // Sort by newest first
+      .skip(skip)
+      .limit(parseInt(limit));
+
+    // Get total count for pagination
+    const totalCount = await VendorLoyaltyProgram.countDocuments(filter);
+
+    // Format the applications
+    const formattedApplications = applications.map(app => {
+      const vendor = app.vendor_user_id ? {
+        _id: app.vendor_user_id._id,
+        name: `${app.vendor_user_id.first_name || 'Unknown'} ${app.vendor_user_id.last_name || 'Vendor'}`,
+        email: app.vendor_user_id.email || 'N/A',
+        company_name: app.vendor_user_id.vendor_info?.company_name || 'N/A',
+        role: app.vendor_user_id.role || 'Vendor'
+      } : {
+        _id: null,
+        name: 'Unknown Vendor',
+        email: 'N/A',
+        company_name: 'N/A',
+        role: 'Vendor'
+      };
+
+      return {
+        _id: app._id,
+        vendor,
+        status: app.status,
+        discount_rate: app.discount_rate,
+        promo_code: app.promo_code,
+        terms_and_conditions: app.terms_and_conditions,
+        applied_at: app.applied_at,
+        approved_at: app.approved_at,
+        cancelled_at: app.cancelled_at,
+        cancellation_reason: app.cancellation_reason,
+        approved_by: app.approved_by ? {
+          name: `${app.approved_by.first_name} ${app.approved_by.last_name}`,
+          email: app.approved_by.email,
+          role: app.approved_by.role
+        } : null,
+        created_at: app.createdAt,
+        updated_at: app.updatedAt
+      };
+    });
+
+    // Calculate statistics
+    const stats = {
+      total: totalCount,
+      pending: await VendorLoyaltyProgram.countDocuments({ ...filter, status: 'pending' }),
+      active: await VendorLoyaltyProgram.countDocuments({ ...filter, status: 'active' }),
+      cancelled: await VendorLoyaltyProgram.countDocuments({ ...filter, status: 'cancelled' }),
+      rejected: await VendorLoyaltyProgram.countDocuments({ ...filter, status: 'rejected' })
+    };
+
+    res.json({
+      message: "Loyalty program applications retrieved successfully",
+      applications: formattedApplications,
+      stats,
+      pagination: {
+        current_page: parseInt(page),
+        total_pages: Math.ceil(totalCount / parseInt(limit)),
+        total_count: totalCount,
+        limit: parseInt(limit)
+      },
+      filters_applied: {
+        status: status || 'all'
+      }
+    });
+
+  } catch (error) {
+    console.error('Error fetching loyalty program applications:', error);
+    res.status(500).json({ 
+      message: "Server error while fetching loyalty program applications.", 
+      error: error.message 
+    });
+  }
+};
+
+// Get loyalty program application by ID
+export const getLoyaltyProgramApplicationById = async (req, res) => {
+  try {
+    const { applicationId } = req.params;
+
+    const application = await VendorLoyaltyProgram.findById(applicationId)
+      .populate('vendor_user_id', 'first_name last_name email vendor_info role')
+      .populate('approved_by', 'first_name last_name email role');
+
+    if (!application) {
+      return res.status(404).json({ message: "Loyalty program application not found" });
+    }
+
+    const formattedApplication = {
+      _id: application._id,
+      vendor: {
+        _id: application.vendor_user_id._id,
+        name: `${application.vendor_user_id.first_name} ${application.vendor_user_id.last_name}`,
+        email: application.vendor_user_id.email,
+        company_name: application.vendor_user_id.vendor_info?.company_name || 'N/A',
+        role: application.vendor_user_id.role
+      },
+      status: application.status,
+      discount_rate: application.discount_rate,
+      promo_code: application.promo_code,
+      terms_and_conditions: application.terms_and_conditions,
+      applied_at: application.applied_at,
+      approved_at: application.approved_at,
+      cancelled_at: application.cancelled_at,
+      cancellation_reason: application.cancellation_reason,
+      approved_by: application.approved_by ? {
+        name: `${application.approved_by.first_name} ${application.approved_by.last_name}`,
+        email: application.approved_by.email,
+        role: application.approved_by.role
+      } : null,
+      created_at: application.createdAt,
+      updated_at: application.updatedAt
+    };
+
+    res.json({
+      message: "Loyalty program application details retrieved successfully",
+      application: formattedApplication
+    });
+
+  } catch (err) {
+    console.error('Error fetching loyalty program application details:', err);
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// Accept loyalty program application
+export const acceptLoyaltyProgramApplication = async (req, res) => {
+  try {
+    const { applicationId } = req.params;
+
+    const application = await VendorLoyaltyProgram.findById(applicationId)
+      .populate('vendor_user_id', 'first_name last_name email');
+
+    if (!application) {
+      return res.status(404).json({ message: "Loyalty program application not found" });
+    }
+
+    if (application.status !== 'pending') {
+      return res.status(400).json({ 
+        message: `Cannot accept application. Current status: ${application.status}` 
+      });
+    }
+
+    // Use the model's approve method
+    await application.approve(req.user._id);
+
+    // Reload application to get updated fields
+    await application.populate('vendor_user_id', 'first_name last_name email vendor_info');
+    await application.populate('approved_by', 'first_name last_name email role');
+
+    // Send notification emails to all Students/Staff/TA/Professor (non-blocking)
+    // Get all active users with these roles
+    const eligibleUsers = await User.find({
+      role: { $in: ['Student', 'Staff', 'TA', 'Professor'] },
+      status: 'active',
+      is_verified: true // Only send to verified users
+    }).select('email first_name last_name');
+
+    const vendorName = application.vendor_user_id.vendor_info?.company_name || 
+                      `${application.vendor_user_id.first_name} ${application.vendor_user_id.last_name}`;
+    const companyName = application.vendor_user_id.vendor_info?.company_name || null;
+
+    // Send emails in parallel (non-blocking)
+    const emailPromises = eligibleUsers.map(user => 
+      sendNewLoyaltyPartnerNotification(user.email, {
+        userName: `${user.first_name} ${user.last_name}`,
+        vendorName: vendorName,
+        companyName: companyName,
+        discountRate: application.discount_rate,
+        promoCode: application.promo_code,
+        termsAndConditions: application.terms_and_conditions
+      }).catch(err => {
+        console.error(`Failed to send notification to ${user.email}:`, err);
+      })
+    );
+
+    // Don't wait for emails to complete
+    Promise.all(emailPromises).then(() => {
+      console.log(`✅ Sent ${eligibleUsers.length} loyalty program notifications`);
+    }).catch(err => {
+      console.error('Error sending loyalty program notifications:', err);
+    });
+
+    res.json({
+      message: "Loyalty program application accepted successfully",
+      application: {
+        _id: application._id,
+        vendor_name: vendorName,
+        vendor_email: application.vendor_user_id.email,
+        status: application.status,
+        discount_rate: application.discount_rate,
+        promo_code: application.promo_code,
+        approved_by: `${req.user.first_name} ${req.user.last_name}`,
+        approved_at: application.approved_at,
+        notifications_sent: eligibleUsers.length
+      }
+    });
+
+  } catch (err) {
+    console.error('Error accepting loyalty program application:', err);
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// Reject loyalty program application
+export const rejectLoyaltyProgramApplication = async (req, res) => {
+  try {
+    const { applicationId } = req.params;
+    const { rejection_reason } = req.body;
+
+    if (!rejection_reason || rejection_reason.trim().length === 0) {
+      return res.status(400).json({ 
+        message: "Rejection reason is required" 
+      });
+    }
+
+    const application = await VendorLoyaltyProgram.findById(applicationId)
+      .populate('vendor_user_id', 'first_name last_name email');
+
+    if (!application) {
+      return res.status(404).json({ message: "Loyalty program application not found" });
+    }
+
+    if (application.status !== 'pending') {
+      return res.status(400).json({ 
+        message: `Cannot reject application. Current status: ${application.status}` 
+      });
+    }
+
+    // Update application status to rejected
+    application.status = 'rejected';
+    application.approved_by = req.user._id;
+    application.approved_at = new Date();
+    // Store rejection reason in cancellation_reason field (reusing existing field)
+    application.cancellation_reason = rejection_reason.trim();
+    await application.save();
+
+    res.json({
+      message: "Loyalty program application rejected successfully",
+      application: {
+        _id: application._id,
+        vendor_name: `${application.vendor_user_id.first_name} ${application.vendor_user_id.last_name}`,
+        vendor_email: application.vendor_user_id.email,
+        status: application.status,
+        rejection_reason: application.cancellation_reason,
+        rejected_by: `${req.user.first_name} ${req.user.last_name}`,
+        rejected_at: application.approved_at
+      }
+    });
+
+  } catch (err) {
+    console.error('Error rejecting loyalty program application:', err);
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// Get loyalty program statistics
+export const getLoyaltyProgramStats = async (req, res) => {
+  try {
+    const stats = {
+      total: await VendorLoyaltyProgram.countDocuments({}),
+      pending: await VendorLoyaltyProgram.countDocuments({ status: 'pending' }),
+      active: await VendorLoyaltyProgram.countDocuments({ status: 'active' }),
+      cancelled: await VendorLoyaltyProgram.countDocuments({ status: 'cancelled' }),
+      rejected: await VendorLoyaltyProgram.countDocuments({ status: 'rejected' })
+    };
+
+    res.json({
+      message: "Loyalty program statistics retrieved successfully",
+      statistics: {
+        overall: stats
+      }
+    });
+
+  } catch (err) {
+    console.error('Error fetching loyalty program stats:', err);
     res.status(500).json({ message: err.message });
   }
 };

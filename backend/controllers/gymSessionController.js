@@ -79,11 +79,23 @@ export const editGymSession = async (req, res) => {
       const registrations = await GymSessionRegistration.find({
         gym_session_id: id,
         status: 'registered'
-      }).populate('user_id', 'email first_name last_name');
+      }).populate('user_id', 'email first_name last_name role');
 
       const emailPromises = registrations.map(reg => {
-        return sendGymSessionEditEmail(reg.email, {
-          userName: reg.name,
+        // Use populated user email if available, otherwise fall back to registration email
+        const userEmail = reg.user_id?.email || reg.email;
+        // Use populated user name if available, otherwise fall back to registration name
+        const userName = reg.user_id 
+          ? `${reg.user_id.first_name || ''} ${reg.user_id.last_name || ''}`.trim() || reg.name
+          : reg.name;
+
+        if (!userEmail) {
+          console.error(`No email found for registration ${reg._id}`);
+          return Promise.resolve();
+        }
+
+        return sendGymSessionEditEmail(userEmail, {
+          userName: userName,
           sessionType: updatedSession.type,
           oldDate: currentSession.date,
           oldTime: currentSession.time,
@@ -91,11 +103,12 @@ export const editGymSession = async (req, res) => {
           newTime: updatedSession.time,
           sessionDuration: updatedSession.duration
         }).catch(err => {
-          console.error(`Failed to send edit email to ${reg.email}:`, err);
+          console.error(`Failed to send edit email to ${userEmail} (${reg.user_id?.role || 'unknown role'}):`, err);
         });
       });
 
       await Promise.all(emailPromises);
+      console.log(`✅ Sent ${registrations.length} gym session edit notification email(s)`);
     }
 
     res.status(200).json({ message: " Gym session updated successfully", updatedSession });
@@ -119,25 +132,38 @@ export const cancelGymSession = async (req, res) => {
       return res.status(404).json({ message: "Gym session not found" });
     }
 
-    // Send email notifications to all registered users
+    // Send email notifications to all registered users (Student, Staff, TA, Professor)
     const registrations = await GymSessionRegistration.find({
       gym_session_id: id,
       status: 'registered'
-    }).populate('user_id', 'email first_name last_name');
+    }).populate('user_id', 'email first_name last_name role');
 
     const emailPromises = registrations.map(reg => {
-      return sendGymSessionCancellationEmail(reg.email, {
-        userName: reg.name,
+      // Use populated user email if available, otherwise fall back to registration email
+      const userEmail = reg.user_id?.email || reg.email;
+      // Use populated user name if available, otherwise fall back to registration name
+      const userName = reg.user_id 
+        ? `${reg.user_id.first_name || ''} ${reg.user_id.last_name || ''}`.trim() || reg.name
+        : reg.name;
+
+      if (!userEmail) {
+        console.error(`No email found for registration ${reg._id}`);
+        return Promise.resolve();
+      }
+
+      return sendGymSessionCancellationEmail(userEmail, {
+        userName: userName,
         sessionType: cancelledSession.type,
         sessionDate: cancelledSession.date,
         sessionTime: cancelledSession.time,
         sessionDuration: cancelledSession.duration
       }).catch(err => {
-        console.error(`Failed to send cancellation email to ${reg.email}:`, err);
+        console.error(`Failed to send cancellation email to ${userEmail} (${reg.user_id?.role || 'unknown role'}):`, err);
       });
     });
 
     await Promise.all(emailPromises);
+    console.log(`✅ Sent ${registrations.length} gym session cancellation notification email(s)`);
 
     res.status(200).json({ message: " Gym session cancelled", cancelledSession });
   } catch (error) {

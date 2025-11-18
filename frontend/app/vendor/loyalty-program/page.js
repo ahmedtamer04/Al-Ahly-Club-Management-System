@@ -38,6 +38,12 @@ export default function LoyaltyProgramPage() {
   useEffect(() => {
     if (isClient) {
       fetchLoyaltyStatus();
+      // Auto-refresh every 60 seconds to check for status updates (when admin accepts/rejects)
+      const interval = setInterval(() => {
+        fetchLoyaltyStatus();
+      }, 60000); // 60 seconds
+      
+      return () => clearInterval(interval);
     }
   }, [isClient]);
 
@@ -114,20 +120,30 @@ export default function LoyaltyProgramPage() {
   };
 
   const handleCancel = async () => {
-    if (!confirm('Are you sure you want to cancel your participation in the GUC Loyalty Program? This action cannot be undone.')) {
+    const isPending = loyaltyStatus?.application?.status === 'pending';
+    const confirmMessage = isPending
+      ? 'Are you sure you want to withdraw your loyalty program application? This action cannot be undone.'
+      : 'Are you sure you want to cancel your participation in the GUC Loyalty Program? This action cannot be undone.';
+    
+    if (!confirm(confirmMessage)) {
       return;
     }
 
     try {
       setCancelling(true);
       setError('');
-      await vendorAPI.cancelLoyaltyProgram(cancellationReason);
-      setSuccess('Loyalty program participation cancelled successfully');
+      setSuccess('');
+      const response = await vendorAPI.cancelLoyaltyProgram(cancellationReason);
+      setSuccess(response.message || (isPending 
+        ? 'Loyalty program application withdrawn successfully' 
+        : 'Loyalty program participation cancelled successfully'));
       setCancellationReason('');
       fetchLoyaltyStatus(); // Refresh status
     } catch (err) {
       console.error('Error cancelling loyalty program:', err);
-      setError(err.response?.data?.message || 'Failed to cancel participation');
+      setError(err.response?.data?.message || (isPending 
+        ? 'Failed to withdraw application' 
+        : 'Failed to cancel participation'));
     } finally {
       setCancelling(false);
     }
@@ -244,6 +260,23 @@ export default function LoyaltyProgramPage() {
                 <section className="section">
                   <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem'}}>
                     <h2>My Loyalty Program Status</h2>
+                    <button
+                      onClick={fetchLoyaltyStatus}
+                      disabled={loading}
+                      style={{
+                        padding: '0.5rem 1rem',
+                        background: '#17a2b8',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '6px',
+                        cursor: loading ? 'not-allowed' : 'pointer',
+                        fontWeight: '600',
+                        opacity: loading ? 0.6 : 1,
+                        fontSize: '0.9rem'
+                      }}
+                    >
+                      {loading ? '🔄 Refreshing...' : '🔄 Refresh Status'}
+                    </button>
                   </div>
 
                   <div style={{
@@ -335,16 +368,32 @@ export default function LoyaltyProgramPage() {
                       </div>
                     )}
 
-                    {loyaltyStatus.application.status === 'active' && (
+                    {(loyaltyStatus.application.status === 'active' || loyaltyStatus.application.status === 'pending') && (
                       <div style={{
                         padding: '1rem',
-                        background: '#fff3cd',
+                        background: loyaltyStatus.application.status === 'active' ? '#fff3cd' : '#f8d7da',
                         borderRadius: '6px',
-                        border: '1px solid #ffc107'
+                        border: `1px solid ${loyaltyStatus.application.status === 'active' ? '#ffc107' : '#dc3545'}`
                       }}>
-                        <h4 style={{margin: '0 0 1rem 0', color: '#856404'}}>Cancel Participation</h4>
+                        <h4 style={{
+                          margin: '0 0 1rem 0', 
+                          color: loyaltyStatus.application.status === 'active' ? '#856404' : '#721c24'
+                        }}>
+                          {loyaltyStatus.application.status === 'active' 
+                            ? 'Cancel Participation' 
+                            : 'Withdraw Application'}
+                        </h4>
+                        <p style={{
+                          margin: '0 0 1rem 0',
+                          color: loyaltyStatus.application.status === 'active' ? '#856404' : '#721c24',
+                          fontSize: '0.9rem'
+                        }}>
+                          {loyaltyStatus.application.status === 'active'
+                            ? 'You can cancel your participation in the GUC Loyalty Program at any time.'
+                            : 'You can withdraw your application before it is reviewed by admin.'}
+                        </p>
                         <textarea
-                          placeholder="Reason for cancellation (optional)"
+                          placeholder="Reason for cancellation/withdrawal (optional)"
                           value={cancellationReason}
                           onChange={(e) => setCancellationReason(e.target.value)}
                           rows="3"
@@ -371,7 +420,11 @@ export default function LoyaltyProgramPage() {
                             opacity: cancelling ? 0.6 : 1
                           }}
                         >
-                          {cancelling ? 'Cancelling...' : '🚫 Cancel Participation'}
+                          {cancelling 
+                            ? 'Processing...' 
+                            : loyaltyStatus.application.status === 'active'
+                              ? '🚫 Cancel Participation'
+                              : '🚫 Withdraw Application'}
                         </button>
                       </div>
                     )}

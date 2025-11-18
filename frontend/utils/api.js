@@ -270,6 +270,22 @@ export const gymAPI = {
     return api.get(`/gym-sessions/schedule${queryString ? `?${queryString}` : ''}`);
   },
 
+  // POST /api/gym-sessions/create
+  // Auth: requireAdminOrEventsOffice
+  // Required: { date, time, duration, type, maxParticipants }
+  // Create a new gym session
+  create: (sessionData) => api.post('/gym-sessions/create', sessionData),
+
+  // PUT /api/gym-sessions/edit/:id
+  // Auth: requireAdminOrEventsOffice
+  // Edit a gym session (triggers email notifications to registered users)
+  edit: (id, updates) => api.put(`/gym-sessions/edit/${id}`, updates),
+
+  // PATCH /api/gym-sessions/cancel/:id
+  // Auth: requireAdminOrEventsOffice
+  // Cancel a gym session (triggers email notifications to registered users)
+  cancel: (id) => api.patch(`/gym-sessions/cancel/${id}`, {}),
+
   // POST /api/gym-sessions/register/:sessionId
   // Auth: requireStudentOrAbove
   // Register for a gym session
@@ -657,6 +673,31 @@ export const adminAPI = {
   // Auth: requireAdminOrEventsOffice
   // Required: { rejection_reason: "rejection reason" }
   rejectVendorRequest: (id, rejection_reason) => api.post(`/admin/vendor-requests/${id}/reject`, { rejection_reason }),
+
+  // GET /api/admin/loyalty-program/applications
+  // Auth: requireAdmin
+  // Query params: status, page, limit
+  getLoyaltyProgramApplications: (params = {}) => {
+    const queryString = new URLSearchParams(params).toString();
+    return api.get(`/admin/loyalty-program/applications${queryString ? `?${queryString}` : ''}`);
+  },
+
+  // GET /api/admin/loyalty-program/applications/stats
+  // Auth: requireAdmin
+  getLoyaltyProgramStats: () => api.get('/admin/loyalty-program/applications/stats'),
+
+  // GET /api/admin/loyalty-program/applications/:applicationId
+  // Auth: requireAdmin
+  getLoyaltyProgramApplicationById: (id) => api.get(`/admin/loyalty-program/applications/${id}`),
+
+  // POST /api/admin/loyalty-program/applications/:applicationId/accept
+  // Auth: requireAdmin
+  acceptLoyaltyProgramApplication: (id) => api.post(`/admin/loyalty-program/applications/${id}/accept`, {}),
+
+  // POST /api/admin/loyalty-program/applications/:applicationId/reject
+  // Auth: requireAdmin
+  // Required: { rejection_reason: "rejection reason" }
+  rejectLoyaltyProgramApplication: (id, rejection_reason) => api.post(`/admin/loyalty-program/applications/${id}/reject`, { rejection_reason }),
 
   // GET /api/admin/pending-users
   // Auth: requireAdmin

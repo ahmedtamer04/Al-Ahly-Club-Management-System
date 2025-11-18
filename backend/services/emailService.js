@@ -614,17 +614,20 @@ export const sendGymSessionCancellationEmail = async (email, sessionDetails) => 
       </html>
     `;
 
-    await getTransporter().sendMail({
+    const emailTransporter = getTransporter();
+    const info = await emailTransporter.sendMail({
       from: `"GUC Al-Ahly" <${process.env.EMAIL_USER}>`,
       to: email,
       subject: 'Gym Session Cancelled - GUC Al-Ahly',
       html: htmlContent
     });
 
-    console.log(`Gym session cancellation email sent to ${email}`);
+    console.log(`✅ Gym session cancellation email sent to ${email}`);
+    console.log(`Message ID: ${info.messageId}`);
+    return true;
   } catch (error) {
-    console.error('Error sending gym session cancellation email:', error);
-    throw error;
+    console.error(`❌ Error sending gym session cancellation email to ${email}:`, error);
+    return false;
   }
 };
 
@@ -683,17 +686,20 @@ export const sendGymSessionEditEmail = async (email, sessionDetails) => {
       </html>
     `;
 
-    await getTransporter().sendMail({
+    const emailTransporter = getTransporter();
+    const info = await emailTransporter.sendMail({
       from: `"GUC Al-Ahly" <${process.env.EMAIL_USER}>`,
       to: email,
       subject: 'Gym Session Updated - GUC Al-Ahly',
       html: htmlContent
     });
 
-    console.log(`Gym session edit email sent to ${email}`);
+    console.log(`✅ Gym session edit email sent to ${email}`);
+    console.log(`Message ID: ${info.messageId}`);
+    return true;
   } catch (error) {
-    console.error('Error sending gym session edit email:', error);
-    throw error;
+    console.error(`❌ Error sending gym session edit email to ${email}:`, error);
+    return false;
   }
 };
 
@@ -838,6 +844,119 @@ export const sendVendorQRCodes = async (email, qrCodeData) => {
     return true;
   } catch (error) {
     console.error('❌ Error sending QR codes:', error);
+    return false;
+  }
+};
+
+// Send notification email to all Students/Staff/TA/Professor about new loyalty program partner
+export const sendNewLoyaltyPartnerNotification = async (email, partnerDetails) => {
+  const {
+    userName,
+    vendorName,
+    companyName,
+    discountRate,
+    promoCode,
+    termsAndConditions
+  } = partnerDetails;
+
+  const mailOptions = {
+    from: process.env.EMAIL_USER,
+    to: email,
+    subject: `🎁 New Partner Added to GUC Loyalty Program - ${vendorName}`,
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>New Loyalty Program Partner</title>
+      </head>
+      <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f4f4f4;">
+        <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff;">
+          <!-- Header -->
+          <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center;">
+            <h1 style="color: white; margin: 0; font-size: 28px;">🎁 New Loyalty Partner!</h1>
+          </div>
+          
+          <!-- Content -->
+          <div style="padding: 30px;">
+            <p style="color: #333; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+              Dear ${userName},
+            </p>
+            
+            <p style="color: #333; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+              Great news! A new vendor has joined the <strong>GUC Loyalty Program</strong> and is now offering exclusive discounts to GUC community members!
+            </p>
+            
+            <!-- Vendor Info Card -->
+            <div style="background-color: #f8f9fa; border-left: 4px solid #667eea; padding: 20px; border-radius: 8px; margin: 20px 0;">
+              <h2 style="color: #333; margin: 0 0 10px 0; font-size: 22px;">
+                ${vendorName}${companyName ? ` - ${companyName}` : ''}
+              </h2>
+              
+              <!-- Discount Badge -->
+              <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px; border-radius: 8px; text-align: center; margin: 15px 0;">
+                <div style="font-size: 14px; margin-bottom: 5px;">Special Discount</div>
+                <div style="font-size: 32px; font-weight: bold;">${discountRate}% OFF</div>
+              </div>
+              
+              <!-- Promo Code -->
+              <div style="background-color: #e3f2fd; border: 2px dashed #1976d2; padding: 15px; border-radius: 8px; text-align: center; margin: 15px 0;">
+                <div style="font-size: 12px; color: #666; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 1px;">Promo Code</div>
+                <div style="font-size: 24px; font-family: monospace; font-weight: bold; color: #1976d2; letter-spacing: 3px;">
+                  ${promoCode}
+                </div>
+              </div>
+              
+              <!-- Terms & Conditions -->
+              <div style="margin-top: 15px;">
+                <h3 style="color: #333; font-size: 16px; margin: 0 0 10px 0;">Terms & Conditions:</h3>
+                <div style="background-color: white; padding: 15px; border-radius: 6px; color: #555; font-size: 14px; line-height: 1.6; white-space: pre-wrap;">
+${termsAndConditions}
+                </div>
+              </div>
+            </div>
+            
+            <p style="color: #333; font-size: 16px; line-height: 1.6; margin: 20px 0;">
+              Don't miss out on this exclusive offer! Use the promo code <strong>${promoCode}</strong> to enjoy ${discountRate}% off at ${vendorName}.
+            </p>
+            
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${process.env.FRONTEND_URL || 'http://localhost:3000'}/loyalty-program" 
+                 style="background-color: #667eea; color: white; padding: 14px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold; font-size: 16px;">
+                View All Loyalty Partners
+              </a>
+            </div>
+            
+            <div style="background-color: #fff3cd; padding: 15px; border-radius: 8px; margin-top: 20px;">
+              <p style="color: #856404; margin: 0; font-size: 14px;">
+                <strong>💡 Tip:</strong> Visit the Loyalty Program page to see all available partners and their exclusive discounts!
+              </p>
+            </div>
+          </div>
+          
+          <hr style="margin: 30px 0; border: none; border-top: 1px solid #ecf0f1;">
+          
+          <p style="color: #95a5a6; font-size: 12px; text-align: center; margin: 0; padding: 0 30px 30px 30px;">
+            This is an automated email from GUC Al-Ahly Club.<br>
+            You are receiving this because you are a member of the GUC community.<br>
+            <br>
+            © ${new Date().getFullYear()} GUC Al-Ahly Club. All rights reserved.
+          </p>
+        </div>
+      </body>
+      </html>
+    `
+  };
+
+  try {
+    const emailTransporter = getTransporter();
+    const info = await emailTransporter.sendMail(mailOptions);
+    console.log(`✅ New loyalty partner notification sent to ${email}`);
+    console.log(`Message ID: ${info.messageId}`);
+    return true;
+  } catch (error) {
+    console.error(`❌ Error sending new loyalty partner notification to ${email}:`, error);
     return false;
   }
 };

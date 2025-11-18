@@ -633,7 +633,7 @@ export default function VendorApplicationsPage() {
                 </div>
               )}
 
-              {/* Payment Section - Only for accepted applications */}
+              {/* Payment Section - Only for accepted applications (works for both bazaar and booth_event) */}
               {selectedApplication.status === 'accepted' && (
                 <div className="detail-section" style={{borderLeftColor: '#ffc107'}}>
                   <h3 className="detail-section-title">
@@ -736,6 +736,17 @@ export default function VendorApplicationsPage() {
                               💳 Pay with Card
                             </button>
                           </div>
+                          <div style={{
+                            marginTop: '1rem',
+                            padding: '0.75rem',
+                            background: '#e3f2fd',
+                            borderRadius: '6px',
+                            border: '1px solid #1976d2'
+                          }}>
+                            <p style={{margin: '0', color: '#1565c0', fontSize: '0.85rem'}}>
+                              💡 <strong>After payment:</strong> You'll be able to request QR codes for all registered visitors via email.
+                            </p>
+                          </div>
                         </div>
                       )}
 
@@ -750,22 +761,38 @@ export default function VendorApplicationsPage() {
                           <p style={{margin: '0 0 1rem 0', color: '#155724', fontWeight: '600'}}>
                             ✅ Payment Completed
                           </p>
-                          <button
-                            onClick={handleSendQRCodes}
-                            disabled={sendingQRCodes}
-                            style={{
-                              padding: '0.75rem 1.5rem',
-                              background: '#17a2b8',
-                              color: 'white',
-                              border: 'none',
-                              borderRadius: '6px',
-                              cursor: sendingQRCodes ? 'not-allowed' : 'pointer',
-                              fontWeight: '600',
-                              opacity: sendingQRCodes ? 0.6 : 1
-                            }}
-                          >
-                            {sendingQRCodes ? 'Sending...' : '📱 Request QR Codes for Visitors'}
-                          </button>
+                          <div style={{
+                            marginTop: '1rem',
+                            padding: '1rem',
+                            background: '#e3f2fd',
+                            borderRadius: '8px',
+                            border: '1px solid #1976d2'
+                          }}>
+                            <p style={{margin: '0 0 1rem 0', color: '#1565c0', fontWeight: '600', fontSize: '0.95rem'}}>
+                              📱 QR Codes for Registered Visitors
+                            </p>
+                            <p style={{margin: '0 0 1rem 0', color: '#1976d2', fontSize: '0.9rem'}}>
+                              Request QR codes for all visitors registered for this {selectedApplication.kind === 'bazaar' ? 'bazaar' : 'booth event'}. 
+                              QR codes will be sent to your email as PNG attachments.
+                            </p>
+                            <button
+                              onClick={handleSendQRCodes}
+                              disabled={sendingQRCodes}
+                              style={{
+                                padding: '0.75rem 1.5rem',
+                                background: '#17a2b8',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '6px',
+                                cursor: sendingQRCodes ? 'not-allowed' : 'pointer',
+                                fontWeight: '600',
+                                opacity: sendingQRCodes ? 0.6 : 1,
+                                width: '100%'
+                              }}
+                            >
+                              {sendingQRCodes ? '⏳ Sending QR Codes...' : '📱 Request QR Codes for All Visitors'}
+                            </button>
+                          </div>
                         </div>
                       )}
                     </div>

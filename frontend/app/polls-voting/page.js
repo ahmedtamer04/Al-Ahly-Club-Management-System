@@ -241,6 +241,9 @@ export default function PollsVotingPage() {
           ) : polls.length === 0 ? (
             <div className="empty-state">
               <p>📊 No open polls available for voting at the moment</p>
+              <p style={{ marginTop: '1rem', color: '#666', fontSize: '0.9rem' }}>
+                Polls need to be opened by Events Office and have an active application deadline to appear here.
+              </p>
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
@@ -293,8 +296,19 @@ export default function PollsVotingPage() {
                         </p>
                       </div>
                     ) : sortedApplications.length === 0 ? (
-                      <div className="empty-state">
-                        <p>No vendor applications yet</p>
+                      <div className="empty-state" style={{
+                        padding: '2rem',
+                        textAlign: 'center',
+                        background: '#f8f9fa',
+                        borderRadius: '8px',
+                        border: '2px dashed #ddd'
+                      }}>
+                        <p style={{ margin: '0 0 0.5rem 0', color: '#666', fontWeight: '600' }}>
+                          ⏳ No vendor applications yet
+                        </p>
+                        <p style={{ margin: 0, color: '#999', fontSize: '0.9rem' }}>
+                          Vendors can still apply. Check back later to vote!
+                        </p>
                       </div>
                     ) : (
                       <div style={{

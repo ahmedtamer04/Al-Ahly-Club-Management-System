@@ -15,6 +15,15 @@ export const getAvailableCourts = async (req, res) => {
 
     const facilities = await Facility.find(filter);
 
+    if (facilities.length === 0) {
+      return res.json({
+        success: true,
+        message: "No courts found matching the criteria",
+        date: date || new Date().toISOString().split('T')[0],
+        courts: []
+      });
+    }
+
     // Get reservations for the specified date (if provided)
     const targetDate = date ? new Date(date) : new Date();
     targetDate.setHours(0, 0, 0, 0);
@@ -33,6 +42,13 @@ export const getAvailableCourts = async (req, res) => {
       reservedSlots[key] = true;
     });
 
+    // Default time slots if no availability is configured
+    const defaultTimeSlots = [
+      '08:00', '09:00', '10:00', '11:00', '12:00', 
+      '13:00', '14:00', '15:00', '16:00', '17:00', 
+      '18:00', '19:00', '20:00', '21:00'
+    ];
+
     // Process facilities and their availability
     const courtsWithAvailability = facilities.map(facility => {
       // Get available times from facility availability
@@ -42,7 +58,11 @@ export const getAvailableCourts = async (req, res) => {
         return availDate.getTime() === targetDate.getTime();
       });
 
-      const availableTimes = dateAvailability ? dateAvailability.times : [];
+      // Use facility-specific availability if available, otherwise use default times
+      // This ensures courts are always visible even if availability isn't configured
+      const availableTimes = dateAvailability && dateAvailability.times.length > 0
+        ? dateAvailability.times
+        : defaultTimeSlots;
       
       // Filter out reserved times
       const freeTimes = availableTimes.filter(time => {
@@ -57,9 +77,10 @@ export const getAvailableCourts = async (req, res) => {
         sport: facility.attributes.sport,
         indoor: facility.attributes.indoor,
         available_times: freeTimes,
-        all_times: availableTimes
+        all_times: availableTimes,
+        has_custom_availability: !!dateAvailability && dateAvailability.times.length > 0
       };
-    });
+    }).filter(court => court.available_times.length > 0); // Only show courts with available times
 
     res.json({
       success: true,
@@ -118,6 +139,13 @@ export const createCourtReservation = async (req, res) => {
       return res.status(400).json({ message: "Cannot reserve courts for past dates" });
     }
 
+    // Default time slots if no availability is configured
+    const defaultTimeSlots = [
+      '08:00', '09:00', '10:00', '11:00', '12:00', 
+      '13:00', '14:00', '15:00', '16:00', '17:00', 
+      '18:00', '19:00', '20:00', '21:00'
+    ];
+
     // Check if the time slot is available in facility availability
     const dateAvailability = facility.availability.find(avail => {
       const availDate = new Date(avail.date);
@@ -125,7 +153,12 @@ export const createCourtReservation = async (req, res) => {
       return availDate.getTime() === reservationDate.getTime();
     });
 
-    if (!dateAvailability || !dateAvailability.times.includes(reservation_time)) {
+    // Use facility-specific availability if available, otherwise use default times
+    const availableTimes = dateAvailability && dateAvailability.times.length > 0
+      ? dateAvailability.times
+      : defaultTimeSlots;
+
+    if (!availableTimes.includes(reservation_time)) {
       return res.status(400).json({ 
         message: "The selected time slot is not available for this facility on this date" 
       });

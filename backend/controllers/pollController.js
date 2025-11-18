@@ -733,6 +733,7 @@ export const getPollsForVoting = async (req, res) => {
           available_positions: poll.available_positions,
           applications: applicationsWithVotes,
           total_applications: applicationsWithVotes.length,
+          has_applications: applicationsWithVotes.length > 0,
           created_at: poll.createdAt
         };
       })

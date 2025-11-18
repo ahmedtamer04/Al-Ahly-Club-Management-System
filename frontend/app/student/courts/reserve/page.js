@@ -221,8 +221,13 @@ export default function ReserveCourtPage() {
             <div className="empty-state">
               <p>🏀 No courts available for the selected date and filters</p>
               <p style={{ fontSize: '0.9rem', color: '#999', marginTop: '0.5rem' }}>
-                Try selecting a different date or removing filters
+                This could mean:
               </p>
+              <ul style={{ fontSize: '0.9rem', color: '#999', marginTop: '0.5rem', textAlign: 'left', maxWidth: '500px', marginLeft: 'auto', marginRight: 'auto' }}>
+                <li>All time slots for this date are already reserved</li>
+                <li>No courts match your selected sport filter</li>
+                <li>Try selecting a different date</li>
+              </ul>
             </div>
           ) : (
             <section className="section">
