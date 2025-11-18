@@ -75,6 +75,8 @@ export const signupUser = async (req, res) => {
     
     // Staff, TA, and Professor require admin approval
     if(role === "Staff" || role === "TA" || role === "Professor") {
+      const skipEmailVerification = process.env.SKIP_EMAIL_VERIFICATION === 'true' && isDevelopment;
+      
       console.log("=== CREATING STAFF/TA/PROFESSOR USER ===");
       console.log("Setting status to: pending");
       console.log("Setting role_admin_verified to: false");
@@ -87,6 +89,7 @@ export const signupUser = async (req, res) => {
         status: "pending", // Requires admin approval
         password_hash: hash,
         role,
+        is_verified: skipEmailVerification ? true : false, // Auto-verified if SKIP_EMAIL_VERIFICATION is true
         role_admin_verified: false // Must be verified by admin
       });
       
@@ -271,10 +274,13 @@ export const loginUser = async (req, res) => {
     }
     
     // Check email verification for Student, Staff, TA, Professor (roles that require email verification)
-    if (!user.is_verified && ["Student", "Staff", "TA", "Professor"].includes(user.role)) {
-      return res.status(403).json({ 
-        message: "Please verify your email address. Check your inbox for the verification link." 
-      });
+    // Skip this check if SKIP_EMAIL_VERIFICATION is true
+    if (!process.env.SKIP_EMAIL_VERIFICATION || process.env.SKIP_EMAIL_VERIFICATION === 'false') {
+      if (!user.is_verified && ["Student", "Staff", "TA", "Professor"].includes(user.role)) {
+        return res.status(403).json({ 
+          message: "Please verify your email address. Check your inbox for the verification link." 
+        });
+      }
     }
     
     // Check if account is active

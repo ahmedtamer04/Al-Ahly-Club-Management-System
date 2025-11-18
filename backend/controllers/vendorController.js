@@ -1052,7 +1052,7 @@ export const getVendorPaymentInfo = async (req, res) => {
   try {
     const { application_id } = req.params;
 
-    const application = await VendorApplication.findById(application_id)
+    let application = await VendorApplication.findById(application_id)
       .populate('bazaar_id', 'name location start_date')
       .populate('vendor_user_id', 'first_name last_name email');
 
@@ -1068,14 +1068,23 @@ export const getVendorPaymentInfo = async (req, res) => {
       return res.status(400).json({ message: "Application must be accepted to view payment info" });
     }
 
+
     // Ensure participation_fee and payment_deadline are set (should be set during approval, but double-check)
     if (!application.participation_fee || application.participation_fee <= 0) {
       // If fee not set, calculate it based on booth size (for both bazaar and booth_event)
+
+    // Check if payment_fee or payment_deadline is missing and set them
+    if (!application.participation_fee || !application.payment_deadline) {
+      console.log('Missing payment info for application:', application._id);
+      
+      // Calculate participation fee based on booth size
+ 
       const feeMap = {
         '2x2': 150,
         '4x4': 400
       };
       application.participation_fee = feeMap[application.application?.booth_size] || 150;
+
     }
 
     if (!application.payment_deadline) {
@@ -1084,6 +1093,18 @@ export const getVendorPaymentInfo = async (req, res) => {
       deadline.setDate(deadline.getDate() + 3);
       application.payment_deadline = deadline;
       await application.save();
+
+      
+      // Set payment deadline: 3 days from approval
+      if (!application.payment_deadline) {
+        const deadline = new Date();
+        deadline.setDate(deadline.getDate() + 3);
+        application.payment_deadline = deadline;
+      }
+      
+      await application.save();
+      console.log('Updated payment info for application:', application._id);
+
     }
 
     // Get payment if exists

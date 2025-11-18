@@ -75,6 +75,7 @@ export default function VendorProfilePage() {
             <li><Link href="/vendor/polls">📊 Polls</Link></li>
             <li><Link href="/vendor/loyalty-program">🎁 Loyalty Program</Link></li>
             <li><Link href="/vendor/profile" className="active">👤 Profile</Link></li>
+            <li><Link href="/vendor/email-preferences">📧 Email Preferences</Link></li>
           </ul>
         </aside>
 
