@@ -1,8 +1,12 @@
 {
-  "/staff/page": "app/staff/page.js",
+  "/student/page": "app/student/page.js",
+  "/student/events/page": "app/student/events/page.js",
+  "/polls-voting/page": "app/polls-voting/page.js",
+  "/loyalty-program/page": "app/loyalty-program/page.js",
+  "/page": "app/page.js",
   "/auth/login/page": "app/auth/login/page.js",
-  "/professor/page": "app/professor/page.js",
-  "/professor/events/page": "app/professor/events/page.js",
-  "/professor/workshops/create/page": "app/professor/workshops/create/page.js",
-  "/professor/gym/page": "app/professor/gym/page.js"
+  "/vendor/loyalty-program/page": "app/vendor/loyalty-program/page.js",
+  "/student/my-registrations/page": "app/student/my-registrations/page.js",
+  "/student/facilities/page": "app/student/facilities/page.js",
+  "/student/gym/schedule/page": "app/student/gym/schedule/page.js"
 }

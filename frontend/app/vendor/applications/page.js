@@ -24,10 +24,12 @@ export default function VendorApplicationsPage() {
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [paymentInfo, setPaymentInfo] = useState(null);
   const [loadingPayment, setLoadingPayment] = useState(false);
+  const [paymentError, setPaymentError] = useState(null);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState('wallet'); // 'wallet' or 'stripe'
   const [processingPayment, setProcessingPayment] = useState(false);
   const [sendingQRCodes, setSendingQRCodes] = useState(false);
+  const [paymentSuccess, setPaymentSuccess] = useState(null);
 
   // Load user data on client side only
   useEffect(() => {
@@ -147,6 +149,7 @@ export default function VendorApplicationsPage() {
   const handleViewDetails = async (app) => {
     setSelectedApplication(app);
     setShowDetailsModal(true);
+    setPaymentError(null);
     
     // If application is accepted, fetch payment info
     if (app.status === 'accepted') {
@@ -156,6 +159,7 @@ export default function VendorApplicationsPage() {
         setPaymentInfo(paymentData);
       } catch (error) {
         console.error('Error fetching payment info:', error);
+        setPaymentError(error.response?.data?.message || error.message || 'Unable to load payment information');
         setPaymentInfo(null);
       } finally {
         setLoadingPayment(false);
@@ -167,7 +171,9 @@ export default function VendorApplicationsPage() {
     setShowDetailsModal(false);
     setSelectedApplication(null);
     setPaymentInfo(null);
+    setPaymentError(null);
     setShowPaymentModal(false);
+    setPaymentSuccess(null);
   };
 
   const handlePayWithWallet = async () => {
@@ -179,18 +185,20 @@ export default function VendorApplicationsPage() {
 
     try {
       setProcessingPayment(true);
+      setPaymentError(null);
       const result = await vendorAPI.payWithWallet(selectedApplication._id);
-      alert('Payment successful! Receipt sent to your email.');
+      setPaymentSuccess('✅ Payment successful! Receipt email sent to your registered email address.');
       
       // Refresh payment info
-      const paymentData = await vendorAPI.getPaymentInfo(selectedApplication._id);
-      setPaymentInfo(paymentData);
-      
-      // Update application in list
-      fetchApplications();
-      setShowPaymentModal(false);
+      setTimeout(async () => {
+        const paymentData = await vendorAPI.getPaymentInfo(selectedApplication._id);
+        setPaymentInfo(paymentData);
+        
+        // Update application in list
+        fetchApplications();
+      }, 2000);
     } catch (error) {
-      alert(`Payment failed: ${error.response?.data?.message || error.message}`);
+      setPaymentError(`Payment failed: ${error.response?.data?.message || error.message}`);
     } finally {
       setProcessingPayment(false);
     }
@@ -201,13 +209,14 @@ export default function VendorApplicationsPage() {
 
     try {
       setProcessingPayment(true);
+      setPaymentError(null);
       
       // Create payment intent
       const { client_secret, payment_id } = await vendorAPI.createStripePayment(selectedApplication._id);
       
       // Use Stripe Elements to confirm payment
       // For now, we'll use a simple approach - in production, use Stripe Elements
-      alert('Stripe payment integration requires Stripe Elements. Please implement Stripe checkout.');
+      setPaymentSuccess('ℹ️ Stripe payment integration requires Stripe Elements. Please implement Stripe checkout.');
       
       // TODO: Implement Stripe Elements integration
       // const stripe = await loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY);
@@ -216,7 +225,7 @@ export default function VendorApplicationsPage() {
       // });
       
     } catch (error) {
-      alert(`Payment failed: ${error.response?.data?.message || error.message}`);
+      setPaymentError(`Payment failed: ${error.response?.data?.message || error.message}`);
     } finally {
       setProcessingPayment(false);
     }
@@ -231,10 +240,11 @@ export default function VendorApplicationsPage() {
 
     try {
       setSendingQRCodes(true);
+      setPaymentSuccess(null);
       const result = await vendorAPI.sendQRCodes(selectedApplication._id);
-      alert(`QR codes sent successfully! Check your email for ${result.visitors_count} visitor QR code(s).`);
+      setPaymentSuccess(`✅ QR codes sent successfully! Check your email for ${result.visitors_count} visitor QR code(s).`);
     } catch (error) {
-      alert(`Failed to send QR codes: ${error.response?.data?.message || error.message}`);
+      setPaymentError(`Failed to send QR codes: ${error.response?.data?.message || error.message}`);
     } finally {
       setSendingQRCodes(false);
     }
@@ -262,6 +272,7 @@ export default function VendorApplicationsPage() {
             <li><Link href="/vendor/polls">📊 Polls</Link></li>
             <li><Link href="/vendor/loyalty-program">🎁 Loyalty Program</Link></li>
             <li><Link href="/vendor/profile">👤 Profile</Link></li>
+            <li><Link href="/vendor/email-preferences">📧 Email Preferences</Link></li>
           </ul>
         </aside>
 
@@ -641,6 +652,23 @@ export default function VendorApplicationsPage() {
                     Payment Information
                   </h3>
                   
+                  {paymentSuccess && (
+                    <div style={{
+                      marginBottom: '1.5rem',
+                      padding: '1rem',
+                      background: '#d4edda',
+                      borderRadius: '8px',
+                      border: '1px solid #28a745',
+                      color: '#155724',
+                      fontWeight: '500'
+                    }}>
+                      {paymentSuccess}
+                      <p style={{margin: '0.5rem 0 0 0', fontSize: '0.9em'}}>
+                        Check your email for the payment receipt.
+                      </p>
+                    </div>
+                  )}
+                  
                   {loadingPayment ? (
                     <div style={{textAlign: 'center', padding: '2rem'}}>Loading payment info...</div>
                   ) : paymentInfo ? (
@@ -770,8 +798,13 @@ export default function VendorApplicationsPage() {
                       )}
                     </div>
                   ) : (
-                    <div style={{textAlign: 'center', padding: '1rem', color: '#666'}}>
-                      Unable to load payment information
+                    <div style={{textAlign: 'center', padding: '1rem', color: '#dc3545'}}>
+                      <p>❌ {paymentError || 'Unable to load payment information'}</p>
+                      {paymentError && paymentError.includes('accepted') && (
+                        <p style={{fontSize: '0.9em', marginTop: '0.5rem', color: '#666'}}>
+                          Make sure your application has been accepted by admin staff.
+                        </p>
+                      )}
                     </div>
                   )}
                 </div>
