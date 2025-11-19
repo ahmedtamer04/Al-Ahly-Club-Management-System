@@ -673,6 +673,39 @@ export default function VendorApplicationsPage() {
                     <div style={{textAlign: 'center', padding: '2rem'}}>Loading payment info...</div>
                   ) : paymentInfo ? (
                     <div>
+                      {/* Application Details Summary in Payment Section */}
+                      <div style={{
+                        marginBottom: '1.5rem',
+                        padding: '1rem',
+                        background: '#f8f9fa',
+                        borderRadius: '8px',
+                        border: '1px solid #dee2e6'
+                      }}>
+                        <h4 style={{margin: '0 0 1rem 0', color: '#495057', fontSize: '0.95rem', fontWeight: '600'}}>
+                          📋 Application Summary
+                        </h4>
+                        <div className="detail-grid">
+                          {paymentInfo.application?.location && (
+                            <div className="detail-item">
+                              <span className="detail-label">📍 Location:</span>
+                              <span className="detail-value">{paymentInfo.application.location}</span>
+                            </div>
+                          )}
+                          {paymentInfo.application?.booth_size && (
+                            <div className="detail-item">
+                              <span className="detail-label">📦 Booth Size:</span>
+                              <span className="detail-value">{paymentInfo.application.booth_size}</span>
+                            </div>
+                          )}
+                          {paymentInfo.application?.duration && (
+                            <div className="detail-item">
+                              <span className="detail-label">⏱️ Duration:</span>
+                              <span className="detail-value">{paymentInfo.application.duration}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
                       <div className="detail-grid">
                         <div className="detail-item">
                           <span className="detail-label">Participation Fee:</span>
