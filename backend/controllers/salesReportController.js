@@ -35,38 +35,47 @@ export const getSalesReport = async (req, res) => {
     // Aggregate revenue by event
     const reportData = await Promise.all(
       events.map(async (event) => {
-        // Get all paid registrations for this event
-        const registrations = await Registration.find({
-          event_id: event._id,
-          payment_status: { $in: ['paid', 'free'] },
-          ...dateFilter
-        });
-        
-        // Calculate revenue from registrations
-        let revenue = 0;
-        let paidCount = 0;
-        let freeCount = 0;
-        
-        registrations.forEach(reg => {
-          if (reg.payment_status === 'paid') {
-            revenue += reg.payment_amount || 0;
-            paidCount++;
-          } else if (reg.payment_status === 'free') {
-            freeCount++;
-          }
-        });
-        
-        // Also check Payment model for additional payments
+        // Fetch payments first (treat Payment records as authoritative)
         const payments = await Payment.find({
           event_id: event._id,
           payment_status: 'completed',
           ...dateFilter
         });
-        
+
+        // Sum completed payments
+        let revenue = 0;
+        const paymentRegistrationIds = new Set();
         payments.forEach(payment => {
           revenue += payment.amount || 0;
+          if (payment.registration_id) paymentRegistrationIds.add(payment.registration_id.toString());
         });
-        
+
+        // Get registrations for this event — only count active (registered) ones
+        const registrations = await Registration.find({
+          event_id: event._id,
+          status: 'registered',
+          payment_status: { $in: ['paid', 'free'] },
+          ...dateFilter
+        });
+
+        // Calculate revenue coming from registrations that DO NOT have a linked Payment record.
+        // This avoids double-counting when a Payment document exists for the same registration.
+        let paidCount = 0;
+        let freeCount = 0;
+
+        registrations.forEach(reg => {
+          const regId = reg._id?.toString();
+          if (reg.payment_status === 'paid') {
+            // Only add registration.payment_amount when there's no corresponding Payment record
+            if (!regId || !paymentRegistrationIds.has(regId)) {
+              revenue += reg.payment_amount || 0;
+            }
+            paidCount++;
+          } else if (reg.payment_status === 'free') {
+            freeCount++;
+          }
+        });
+
         return {
           event_id: event._id,
           event_name: event.name,
@@ -129,6 +138,35 @@ export const getSalesReport = async (req, res) => {
       total_events: filteredReport.length
     };
     
+    // Support CSV download via ?format=csv
+    const { format } = req.query;
+    if (format === 'csv') {
+      // Build CSV header
+      const headers = [
+        'event_id', 'event_name', 'event_type', 'start_date', 'end_date', 'location',
+        'revenue', 'total_registrations', 'paid_registrations', 'free_registrations', 'capacity'
+      ];
+
+      const escapeCsv = (value) => {
+        if (value === null || value === undefined) return '';
+        const str = value instanceof Date ? value.toISOString() : String(value);
+        if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+          return '"' + str.replace(/"/g, '""') + '"';
+        }
+        return str;
+      };
+
+      const rows = filteredReport.map(row => (
+        headers.map(h => escapeCsv(row[h] ?? ''))
+      ));
+
+      const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', 'attachment; filename="sales-report.csv"');
+      return res.status(200).send(csv);
+    }
+
     res.status(200).json({
       success: true,
       report: filteredReport,
@@ -141,6 +179,7 @@ export const getSalesReport = async (req, res) => {
         sort_order
       }
     });
+    
     
   } catch (err) {
     console.error('Error generating sales report:', err);

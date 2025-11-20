@@ -7,7 +7,7 @@ import {
   deleteBazaar
 } from "../controllers/bazaarController.js";
 
-import { auth, requireEventsOffice } from "../middleware/auth.js";
+import { auth, requireEventsOffice, requireAdminOrEventsOffice } from "../middleware/auth.js";
 
 const router = express.Router();
 
@@ -17,8 +17,9 @@ const router = express.Router();
 
 // Only Admins and EventsOffice can create, edit, or delete bazaars
 router.post("/createBazaar", auth, requireEventsOffice, createBazaar);
-router.put("/editBazaar/:id", auth, requireEventsOffice, editBazaar);
-router.delete("/deleteBazaar/:id", auth, requireEventsOffice, deleteBazaar);
+// Allow Admin or EventsOffice to edit/delete bazaars
+router.put("/editBazaar/:id", auth, requireAdminOrEventsOffice, editBazaar);
+router.delete("/deleteBazaar/:id", auth, requireAdminOrEventsOffice, deleteBazaar);
 
 // General routes (can be accessed by different roles)
 router.get("/all", auth, getAllBazaars);

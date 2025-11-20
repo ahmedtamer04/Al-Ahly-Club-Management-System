@@ -1,6 +1,8 @@
 {
-  "/eventsoffice/events/page": "app/eventsoffice/events/page.js",
-  "/auth/login/page": "app/auth/login/page.js",
+  "/eventsoffice/page": "app/eventsoffice/page.js",
   "/eventsoffice/conferences/page": "app/eventsoffice/conferences/page.js",
-  "/eventsoffice/page": "app/eventsoffice/page.js"
+  "/eventsoffice/trips/page": "app/eventsoffice/trips/page.js",
+  "/eventsoffice/sales-report/page": "app/eventsoffice/sales-report/page.js",
+  "/eventsoffice/documents/page": "app/eventsoffice/documents/page.js",
+  "/page": "app/page.js"
 }
