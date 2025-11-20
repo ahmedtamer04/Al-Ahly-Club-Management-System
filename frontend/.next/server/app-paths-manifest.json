@@ -1,7 +1,6 @@
 {
-  "/auth/login/page": "app/auth/login/page.js",
-  "/eventsoffice/page": "app/eventsoffice/page.js",
-  "/page": "app/page.js",
   "/eventsoffice/events/page": "app/eventsoffice/events/page.js",
-  "/eventsoffice/conferences/page": "app/eventsoffice/conferences/page.js"
+  "/eventsoffice/conferences/page": "app/eventsoffice/conferences/page.js",
+  "/eventsoffice/page": "app/eventsoffice/page.js",
+  "/auth/login/page": "app/auth/login/page.js"
 }

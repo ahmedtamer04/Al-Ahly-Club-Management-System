@@ -41,14 +41,19 @@ export default function MyWorkshopsPage() {
       time: workshop.time || '',
       full_agenda: workshop.workshop?.full_agenda || '',
       faculty_responsible: workshop.workshop?.faculty_responsible || '',
-      professors_participating: workshop.workshop?.professors_participating || '',
+      professors_participating: Array.isArray(workshop.workshop?.professors_participating) 
+        ? workshop.workshop.professors_participating.join(', ')
+        : workshop.workshop?.professors_participating || '',
       required_budget: workshop.workshop?.required_budget || 0,
       funding_source: workshop.workshop?.funding_source || '',
       extra_resources: workshop.workshop?.extra_resources || '',
       capacity: workshop.workshop?.capacity || 30,
-      registration_deadline: workshop.workshop?.registration_deadline?.split('T')[0] || ''
+      registration_deadline: workshop.workshop?.registration_deadline?.split('T')[0] || '',
+      allowed_roles: Array.isArray(workshop.allowed_roles) ? workshop.allowed_roles : []
     });
   };
+  
+  const availableRoles = ['Student', 'Staff', 'TA', 'Professor'];
 
   const handleUpdate = async (e) => {
     e.preventDefault();
@@ -395,6 +400,42 @@ export default function MyWorkshopsPage() {
                         onChange={(e) => setEditFormData({...editFormData, registration_deadline: e.target.value})}
                       />
                     </div>
+                  </div>
+
+                  <div className="form-group">
+                    <label>Restrict to Specific Roles (Optional)</label>
+                    <p style={{ fontSize: '14px', color: '#666', marginBottom: '12px' }}>
+                      Select which user roles can view and register for this event. Leave empty to allow all roles.
+                    </p>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
+                      {availableRoles.map(role => (
+                        <label key={role} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                          <input
+                            type="checkbox"
+                            checked={editFormData.allowed_roles?.includes(role) || false}
+                            onChange={(e) => {
+                              const currentRoles = editFormData.allowed_roles || [];
+                              if (e.target.checked) {
+                                setEditFormData({...editFormData, allowed_roles: [...currentRoles, role]});
+                              } else {
+                                setEditFormData({...editFormData, allowed_roles: currentRoles.filter(r => r !== role)});
+                              }
+                            }}
+                          />
+                          <span>{role}</span>
+                        </label>
+                      ))}
+                    </div>
+                    {editFormData.allowed_roles?.length > 0 && (
+                      <p style={{ fontSize: '12px', color: '#28a745', marginTop: '8px' }}>
+                        ✓ Restricted to: {editFormData.allowed_roles.join(', ')}
+                      </p>
+                    )}
+                    {(!editFormData.allowed_roles || editFormData.allowed_roles.length === 0) && (
+                      <p style={{ fontSize: '12px', color: '#666', marginTop: '8px' }}>
+                        All roles can access this event
+                      </p>
+                    )}
                   </div>
 
                   <div className="form-actions">
