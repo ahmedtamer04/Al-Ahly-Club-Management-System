@@ -29,30 +29,6 @@
       "static/css/app/eventsoffice/events/page.css",
       "static/chunks/app/eventsoffice/events/page.js"
     ],
-    "/eventsoffice/conferences/create/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/css/app/eventsoffice/conferences/create/page.css",
-      "static/chunks/app/eventsoffice/conferences/create/page.js"
-    ],
-    "/eventsoffice/sales-report/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/css/app/eventsoffice/sales-report/page.css",
-      "static/chunks/app/eventsoffice/sales-report/page.js"
-    ],
-    "/eventsoffice/documents/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/css/app/eventsoffice/documents/page.css",
-      "static/chunks/app/eventsoffice/documents/page.js"
-    ],
-    "/eventsoffice/bazaars/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/css/app/eventsoffice/bazaars/page.css",
-      "static/chunks/app/eventsoffice/bazaars/page.js"
-    ],
     "/eventsoffice/conferences/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
