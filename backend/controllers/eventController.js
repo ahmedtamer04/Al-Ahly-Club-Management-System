@@ -2,6 +2,7 @@ import Event from "../models/Events.js";
 import Registration from "../models/Registration.js";
 import VendorApplication from "../models/VendorApplication.js";
 import Comment from "../models/Comment.js";
+import Rating from "../models/Rating.js";
 
 /* -------------------------- GET /events/upcoming -------------------------- */
 export const getUpcomingEvents = async (req, res) => {
@@ -237,3 +238,455 @@ export const getEventComments = async (req, res) => {
 // | 🔹 Sort by date ascending  | `GET`  | `http://localhost:5001/events/sort/date/asc`             |
 // | 🔹 Sort by date descending | `GET`  | `http://localhost:5001/events/sort/date/desc`            |
 // | 🔹 Get event by ID         | `GET`  | `http://localhost:5001/events/652ad81e23f3c9b96a8120b4`  |
+
+/* -------------------------- POST /events/:eventId/rate -------------------------- */
+export const rateEvent = async (req, res) => {
+  try {
+    const { eventId } = req.params;
+    const { rating, review } = req.body;
+    const userId = req.user._id;
+
+    // Validate rating value
+    if (!rating || rating < 1 || rating > 5) {
+      return res.status(400).json({ 
+        message: "Rating must be between 1 and 5" 
+      });
+    }
+
+    // Check if event exists
+    const event = await Event.findById(eventId);
+    if (!event) {
+      return res.status(404).json({ message: "Event not found" });
+    }
+
+    // Check if event has ended (only completed events can be rated)
+    if (event.status !== "completed" && event.end_date > new Date()) {
+      return res.status(400).json({ 
+        message: "You can only rate events that have been completed" 
+      });
+    }
+
+    // Check if user attended the event
+    const registration = await Registration.findOne({
+      event_id: eventId,
+      user_id: userId,
+      status: "registered",
+      payment_status: { $in: ["paid", "free"] }
+    });
+
+    if (!registration) {
+      return res.status(403).json({ 
+        message: "You can only rate events you have attended" 
+      });
+    }
+
+    // Check if user has already rated this event
+    let existingRating = await Rating.findOne({
+      event_id: eventId,
+      user_id: userId
+    });
+
+    if (existingRating) {
+      // Update existing rating
+      const oldRating = existingRating.rating;
+      existingRating.rating = rating;
+      existingRating.review = review || existingRating.review;
+      await existingRating.save();
+
+      // Recalculate average rating
+      const allRatings = await Rating.find({ event_id: eventId });
+      const totalRatings = allRatings.length;
+      const averageRating = allRatings.reduce((sum, r) => sum + r.rating, 0) / totalRatings;
+
+      event.average_rating = Math.round(averageRating * 10) / 10; // Round to 1 decimal
+      event.total_ratings = totalRatings;
+      await event.save();
+
+      return res.status(200).json({
+        message: "Rating updated successfully",
+        rating: existingRating,
+        event: {
+          id: event._id,
+          name: event.name,
+          average_rating: event.average_rating,
+          total_ratings: event.total_ratings
+        }
+      });
+    }
+
+    // Create new rating
+    const newRating = new Rating({
+      event_id: eventId,
+      user_id: userId,
+      rating,
+      review: review || ""
+    });
+
+    await newRating.save();
+
+    // Update event average rating and total ratings
+    const allRatings = await Rating.find({ event_id: eventId });
+    const totalRatings = allRatings.length;
+    const averageRating = allRatings.reduce((sum, r) => sum + r.rating, 0) / totalRatings;
+
+    event.average_rating = Math.round(averageRating * 10) / 10; // Round to 1 decimal
+    event.total_ratings = totalRatings;
+    await event.save();
+
+    res.status(201).json({
+      message: "Rating submitted successfully",
+      rating: newRating,
+      event: {
+        id: event._id,
+        name: event.name,
+        average_rating: event.average_rating,
+        total_ratings: event.total_ratings
+      }
+    });
+  } catch (err) {
+    console.error('Error rating event:', err);
+    res.status(500).json({ message: err.message });
+  }
+};
+
+/* -------------------------- GET /events/:eventId/ratings -------------------------- */
+export const getEventRatings = async (req, res) => {
+  try {
+    const { eventId } = req.params;
+
+    // Check if event exists
+    const event = await Event.findById(eventId);
+    if (!event) {
+      return res.status(404).json({ message: "Event not found" });
+    }
+
+    // Get all ratings for the event with user details
+    const ratings = await Rating.find({ event_id: eventId })
+      .populate('user_id', 'first_name last_name email')
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({
+      event: {
+        id: event._id,
+        name: event.name,
+        average_rating: event.average_rating,
+        total_ratings: event.total_ratings
+      },
+      ratings
+    });
+  } catch (err) {
+    console.error('Error fetching ratings:', err);
+    res.status(500).json({ message: err.message });
+  }
+};
+
+/* -------------------------- GET /events/:eventId/my-rating -------------------------- */
+export const getMyRating = async (req, res) => {
+  try {
+    const { eventId } = req.params;
+    const userId = req.user._id;
+
+    // Check if event exists
+    const event = await Event.findById(eventId);
+    if (!event) {
+      return res.status(404).json({ message: "Event not found" });
+    }
+
+    // Get user's rating for this event
+    const rating = await Rating.findOne({
+      event_id: eventId,
+      user_id: userId
+    }).populate('user_id', 'first_name last_name email');
+
+    if (!rating) {
+      return res.status(404).json({ 
+        message: "You have not rated this event yet",
+        canRate: false
+      });
+    }
+
+    res.status(200).json({
+      rating,
+      event: {
+        id: event._id,
+        name: event.name,
+        average_rating: event.average_rating,
+        total_ratings: event.total_ratings
+      }
+    });
+  } catch (err) {
+    console.error('Error fetching user rating:', err);
+    res.status(500).json({ message: err.message });
+  }
+};
+
+/* -------------------------- DELETE /events/:eventId/rate -------------------------- */
+export const deleteRating = async (req, res) => {
+  try {
+    const { eventId } = req.params;
+    const userId = req.user._id;
+
+    // Check if event exists
+    const event = await Event.findById(eventId);
+    if (!event) {
+      return res.status(404).json({ message: "Event not found" });
+    }
+
+    // Find and delete the rating
+    const rating = await Rating.findOneAndDelete({
+      event_id: eventId,
+      user_id: userId
+    });
+
+    if (!rating) {
+      return res.status(404).json({ 
+        message: "Rating not found" 
+      });
+    }
+
+    // Recalculate event average rating
+    const allRatings = await Rating.find({ event_id: eventId });
+    const totalRatings = allRatings.length;
+    
+    if (totalRatings > 0) {
+      const averageRating = allRatings.reduce((sum, r) => sum + r.rating, 0) / totalRatings;
+      event.average_rating = Math.round(averageRating * 10) / 10;
+    } else {
+      event.average_rating = 0;
+    }
+    
+    event.total_ratings = totalRatings;
+    await event.save();
+
+    res.status(200).json({
+      message: "Rating deleted successfully",
+      event: {
+        id: event._id,
+        name: event.name,
+        average_rating: event.average_rating,
+        total_ratings: event.total_ratings
+      }
+    });
+  } catch (err) {
+    console.error('Error deleting rating:', err);
+    res.status(500).json({ message: err.message });
+  }
+};
+
+/* -------------------------- POST /events/:eventId/comments -------------------------- */
+export const createComment = async (req, res) => {
+  try {
+    const { eventId } = req.params;
+    const { body } = req.body;
+    const userId = req.user._id;
+
+    // Validate comment body
+    if (!body || body.trim().length === 0) {
+      return res.status(400).json({ 
+        message: "Comment body is required" 
+      });
+    }
+
+    if (body.length > 1000) {
+      return res.status(400).json({ 
+        message: "Comment cannot exceed 1000 characters" 
+      });
+    }
+
+    // Check if event exists
+    const event = await Event.findById(eventId);
+    if (!event) {
+      return res.status(404).json({ message: "Event not found" });
+    }
+
+    // Check if user attended the event
+    const registration = await Registration.findOne({
+      event_id: eventId,
+      user_id: userId,
+      status: "registered",
+      payment_status: { $in: ["paid", "free"] }
+    });
+
+    if (!registration) {
+      return res.status(403).json({ 
+        message: "You can only comment on events you have attended" 
+      });
+    }
+
+    // Create new comment
+    const newComment = new Comment({
+      event_id: eventId,
+      author_id: userId,
+      body: body.trim()
+    });
+
+    await newComment.save();
+
+    // Populate author details before sending response
+    await newComment.populate('author_id', 'first_name last_name email');
+
+    res.status(201).json({
+      message: "Comment created successfully",
+      comment: newComment
+    });
+  } catch (err) {
+    console.error('Error creating comment:', err);
+    res.status(500).json({ message: err.message });
+  }
+};
+
+/* -------------------------- PUT /events/:eventId/comments/:commentId -------------------------- */
+export const updateComment = async (req, res) => {
+  try {
+    const { eventId, commentId } = req.params;
+    const { body } = req.body;
+    const userId = req.user._id;
+
+    // Validate comment body
+    if (!body || body.trim().length === 0) {
+      return res.status(400).json({ 
+        message: "Comment body is required" 
+      });
+    }
+
+    if (body.length > 1000) {
+      return res.status(400).json({ 
+        message: "Comment cannot exceed 1000 characters" 
+      });
+    }
+
+    // Check if event exists
+    const event = await Event.findById(eventId);
+    if (!event) {
+      return res.status(404).json({ message: "Event not found" });
+    }
+
+    // Find the comment
+    const comment = await Comment.findOne({
+      _id: commentId,
+      event_id: eventId
+    });
+
+    if (!comment) {
+      return res.status(404).json({ message: "Comment not found" });
+    }
+
+    // Check if user is the author of the comment
+    if (comment.author_id.toString() !== userId.toString()) {
+      return res.status(403).json({ 
+        message: "You can only edit your own comments" 
+      });
+    }
+
+    // Check if comment is not deleted
+    if (comment.status === "deleted") {
+      return res.status(400).json({ 
+        message: "Cannot edit a deleted comment" 
+      });
+    }
+
+    // Update the comment
+    comment.body = body.trim();
+    await comment.save();
+
+    // Populate author details before sending response
+    await comment.populate('author_id', 'first_name last_name email');
+
+    res.status(200).json({
+      message: "Comment updated successfully",
+      comment
+    });
+  } catch (err) {
+    console.error('Error updating comment:', err);
+    res.status(500).json({ message: err.message });
+  }
+};
+
+/* -------------------------- DELETE /events/:eventId/comments/:commentId -------------------------- */
+export const deleteUserComment = async (req, res) => {
+  try {
+    const { eventId, commentId } = req.params;
+    const userId = req.user._id;
+
+    // Check if event exists
+    const event = await Event.findById(eventId);
+    if (!event) {
+      return res.status(404).json({ message: "Event not found" });
+    }
+
+    // Find the comment
+    const comment = await Comment.findOne({
+      _id: commentId,
+      event_id: eventId
+    });
+
+    if (!comment) {
+      return res.status(404).json({ message: "Comment not found" });
+    }
+
+    // Check if user is the author of the comment
+    if (comment.author_id.toString() !== userId.toString()) {
+      return res.status(403).json({ 
+        message: "You can only delete your own comments" 
+      });
+    }
+
+    // Check if comment is already deleted
+    if (comment.status === "deleted") {
+      return res.status(400).json({ 
+        message: "Comment is already deleted" 
+      });
+    }
+
+    // Mark comment as deleted
+    comment.status = "deleted";
+    comment.deleted_by = userId;
+    await comment.save();
+
+    res.status(200).json({
+      message: "Comment deleted successfully",
+      comment: {
+        id: comment._id,
+        event_id: comment.event_id,
+        deleted_at: new Date()
+      }
+    });
+  } catch (err) {
+    console.error('Error deleting comment:', err);
+    res.status(500).json({ message: err.message });
+  }
+};
+
+/* -------------------------- GET /events/:eventId/my-comment -------------------------- */
+export const getMyComment = async (req, res) => {
+  try {
+    const { eventId } = req.params;
+    const userId = req.user._id;
+
+    // Check if event exists
+    const event = await Event.findById(eventId);
+    if (!event) {
+      return res.status(404).json({ message: "Event not found" });
+    }
+
+    // Get user's comment for this event
+    const comment = await Comment.findOne({
+      event_id: eventId,
+      author_id: userId,
+      status: "visible"
+    }).populate('author_id', 'first_name last_name email');
+
+    if (!comment) {
+      return res.status(404).json({ 
+        message: "You have not commented on this event yet"
+      });
+    }
+
+    res.status(200).json({
+      comment
+    });
+  } catch (err) {
+    console.error('Error fetching user comment:', err);
+    res.status(500).json({ message: err.message });
+  }
+};

@@ -338,16 +338,45 @@ export const verifyEmail = async (req, res) => {
 export const deleteComment = async (req, res) => {
   try {
     const { commentId } = req.params;
+    const { reason } = req.body; // Optional reason for deletion
     
-    const comment = await Comment.findById(commentId);
+    const comment = await Comment.findById(commentId)
+      .populate('author_id', 'first_name last_name email')
+      .populate('event_id', 'name');
+      
     if (!comment) {
       return res.status(404).json({ message: "Comment not found" });
     }
+
+    // Store comment details before deletion for email
+    const commentAuthor = comment.author_id;
+    const eventName = comment.event_id?.name || 'Unknown Event';
+    const commentBody = comment.body;
 
     // Mark comment as deleted and store who deleted it
     comment.status = "deleted";
     comment.deleted_by = req.user._id;
     await comment.save();
+
+    // Send warning email to the comment author
+    if (commentAuthor && commentAuthor.email) {
+      const { sendCommentDeletionWarning } = await import('../services/emailService.js');
+      
+      try {
+        await sendCommentDeletionWarning(commentAuthor.email, {
+          userName: `${commentAuthor.first_name} ${commentAuthor.last_name}`,
+          eventName: eventName,
+          commentBody: commentBody,
+          deletedBy: `${req.user.first_name} ${req.user.last_name} (Admin)`,
+          deletionDate: new Date(),
+          reason: reason || 'The comment violated our community guidelines.'
+        });
+        console.log(`✅ Warning email sent to ${commentAuthor.email}`);
+      } catch (emailError) {
+        console.error('❌ Failed to send warning email:', emailError);
+        // Continue execution even if email fails
+      }
+    }
 
     res.json({ 
       message: "Comment deleted successfully",
@@ -356,7 +385,8 @@ export const deleteComment = async (req, res) => {
         event_id: comment.event_id,
         deleted_by: req.user._id,
         deleted_at: new Date()
-      }
+      },
+      warning_email_sent: commentAuthor && commentAuthor.email ? true : false
     });
 
   } catch (err) {

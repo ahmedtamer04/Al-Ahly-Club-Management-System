@@ -61,6 +61,22 @@ const eventSchema = new mongoose.Schema({
   },
   
   // ========================================
+  // RATING FIELDS
+  // ========================================
+  average_rating: {
+    type: Number,
+    default: 0,
+    min: 0,
+    max: 5
+  },
+  
+  total_ratings: {
+    type: Number,
+    default: 0,
+    min: 0
+  },
+  
+  // ========================================
   // WORKSHOP SPECIFIC FIELDS
   // ========================================
   workshop: {
