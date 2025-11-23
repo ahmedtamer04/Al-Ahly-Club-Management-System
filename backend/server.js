@@ -22,7 +22,8 @@ import eventRoutes from "./routes/eventRoutes.js";
 import favoriteRoutes from "./routes/favoriteRoutes.js";
 import paymentRoutes from "./routes/paymentRoutes.js";
 import certificateRoutes from "./routes/certificateRoutes.js";
-import notificationRoutes from "./routes/notificationRoutes.js"; // ← Add notification routes
+import pollRoutes from "./routes/pollRoutes.js";
+import notificationRoutes from "./routes/notificationRoutes.js";
 import salesReportRoutes from "./routes/salesReportRoutes.js";
 import documentRoutes from "./routes/documentRoutes.js";
 
@@ -84,7 +85,8 @@ app.use("/api/events", eventRoutes);
 app.use("/api/favorites", favoriteRoutes);
 app.use("/api/payment", paymentRoutes);
 app.use("/api/certificates", certificateRoutes);
-app.use("/api/notifications", notificationRoutes); // ← Add notification routes
+app.use("/api/polls", pollRoutes);
+app.use("/api/notifications", notificationRoutes);
 app.use("/api/sales-report", salesReportRoutes);
 app.use("/api/documents", documentRoutes);
 

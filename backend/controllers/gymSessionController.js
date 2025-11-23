@@ -1,4 +1,6 @@
 import GymSession from "../models/gymSession.js";
+import GymSessionRegistration from "../models/GymSessionRegistration.js";
+import { sendGymSessionCancellationEmail, sendGymSessionEditEmail } from "../services/emailService.js";
 
 //  CREATE a gym session
 export const createGymSession = async (req, res) => {
@@ -37,6 +39,12 @@ export const editGymSession = async (req, res) => {
     const { id } = req.params;
     const { date, time, duration } = req.body;
 
+    // Get current session to compare changes
+    const currentSession = await GymSession.findById(id);
+    if (!currentSession) {
+      return res.status(404).json({ message: "Gym session not found" });
+    }
+
     // Validate date if it's being updated
     if (date) {
       const sessionDate = new Date(date);
@@ -62,6 +70,47 @@ export const editGymSession = async (req, res) => {
       return res.status(404).json({ message: "Gym session not found" });
     }
 
+    // Check if date or time changed
+    const dateChanged = date && new Date(date).getTime() !== new Date(currentSession.date).getTime();
+    const timeChanged = time && time !== currentSession.time;
+
+    // Send email notifications to registered users if date or time changed
+    if (dateChanged || timeChanged) {
+      const registrations = await GymSessionRegistration.find({
+        gym_session_id: id,
+        status: 'registered'
+      }).populate('user_id', 'email first_name last_name role');
+
+      const emailPromises = registrations.map(reg => {
+        // Use populated user email if available, otherwise fall back to registration email
+        const userEmail = reg.user_id?.email || reg.email;
+        // Use populated user name if available, otherwise fall back to registration name
+        const userName = reg.user_id 
+          ? `${reg.user_id.first_name || ''} ${reg.user_id.last_name || ''}`.trim() || reg.name
+          : reg.name;
+
+        if (!userEmail) {
+          console.error(`No email found for registration ${reg._id}`);
+          return Promise.resolve();
+        }
+
+        return sendGymSessionEditEmail(userEmail, {
+          userName: userName,
+          sessionType: updatedSession.type,
+          oldDate: currentSession.date,
+          oldTime: currentSession.time,
+          newDate: updatedSession.date,
+          newTime: updatedSession.time,
+          sessionDuration: updatedSession.duration
+        }).catch(err => {
+          console.error(`Failed to send edit email to ${userEmail} (${reg.user_id?.role || 'unknown role'}):`, err);
+        });
+      });
+
+      await Promise.all(emailPromises);
+      console.log(`✅ Sent ${registrations.length} gym session edit notification email(s)`);
+    }
+
     res.status(200).json({ message: " Gym session updated successfully", updatedSession });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -82,6 +131,39 @@ export const cancelGymSession = async (req, res) => {
     if (!cancelledSession) {
       return res.status(404).json({ message: "Gym session not found" });
     }
+
+    // Send email notifications to all registered users (Student, Staff, TA, Professor)
+    const registrations = await GymSessionRegistration.find({
+      gym_session_id: id,
+      status: 'registered'
+    }).populate('user_id', 'email first_name last_name role');
+
+    const emailPromises = registrations.map(reg => {
+      // Use populated user email if available, otherwise fall back to registration email
+      const userEmail = reg.user_id?.email || reg.email;
+      // Use populated user name if available, otherwise fall back to registration name
+      const userName = reg.user_id 
+        ? `${reg.user_id.first_name || ''} ${reg.user_id.last_name || ''}`.trim() || reg.name
+        : reg.name;
+
+      if (!userEmail) {
+        console.error(`No email found for registration ${reg._id}`);
+        return Promise.resolve();
+      }
+
+      return sendGymSessionCancellationEmail(userEmail, {
+        userName: userName,
+        sessionType: cancelledSession.type,
+        sessionDate: cancelledSession.date,
+        sessionTime: cancelledSession.time,
+        sessionDuration: cancelledSession.duration
+      }).catch(err => {
+        console.error(`Failed to send cancellation email to ${userEmail} (${reg.user_id?.role || 'unknown role'}):`, err);
+      });
+    });
+
+    await Promise.all(emailPromises);
+    console.log(`✅ Sent ${registrations.length} gym session cancellation notification email(s)`);
 
     res.status(200).json({ message: " Gym session cancelled", cancelledSession });
   } catch (error) {

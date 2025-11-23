@@ -8,12 +8,15 @@ const paymentSchema = new mongoose.Schema({
   },
   event_id: { 
     type: mongoose.Schema.Types.ObjectId, 
-    ref: 'Event', 
-    required: true 
+    ref: 'Event',
   },
   registration_id: { 
     type: mongoose.Schema.Types.ObjectId, 
     ref: 'Registration',
+  },
+  vendor_application_id: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'VendorApplication',
   },
   amount: { 
     type: Number, 

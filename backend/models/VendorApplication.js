@@ -212,6 +212,14 @@ const vendorAppSchema = new mongoose.Schema({
     default: "not_paid"
   },
   payment_date: Date,
+  participation_fee: {
+    type: Number,
+    min: 0,
+    default: 0
+  },
+  payment_deadline: {
+    type: Date
+  },
   rejection_reason: {
     type: String,
     trim: true
@@ -265,6 +273,19 @@ vendorAppSchema.methods.approve = async function(approvedBy) {
   this.status = 'accepted';
   this.approved_by = approvedBy;
   this.approved_at = new Date();
+  
+  // Calculate participation fee based on booth size
+  // 2x2 = $150, 4x4 = $400
+  const feeMap = {
+    '2x2': 150,
+    '4x4': 400
+  };
+  this.participation_fee = feeMap[this.application?.booth_size] || 150;
+  
+  // Set payment deadline: 3 days from approval
+  const deadline = new Date();
+  deadline.setDate(deadline.getDate() + 3);
+  this.payment_deadline = deadline;
   
   // If this is a bazaar application, add vendor to the bazaar's vendors_participating
   if (this.kind === 'bazaar' && this.bazaar_id) {

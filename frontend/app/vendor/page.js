@@ -20,6 +20,7 @@ export default function VendorDashboard() {
   const [recentApplications, setRecentApplications] = useState([]);
   const [acceptedApplications, setAcceptedApplications] = useState([]);
   const [pendingRejectedApplications, setPendingRejectedApplications] = useState([]);
+  const [loyaltyProgramStatus, setLoyaltyProgramStatus] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -56,6 +57,14 @@ export default function VendorDashboard() {
       console.log('Bazaars data:', bazaarsData);
       const allBazaars = bazaarsData.bazaars || [];
       console.log('Bazaars array:', allBazaars);
+      
+      // Fetch loyalty program status
+      try {
+        const loyaltyData = await vendorAPI.getLoyaltyProgramStatus();
+        setLoyaltyProgramStatus(loyaltyData);
+      } catch (err) {
+        console.error('Error fetching loyalty program status:', err);
+      }
       
       // Calculate stats
       const pendingCount = applications.filter(app => app.status === 'pending').length;
@@ -134,7 +143,10 @@ export default function VendorDashboard() {
             <li><Link href="/vendor/applications">📋 My Applications</Link></li>
             <li><Link href="/vendor/bazaars">🎪 Browse Bazaars</Link></li>
             <li><Link href="/vendor/booths">🏪 My Booths</Link></li>
+            <li><Link href="/vendor/polls">📊 Polls</Link></li>
+            <li><Link href="/vendor/loyalty-program">🎁 Loyalty Program</Link></li>
             <li><Link href="/vendor/profile">👤 Profile</Link></li>
+            <li><Link href="/vendor/email-preferences">📧 Email Preferences</Link></li>
           </ul>
         </aside>
 
@@ -296,6 +308,64 @@ export default function VendorDashboard() {
                         </button>
                       </div>
                     ))}
+                  </div>
+                )}
+              </section>
+
+              <section className="section">
+                <div className="section-header">
+                  <h2>GUC Loyalty Program 🎁</h2>
+                  <Link href="/vendor/loyalty-program" className="btn-primary">Manage</Link>
+                </div>
+                
+                {loyaltyProgramStatus?.has_application && loyaltyProgramStatus.application ? (
+                  <div className="preview-card" style={{
+                    borderLeft: `4px solid ${
+                      loyaltyProgramStatus.application.status === 'active' ? '#28a745' :
+                      loyaltyProgramStatus.application.status === 'pending' ? '#ffc107' :
+                      '#6c757d'
+                    }`
+                  }}>
+                    <div className="preview-header">
+                      <h3>Loyalty Program Status</h3>
+                      <span style={{
+                        padding: '6px 12px',
+                        borderRadius: '4px',
+                        background: loyaltyProgramStatus.application.status === 'active' ? '#28a745' :
+                                    loyaltyProgramStatus.application.status === 'pending' ? '#ffc107' :
+                                    '#6c757d',
+                        color: 'white',
+                        fontWeight: '500',
+                        fontSize: '0.9em',
+                        textTransform: 'capitalize'
+                      }}>
+                        {loyaltyProgramStatus.application.status}
+                      </span>
+                    </div>
+                    <div className="preview-details">
+                      {loyaltyProgramStatus.application.status === 'active' && (
+                        <>
+                          <p>🎫 Promo Code: <strong style={{fontFamily: 'monospace', color: '#1976d2'}}>{loyaltyProgramStatus.application.promo_code}</strong></p>
+                          <p>💰 Discount: <strong style={{color: '#c41e3a'}}>{loyaltyProgramStatus.application.discount_rate}%</strong></p>
+                        </>
+                      )}
+                      {loyaltyProgramStatus.application.status === 'pending' && (
+                        <p>⏳ Your application is pending admin approval</p>
+                      )}
+                    </div>
+                    <button 
+                      className="btn-secondary"
+                      onClick={() => router.push('/vendor/loyalty-program')}
+                    >
+                      View Details
+                    </button>
+                  </div>
+                ) : (
+                  <div className="empty-state">
+                    <p>🎁 You haven't joined the loyalty program yet</p>
+                    <Link href="/vendor/loyalty-program" className="btn-primary" style={{marginTop: '1rem', display: 'inline-block'}}>
+                      Apply Now
+                    </Link>
                   </div>
                 )}
               </section>
