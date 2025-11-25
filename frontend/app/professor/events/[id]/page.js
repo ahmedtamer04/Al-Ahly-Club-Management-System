@@ -2,12 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { eventAPI } from '../../../utils/api';
-import RatingStars from '../../../components/RatingStars';
-import RatingForm from '../../../components/RatingForm';
-import RatingsList from '../../../components/RatingsList';
-import CommentForm from '../../../components/CommentForm';
-import CommentsList from '../../../components/CommentsList';
+import { eventAPI } from '@/utils/api';
+import RatingStars from '@/app/components/RatingStars';
+import RatingForm from '@/app/components/RatingForm';
+import RatingsList from '@/app/components/RatingsList';
+import CommentForm from '@/app/components/CommentForm';
+import CommentsList from '@/app/components/CommentsList';
 
 export default function ProfessorEventDetails() {
   const params = useParams();

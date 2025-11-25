@@ -2,10 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { eventAPI } from '../../../utils/api';
-import RatingStars from '../../../components/RatingStars';
-import RatingsList from '../../../components/RatingsList';
-import CommentsList from '../../../components/CommentsList';
+import { eventAPI } from '@/utils/api';
+import RatingStars from '@/app/components/RatingStars';
+import RatingsList from '@/app/components/RatingsList';
+import CommentsList from '@/app/components/CommentsList';
 
 export default function AdminEventDetails() {
   const params = useParams();
