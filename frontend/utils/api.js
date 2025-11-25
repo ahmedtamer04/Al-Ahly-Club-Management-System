@@ -97,6 +97,26 @@ export const api = {
   }),
   
   delete: (endpoint) => fetchWithAuth(endpoint, { method: 'DELETE' }),
+  // Upload FormData (multipart). Does NOT set Content-Type so browser can set boundary.
+  upload: async (endpoint, formData) => {
+    const token = getToken();
+    const headers = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    try {
+      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+        method: 'POST',
+        headers,
+        body: formData
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || 'Upload failed');
+      return data;
+    } catch (error) {
+      console.error('Upload Error:', error);
+      throw error;
+    }
+  }
 };
 
 // ================================

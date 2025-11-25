@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
-import { getUser } from '@/utils/api';
+import { getUser, setUser, api } from '@/utils/api';
 import '@/app/dashboard.css';
 
 export default function VendorProfilePage() {
@@ -20,6 +20,11 @@ export default function VendorProfilePage() {
   });
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
+  const [taxCardFile, setTaxCardFile] = useState(null);
+  const [companyLogoFile, setCompanyLogoFile] = useState(null);
+  const [taxCardPreview, setTaxCardPreview] = useState('');
+  const [companyLogoPreview, setCompanyLogoPreview] = useState('');
+  const [uploading, setUploading] = useState(false);
 
   // Load user data on client side only
   useEffect(() => {
@@ -37,6 +42,9 @@ export default function VendorProfilePage() {
           businessType: userData.vendor_info?.business_type || '',
           businessDescription: userData.vendor_info?.business_description || ''
         });
+        // set previews if URLs available
+        if (userData.vendor_info?.tax_card_url) setTaxCardPreview(userData.vendor_info.tax_card_url);
+        if (userData.vendor_info?.company_logo_url) setCompanyLogoPreview(userData.vendor_info.company_logo_url);
       }
     }
     setLoading(false);
@@ -188,6 +196,105 @@ export default function VendorProfilePage() {
                       rows="3"
                       style={{padding: '0.75rem', borderRadius: '8px', border: '2px solid #E5E5E5', width: '100%', fontFamily: 'inherit'}}
                     />
+                  </div>
+                </div>
+              </section>
+
+              <section className="section">
+                <h2>Vendor Documents</h2>
+                <div className="settings-form">
+                  <div className="form-group">
+                    <label>Tax Card (PDF / Image)</label>
+                    {taxCardPreview && (
+                      <div style={{marginBottom: '0.5rem'}}>
+                        <a href={taxCardPreview} target="_blank" rel="noreferrer">View current tax card</a>
+                      </div>
+                    )}
+                    <input
+                      type="file"
+                      accept="application/pdf,image/*"
+                      onChange={(e) => {
+                        const file = e.target.files[0];
+                        setTaxCardFile(file || null);
+                        if (file) {
+                          const url = URL.createObjectURL(file);
+                          setTaxCardPreview(url);
+                        }
+                      }}
+                      disabled={!isEditing}
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label>Company Logo (PNG / JPG)</label>
+                    {companyLogoPreview && (
+                      <div style={{marginBottom: '0.5rem'}}>
+                        <img src={companyLogoPreview} alt="company logo" style={{height: 80, objectFit: 'contain'}} />
+                      </div>
+                    )}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files[0];
+                        setCompanyLogoFile(file || null);
+                        if (file) {
+                          const url = URL.createObjectURL(file);
+                          setCompanyLogoPreview(url);
+                        }
+                      }}
+                      disabled={!isEditing}
+                    />
+                  </div>
+
+                  <div style={{display: 'flex', gap: '1rem'}}>
+                    <button className="btn-primary" onClick={async () => {
+                      // upload files
+                      if (!taxCardFile && !companyLogoFile) {
+                        alert('Please choose at least one file to upload.');
+                        return;
+                      }
+
+                      setUploading(true);
+                      try {
+                        const formData = new FormData();
+                        if (taxCardFile) formData.append('tax_card', taxCardFile);
+                        if (companyLogoFile) formData.append('company_logo', companyLogoFile);
+
+                        const res = await api.upload('/vendor/documents/upload', formData);
+                        alert(res.message || 'Documents uploaded');
+
+                        // update local user vendor_info if available
+                        const localUser = getUser();
+                        if (localUser) {
+                          localUser.vendor_info = localUser.vendor_info || {};
+                          if (res.documents?.tax_card?.file_url) localUser.vendor_info.tax_card_url = res.documents.tax_card.file_url;
+                          if (res.documents?.company_logo?.file_url) localUser.vendor_info.company_logo_url = res.documents.company_logo.file_url;
+                          setUser(localUser);
+                        }
+                        setTaxCardFile(null);
+                        setCompanyLogoFile(null);
+                      } catch (err) {
+                        console.error(err);
+                        alert(err.message || 'Upload failed');
+                      } finally {
+                        setUploading(false);
+                      }
+                    }} disabled={!isEditing || uploading}>
+                      {uploading ? 'Uploading...' : 'Upload Documents'}
+                    </button>
+
+                    <button className="btn-secondary" onClick={() => {
+                      setTaxCardFile(null);
+                      setCompanyLogoFile(null);
+                      const userData = getUser();
+                      if (userData) {
+                        setTaxCardPreview(userData.vendor_info?.tax_card_url || '');
+                        setCompanyLogoPreview(userData.vendor_info?.company_logo_url || '');
+                      }
+                    }} disabled={!isEditing || uploading}>
+                      Reset
+                    </button>
                   </div>
                 </div>
               </section>
