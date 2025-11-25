@@ -42,9 +42,19 @@ export default function VendorProfilePage() {
           businessType: userData.vendor_info?.business_type || '',
           businessDescription: userData.vendor_info?.business_description || ''
         });
+        // helper: normalize file URLs returned by backend (they are stored as '/uploads/...')
+        const API_ORIGIN = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api').replace(/\/api$/, '');
+        const normalizeUrl = (url) => {
+          if (!url) return '';
+          // if already absolute, return as-is
+          if (url.startsWith('http://') || url.startsWith('https://')) return url;
+          // otherwise assume it's a backend-relative path and prepend origin
+          return `${API_ORIGIN}${url.startsWith('/') ? '' : '/'}${url}`;
+        };
+
         // set previews if URLs available
-        if (userData.vendor_info?.tax_card_url) setTaxCardPreview(userData.vendor_info.tax_card_url);
-        if (userData.vendor_info?.company_logo_url) setCompanyLogoPreview(userData.vendor_info.company_logo_url);
+        if (userData.vendor_info?.tax_card_url) setTaxCardPreview(normalizeUrl(userData.vendor_info.tax_card_url));
+        if (userData.vendor_info?.company_logo_url) setCompanyLogoPreview(normalizeUrl(userData.vendor_info.company_logo_url));
       }
     }
     setLoading(false);
@@ -221,7 +231,7 @@ export default function VendorProfilePage() {
                           setTaxCardPreview(url);
                         }
                       }}
-                      disabled={!isEditing}
+                      // Allow selecting files any time (upload still gated)
                     />
                   </div>
 
@@ -243,11 +253,11 @@ export default function VendorProfilePage() {
                           setCompanyLogoPreview(url);
                         }
                       }}
-                      disabled={!isEditing}
+                      // Allow selecting files any time (upload still gated)
                     />
                   </div>
 
-                  <div style={{display: 'flex', gap: '1rem'}}>
+                    <div style={{display: 'flex', gap: '1rem'}}>
                     <button className="btn-primary" onClick={async () => {
                       // upload files
                       if (!taxCardFile && !companyLogoFile) {
@@ -264,12 +274,27 @@ export default function VendorProfilePage() {
                         const res = await api.upload('/vendor/documents/upload', formData);
                         alert(res.message || 'Documents uploaded');
 
-                        // update local user vendor_info if available
+                        // update local user vendor_info if available and normalize URLs
                         const localUser = getUser();
+                        const API_ORIGIN = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api').replace(/\/api$/, '');
+                        const normalizeUrl = (url) => {
+                          if (!url) return '';
+                          if (url.startsWith('http://') || url.startsWith('https://')) return url;
+                          return `${API_ORIGIN}${url.startsWith('/') ? '' : '/'}${url}`;
+                        };
+
                         if (localUser) {
                           localUser.vendor_info = localUser.vendor_info || {};
-                          if (res.documents?.tax_card?.file_url) localUser.vendor_info.tax_card_url = res.documents.tax_card.file_url;
-                          if (res.documents?.company_logo?.file_url) localUser.vendor_info.company_logo_url = res.documents.company_logo.file_url;
+                          if (res.documents?.tax_card?.file_url) {
+                            const full = normalizeUrl(res.documents.tax_card.file_url);
+                            localUser.vendor_info.tax_card_url = res.documents.tax_card.file_url;
+                            setTaxCardPreview(full);
+                          }
+                          if (res.documents?.company_logo?.file_url) {
+                            const full = normalizeUrl(res.documents.company_logo.file_url);
+                            localUser.vendor_info.company_logo_url = res.documents.company_logo.file_url;
+                            setCompanyLogoPreview(full);
+                          }
                           setUser(localUser);
                         }
                         setTaxCardFile(null);
@@ -280,7 +305,7 @@ export default function VendorProfilePage() {
                       } finally {
                         setUploading(false);
                       }
-                    }} disabled={!isEditing || uploading}>
+                    }} disabled={uploading || (!taxCardFile && !companyLogoFile)}>
                       {uploading ? 'Uploading...' : 'Upload Documents'}
                     </button>
 
@@ -292,7 +317,7 @@ export default function VendorProfilePage() {
                         setTaxCardPreview(userData.vendor_info?.tax_card_url || '');
                         setCompanyLogoPreview(userData.vendor_info?.company_logo_url || '');
                       }
-                    }} disabled={!isEditing || uploading}>
+                    }} disabled={uploading}>
                       Reset
                     </button>
                   </div>

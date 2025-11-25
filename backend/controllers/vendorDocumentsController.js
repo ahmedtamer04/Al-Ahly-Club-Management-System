@@ -31,8 +31,8 @@ export const uploadVendorDocuments = async (req, res) => {
     const uploadedDocs = {};
     
     if (req.files.tax_card) {
-      // Simulate file storage (in real app: S3, GCS, etc.)
-      const taxCardFile = req.files.tax_card;
+      // Multer may provide files as an array for fields; use first file when so.
+      const taxCardFile = Array.isArray(req.files.tax_card) ? req.files.tax_card[0] : req.files.tax_card;
       uploadedDocs.tax_card = {
         file_url: `/uploads/vendor/${vendor_id}/tax_card_${Date.now()}.pdf`,
         file_name: taxCardFile.name,
@@ -42,9 +42,9 @@ export const uploadVendorDocuments = async (req, res) => {
     }
 
     if (req.files.company_logo) {
-      const logoFile = req.files.company_logo;
+      const logoFile = Array.isArray(req.files.company_logo) ? req.files.company_logo[0] : req.files.company_logo;
       uploadedDocs.company_logo = {
-        file_url: `/uploads/vendor/${vendor_id}/logo_${Date.now()}.${logoFile.name.split('.').pop()}`,
+        file_url: `/uploads/vendor/${vendor_id}/logo_${Date.now()}.${(logoFile.name || '').split('.').pop()}`,
         file_name: logoFile.name,
         uploaded_at: new Date()
       };
