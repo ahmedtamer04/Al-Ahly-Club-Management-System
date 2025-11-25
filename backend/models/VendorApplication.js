@@ -191,6 +191,34 @@ const vendorAppSchema = new mongoose.Schema({
       }
     }
   },
+  // File uploads for vendor company verification
+  vendor_documents: {
+    tax_card: {
+      file_url: String,
+      file_name: String,
+      uploaded_at: Date
+    },
+    company_logo: {
+      file_url: String,
+      file_name: String,
+      uploaded_at: Date
+    }
+  },
+  // Attendee ID uploads (for each staff member)
+  attendee_id_uploads: [
+    {
+      staff_name: String,
+      staff_email: String,
+      id_file_url: String,
+      id_file_name: String,
+      uploaded_at: Date,
+      verification_status: {
+        type: String,
+        enum: ['pending', 'verified', 'rejected'],
+        default: 'pending'
+      }
+    }
+  ],
   // Duration in weeks (flattened from application object for easier querying)
   duration_weeks: {
     type: Number,

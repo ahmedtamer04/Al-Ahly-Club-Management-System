@@ -21,6 +21,16 @@ import {
   cancelLoyaltyProgram,
   getAllLoyaltyProgramVendors
 } from "../controllers/vendorController.js";
+import {
+  uploadVendorDocuments,
+  uploadAttendeeIds,
+  acceptVendorApplication,
+  rejectVendorApplication,
+  processPayment,
+  generateAndSendQRCodes,
+  cancelVendorApplication,
+  getApplicationStatus
+} from "../controllers/vendorDocumentsController.js";
 
 const router = express.Router();
 
@@ -80,17 +90,45 @@ router.get("/loyalty-program/status", auth, requireVendor, getLoyaltyProgramStat
 router.post("/loyalty-program/cancel", auth, requireVendor, cancelLoyaltyProgram);
 
 // ========================================
+// NEW VENDOR DOCUMENT & PAYMENT ROUTES
+// ========================================
+
+// 18. Upload vendor company documents (tax card & logo)
+router.post("/documents/upload", auth, requireVendor, uploadVendorDocuments);
+
+// 19. Upload attendee ID documents
+router.post("/applications/:application_id/attendee-ids/upload", auth, requireVendor, uploadAttendeeIds);
+
+// 20. Get application status with payment info
+router.get("/applications/:application_id/status", auth, requireVendor, getApplicationStatus);
+
+// 21. Process payment for vendor application
+router.post("/applications/:application_id/pay", auth, requireVendor, processPayment);
+
+// 22. Cancel vendor application (only if not paid)
+router.delete("/applications/:application_id", auth, requireVendor, cancelVendorApplication);
+
+// 23. Generate and send QR codes (new implementation)
+router.post("/applications/:application_id/qr-codes/send", auth, requireVendor, generateAndSendQRCodes);
+
+// ========================================
 // PUBLIC ROUTES (For Students, Staff, TA, Professor, EventsOffice, Admin)
 // ========================================
 
-// 18. Get all active loyalty program vendors (Public view)
+// 24. Get all active loyalty program vendors (Public view)
 router.get("/loyalty-program/vendors", auth, requireStudentOrAbove, getAllLoyaltyProgramVendors);
 
 // ========================================
 // ADMIN ROUTES (Get all vendor applications)
 // ========================================
 
-// 19. Get all vendor applications (Admin only)
+// 25. Get all vendor applications (Admin only)
 router.get("/applications/all", auth, requireAdmin, getAllVendorApplications);
+
+// 26. Accept vendor application with email notification (Admin)
+router.post("/admin/applications/:application_id/accept", auth, requireAdmin, acceptVendorApplication);
+
+// 27. Reject vendor application with email notification (Admin)
+router.post("/admin/applications/:application_id/reject", auth, requireAdmin, rejectVendorApplication);
 
 export default router;

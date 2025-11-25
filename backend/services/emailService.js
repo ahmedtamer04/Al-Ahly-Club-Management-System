@@ -960,3 +960,74 @@ ${termsAndConditions}
     return false;
   }
 };
+
+/**
+ * Send vendor rejection email
+ */
+export const sendVendorRejectionEmail = async (email, rejectionDetails) => {
+  const {
+    userName,
+    applicationType,
+    rejectionReason
+  } = rejectionDetails;
+
+  const mailOptions = {
+    from: process.env.EMAIL_USER,
+    to: email,
+    subject: `Application Status - ${applicationType}`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8f9fa;">
+        <div style="background-color: white; border-radius: 10px; padding: 30px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+          <div style="text-align: center; margin-bottom: 30px;">
+            <h1 style="color: #c41e3a; margin: 0;">Application Status Update</h1>
+            <p style="color: #7f8c8d; margin-top: 10px;">GUC Al-Ahly Club</p>
+          </div>
+          
+          <div style="background-color: #fff3cd; padding: 20px; border-radius: 8px; margin-bottom: 30px; border-left: 4px solid #ffc107;">
+            <p style="color: #856404; margin: 0; font-size: 16px;">
+              Thank you for your interest in participating with us. Unfortunately, we are unable to move forward with your ${applicationType} application at this time.
+            </p>
+          </div>
+          
+          <div style="margin-bottom: 30px;">
+            <h3 style="color: #2c3e50; border-bottom: 2px solid #c41e3a; padding-bottom: 10px; margin-bottom: 20px;">Reason for Decision</h3>
+            <p style="color: #555; line-height: 1.8; margin: 0;">${rejectionReason}</p>
+          </div>
+
+          <div style="background-color: #e8f5e9; padding: 20px; border-radius: 8px; margin-bottom: 30px;">
+            <h3 style="color: #2e7d32; margin-top: 0; margin-bottom: 10px;">What You Can Do</h3>
+            <ul style="color: #2e7d32; margin: 0; padding-left: 20px;">
+              <li>Address the concerns mentioned above and reapply in future events</li>
+              <li>Contact our support team if you need clarification</li>
+              <li>Check for upcoming events and applications in our portal</li>
+            </ul>
+          </div>
+          
+          <p style="color: #666; margin: 20px 0;">We appreciate your understanding and hope to work with you in the future.</p>
+          
+          <p style="color: #2c3e50; margin: 0;">Best regards,<br><strong>GUC Al-Ahly Club Team</strong></p>
+          
+          <hr style="margin: 30px 0; border: none; border-top: 1px solid #ecf0f1;">
+          
+          <p style="color: #95a5a6; font-size: 12px; text-align: center; margin: 0;">
+            This is an automated email from GUC Al-Ahly Club.<br>
+            If you have any questions, please contact our support team.<br>
+            <br>
+            © ${new Date().getFullYear()} GUC Al-Ahly Club. All rights reserved.
+          </p>
+        </div>
+      </div>
+    `
+  };
+
+  try {
+    const emailTransporter = getTransporter();
+    const info = await emailTransporter.sendMail(mailOptions);
+    console.log(`✅ Vendor rejection email sent to ${email}`);
+    console.log(`Message ID: ${info.messageId}`);
+    return true;
+  } catch (error) {
+    console.error(`❌ Error sending vendor rejection email to ${email}:`, error);
+    return false;
+  }
+};

@@ -48,7 +48,10 @@ const userSchema = new mongoose.Schema({
   },
   
   vendor_info: {
-    company_name: String
+    company_name: String,
+    tax_card_url: String,
+    company_logo_url: String,
+    documents_verified: { type: Boolean, default: false }
   }
 }, { timestamps: true });
 
