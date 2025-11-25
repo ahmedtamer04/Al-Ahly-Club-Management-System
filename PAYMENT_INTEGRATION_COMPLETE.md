@@ -152,7 +152,7 @@ If `eventPrice === 0`, registration completes immediately without payment modal.
 ### Frontend (.env.local)
 ```bash
 NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_your_key_here
-NEXT_PUBLIC_API_URL=http://localhost:5000/api
+NEXT_PUBLIC_API_URL=http://localhost:5001/api
 ```
 
 ### Backend (.env)

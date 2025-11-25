@@ -5,7 +5,7 @@ import Comment from "../models/Comment.js";
 import Registration from "../models/Registration.js";
 import Event from "../models/Events.js";
 import bcrypt from "bcryptjs";
-import { generateVerificationToken, sendVerificationEmail, sendVendorAcceptanceEmail, sendNewLoyaltyPartnerNotification } from "../services/emailService.js";
+import { generateVerificationToken, sendVerificationEmail, sendVendorAcceptanceEmail, sendVendorRejectionEmail, sendNewLoyaltyPartnerNotification } from "../services/emailService.js";
 
 // Create Admin or EventsOffice user
 export const createAdminUser = async (req, res) => {
@@ -850,6 +850,15 @@ export const rejectVendorRequest = async (req, res) => {
 
     // Use the model's reject method
     await application.reject(rejection_reason.trim(), req.user._id);
+
+    // Send rejection email (non-blocking)
+    sendVendorRejectionEmail(application.vendor_user_id.email, {
+      userName: `${application.vendor_user_id.first_name} ${application.vendor_user_id.last_name}`,
+      applicationType: application.kind === 'bazaar' ? 'Bazaar' : 'Booth Event',
+      rejectionReason: rejection_reason.trim()
+    }).catch(err => {
+      console.error('Failed to send rejection email:', err);
+    });
 
     res.json({
       message: "Vendor application rejected successfully",

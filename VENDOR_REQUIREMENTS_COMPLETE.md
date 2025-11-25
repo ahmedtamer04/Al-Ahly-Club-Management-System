@@ -455,7 +455,7 @@ FRONTEND_URL=http://localhost:3000
 
 #### Test 1: Upload Vendor Documents (Requirement 1)
 ```bash
-curl -X POST http://localhost:5000/api/vendor/documents/upload \
+curl -X POST http://localhost:5001/api/vendor/documents/upload \
   -H "Authorization: Bearer {vendor_token}" \
   -F "tax_card=@tax_card.pdf" \
   -F "company_logo=@logo.png"
@@ -465,7 +465,7 @@ curl -X POST http://localhost:5000/api/vendor/documents/upload \
 
 #### Test 2: Upload Attendee IDs (Requirement 2)
 ```bash
-curl -X POST http://localhost:5000/api/vendor/applications/{appId}/attendee-ids/upload \
+curl -X POST http://localhost:5001/api/vendor/applications/{appId}/attendee-ids/upload \
   -H "Authorization: Bearer {vendor_token}" \
   -F "id_0=@id1.pdf" \
   -F "id_1=@id2.pdf"
@@ -475,7 +475,7 @@ curl -X POST http://localhost:5000/api/vendor/applications/{appId}/attendee-ids/
 
 #### Test 3: Accept Application (Requirement 3)
 ```bash
-curl -X POST http://localhost:5000/api/vendor/admin/applications/{appId}/accept \
+curl -X POST http://localhost:5001/api/vendor/admin/applications/{appId}/accept \
   -H "Authorization: Bearer {admin_token}" \
   -H "Content-Type: application/json"
 
@@ -485,7 +485,7 @@ curl -X POST http://localhost:5000/api/vendor/admin/applications/{appId}/accept 
 
 #### Test 4: Process Payment (Requirement 4)
 ```bash
-curl -X POST http://localhost:5000/api/vendor/applications/{appId}/pay \
+curl -X POST http://localhost:5001/api/vendor/applications/{appId}/pay \
   -H "Authorization: Bearer {vendor_token}" \
   -H "Content-Type: application/json" \
   -d '{"payment_method": "wallet"}'
@@ -496,7 +496,7 @@ curl -X POST http://localhost:5000/api/vendor/applications/{appId}/pay \
 
 #### Test 5: Generate QR Codes (Requirement 5)
 ```bash
-curl -X POST http://localhost:5000/api/vendor/applications/{appId}/qr-codes/send \
+curl -X POST http://localhost:5001/api/vendor/applications/{appId}/qr-codes/send \
   -H "Authorization: Bearer {vendor_token}" \
   -H "Content-Type: application/json" \
   -d '{"visitors": [{"_id": "v1", "name": "Ahmed", "email": "a@test.com"}]}'
@@ -508,7 +508,7 @@ curl -X POST http://localhost:5000/api/vendor/applications/{appId}/qr-codes/send
 #### Test 6: Cancel Application (Requirement 6)
 ```bash
 # Before payment (should succeed):
-curl -X DELETE http://localhost:5000/api/vendor/applications/{appId} \
+curl -X DELETE http://localhost:5001/api/vendor/applications/{appId} \
   -H "Authorization: Bearer {vendor_token}"
 
 # Expected: 200, status changes to "cancelled"
@@ -520,7 +520,7 @@ curl -X DELETE http://localhost:5000/api/vendor/applications/{appId} \
 
 #### Test 7: Reject Application (Requirement 3b)
 ```bash
-curl -X POST http://localhost:5000/api/vendor/admin/applications/{appId}/reject \
+curl -X POST http://localhost:5001/api/vendor/admin/applications/{appId}/reject \
   -H "Authorization: Bearer {admin_token}" \
   -H "Content-Type: application/json" \
   -d '{"rejection_reason": "Incomplete documentation"}'

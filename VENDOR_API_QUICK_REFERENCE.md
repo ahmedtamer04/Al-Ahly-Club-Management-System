@@ -2,7 +2,7 @@
 
 ## Base URL
 ```
-http://localhost:5000/api/vendor
+http://localhost:5001/api/vendor
 ```
 
 ## Authentication

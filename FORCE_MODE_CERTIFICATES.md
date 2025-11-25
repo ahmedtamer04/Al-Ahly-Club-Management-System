@@ -58,7 +58,7 @@ Authorization: Bearer <token>
 Workshop is scheduled for **December 2025**, but you want to test certificates now:
 
 ```bash
-curl -X PATCH "http://localhost:5000/api/workshop/ABC123/complete?force=true" \
+curl -X PATCH "http://localhost:5001/api/workshop/ABC123/complete?force=true" \
   -H "Authorization: Bearer YOUR_TOKEN"
 ```
 
@@ -70,7 +70,7 @@ Workshop scheduled to end **December 31**, but actually ended **December 15**:
 
 ```bash
 # Option 1: Use force mode
-curl -X PATCH "http://localhost:5000/api/workshop/ABC123/complete?force=true" \
+curl -X PATCH "http://localhost:5001/api/workshop/ABC123/complete?force=true" \
   -H "Authorization: Bearer YOUR_TOKEN"
 
 # Option 2: Update end_date first, then complete normally
@@ -83,7 +83,7 @@ Workshop ended on schedule:
 
 ```bash
 # No force needed - will work automatically if end_date passed
-curl -X PATCH "http://localhost:5000/api/workshop/ABC123/complete" \
+curl -X PATCH "http://localhost:5001/api/workshop/ABC123/complete" \
   -H "Authorization: Bearer YOUR_TOKEN"
 ```
 

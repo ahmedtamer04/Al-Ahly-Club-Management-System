@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
-import { vendorAPI } from '@/utils/api';
+import { vendorAPI, api } from '@/utils/api';
 import '@/app/dashboard.css';
 
 export default function MyBoothsPage() {
@@ -14,6 +14,8 @@ export default function MyBoothsPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [selectedApplication, setSelectedApplication] = useState(null);
+  const [attendeeFiles, setAttendeeFiles] = useState({});
+  const [uploadingAttendees, setUploadingAttendees] = useState({});
   
   // Form state
   const [formData, setFormData] = useState({
@@ -491,9 +493,65 @@ export default function MyBoothsPage() {
                                     <div key={idx} style={{
                                       padding: '0.5rem',
                                       background: 'white',
-                                      borderRadius: '4px'
+                                      borderRadius: '4px',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'space-between',
+                                      gap: '1rem'
                                     }}>
-                                      <strong>{idx + 1}.</strong> {staff.name} - {staff.email}
+                                      <div style={{flex: 1}}>
+                                        <strong>{idx + 1}.</strong> {staff.name} - {staff.email}
+                                        <div style={{marginTop: '0.4rem'}}>
+                                          {selectedApplication.attendee_id_uploads && selectedApplication.attendee_id_uploads[idx] ? (
+                                            <div style={{fontSize: '0.9em'}}>
+                                              Uploaded: <a href={selectedApplication.attendee_id_uploads[idx].file_url} target="_blank" rel="noreferrer">View ID</a>
+                                              {' '}• Status: {selectedApplication.attendee_id_uploads[idx].verification_status || 'pending'}
+                                            </div>
+                                          ) : (
+                                            <div style={{fontSize: '0.9em', color: '#666'}}>No ID uploaded yet</div>
+                                          )}
+                                        </div>
+                                      </div>
+
+                                      <div style={{display: 'flex', alignItems: 'center', gap: '0.5rem'}}>
+                                        <input
+                                          type="file"
+                                          accept="image/*,.pdf"
+                                          onChange={(e) => {
+                                            const file = e.target.files?.[0];
+                                            if (file) setAttendeeFiles(prev => ({ ...prev, [idx]: file }));
+                                          }}
+                                        />
+                                        <button
+                                          className="btn-secondary"
+                                          disabled={!attendeeFiles[idx] || uploadingAttendees[idx]}
+                                          onClick={async () => {
+                                            if (!attendeeFiles[idx]) return;
+                                            try {
+                                              setUploadingAttendees(prev => ({ ...prev, [idx]: true }));
+                                              const formData = new FormData();
+                                              formData.append(`id_${idx}`, attendeeFiles[idx]);
+                                              const res = await api.upload(`/vendor/applications/${selectedApplication._id}/attendee-ids/upload`, formData);
+                                              // If API returns updated uploads, merge into selectedApplication
+                                              if (res.attendee_id_uploads) {
+                                                setSelectedApplication(prev => ({ ...prev, attendee_id_uploads: res.attendee_id_uploads }));
+                                              } else if (res.uploads) {
+                                                setSelectedApplication(prev => ({ ...prev, attendee_id_uploads: res.uploads }));
+                                              }
+                                              // clear the file input state for this idx
+                                              setAttendeeFiles(prev => ({ ...prev, [idx]: null }));
+                                              alert('Uploaded successfully');
+                                            } catch (err) {
+                                              console.error('Upload failed', err);
+                                              alert(err.message || 'Upload failed');
+                                            } finally {
+                                              setUploadingAttendees(prev => ({ ...prev, [idx]: false }));
+                                            }
+                                          }}
+                                        >
+                                          {uploadingAttendees[idx] ? 'Uploading...' : 'Upload ID'}
+                                        </button>
+                                      </div>
                                     </div>
                                   ))}
                                 </div>
@@ -548,11 +606,38 @@ export default function MyBoothsPage() {
                             </div>
                           </div>
 
-                          {/* Close Button */}
+                          {/* Actions: Cancel (if allowed) + Close */}
                           <div style={{
                             marginTop: '2rem',
-                            textAlign: 'center'
+                            textAlign: 'center',
+                            display: 'flex',
+                            gap: '1rem',
+                            justifyContent: 'center'
                           }}>
+                            {selectedApplication.payment_status !== 'paid' && selectedApplication.status === 'pending' && (
+                              <button
+                                className="btn-danger"
+                                onClick={async () => {
+                                  if (!confirm('Are you sure you want to cancel this application?')) return;
+                                  try {
+                                    setLoading(true);
+                                    await vendorAPI.cancelApplication(selectedApplication._id);
+                                    alert('Application cancelled');
+                                    setSelectedApplication(null);
+                                    fetchMyBooths();
+                                  } catch (err) {
+                                    console.error('Cancel failed', err);
+                                    alert(err.message || 'Cancel failed');
+                                  } finally {
+                                    setLoading(false);
+                                  }
+                                }}
+                                style={{ padding: '0.75rem 1.5rem' }}
+                              >
+                                Cancel Application
+                              </button>
+                            )}
+
                             <button
                               className="btn-primary"
                               onClick={() => setSelectedApplication(null)}

@@ -19,7 +19,7 @@ npm start
 
 Wait for:
 ```
-Server running on port 5000
+Server running on port 5001
 ✅ Mongo connected
 ```
 

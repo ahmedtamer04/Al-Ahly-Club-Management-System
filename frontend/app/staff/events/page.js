@@ -56,7 +56,7 @@ export default function StaffEventsPage() {
         return;
       }
 
-      const response = await fetch(`http://localhost:5000/api/registration/${user._id}/events`, {
+      const response = await fetch(`http://localhost:5001/api/registration/${user._id}/events`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -88,7 +88,7 @@ export default function StaffEventsPage() {
 
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:5000/api/registration/cancel/${registrationId}`, {
+      const response = await fetch(`http://localhost:5001/api/registration/cancel/${registrationId}`, {
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${token}`,

@@ -27,12 +27,12 @@ You're seeing the error **"Failed to initialize card payment"** because Stripe i
 
 2. **Add your Stripe Publishable Key**:
    ```bash
-   NEXT_PUBLIC_API_URL=http://localhost:5000/api
+   NEXT_PUBLIC_API_URL=http://localhost:5001/api
    NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_51xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
    ```
    
    Replace `pk_test_51xxx...` with YOUR actual publishable key from Stripe
-
+### Step 3: Configure Backend (Node.js/Express)
 3. **Restart your frontend server**:
    ```bash
    cd frontend
@@ -41,14 +41,12 @@ You're seeing the error **"Failed to initialize card payment"** because Stripe i
 
 ### Step 3: Configure Backend (Node.js/Express)
 
-1. **Open or create** `backend/.env`
-
 2. **Add your Stripe Secret Key**:
    ```bash
    # Existing variables
    MONGO_URI=your_mongodb_connection_string
    JWT_SECRET=your_jwt_secret
-   PORT=5000
+   PORT=5001
    
    # Add Stripe Secret Key
    STRIPE_SECRET_KEY=sk_test_51xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
@@ -99,9 +97,6 @@ NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_your_key_here
 ### Issue: Payment succeeds but registration doesn't update
 
 **Solution**: Make sure the backend has the secret key configured in `backend/.env`:
-```bash
-STRIPE_SECRET_KEY=sk_test_your_key_here
-```
 
 ### Issue: "Invalid API key provided"
 
@@ -119,20 +114,10 @@ cd frontend
 npm run dev
 
 # Terminal 2 - Backend  
-cd backend
-npm run dev
-```
-
-## Current System Status
 
 ### ✅ What's Already Working:
-- Payment system code (frontend & backend)
-- PaymentModal component
 - Wallet payments
 - Payment history tracking
-- Mock Stripe integration (creates fake payment intents)
-
-### ⚠️ What Needs Configuration:
 - Stripe API keys in environment files
 - Once configured, card payments will work immediately
 
@@ -145,7 +130,7 @@ npm run dev
 
 ### frontend/.env.local
 ```bash
-NEXT_PUBLIC_API_URL=http://localhost:5000/api
+NEXT_PUBLIC_API_URL=http://localhost:5001/api
 NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_YOUR_PUBLISHABLE_KEY_HERE
 ```
 
@@ -153,7 +138,7 @@ NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_YOUR_PUBLISHABLE_KEY_HERE
 ```bash
 MONGO_URI=mongodb://localhost:27017/al-ahly-events
 JWT_SECRET=your_jwt_secret_key_here
-PORT=5000
+PORT=5001
 EMAIL_USER=your_email@example.com
 EMAIL_PASS=your_email_app_password
 STRIPE_SECRET_KEY=sk_test_YOUR_SECRET_KEY_HERE
@@ -166,8 +151,6 @@ STRIPE_SECRET_KEY=sk_test_YOUR_SECRET_KEY_HERE
 Both `.env` and `.env.local` files should be in `.gitignore`:
 
 ```gitignore
-# Environment files
-.env
 .env.local
 .env*.local
 ```
@@ -194,7 +177,7 @@ npm run dev
 
 # Terminal 3 (optional) - Test the setup
 curl http://localhost:3000  # Should show your app
-curl http://localhost:5000  # Should show backend status
+curl http://localhost:5001  # Should show backend status
 ```
 
 ## Need Help?
@@ -213,7 +196,6 @@ The error occurs because:
 1. ❌ Stripe publishable key is missing from `frontend/.env.local`
 2. ❌ Stripe secret key is missing from `backend/.env`
 
-To fix:
 1. ✅ Get API keys from Stripe Dashboard
 2. ✅ Add publishable key to frontend `.env.local`
 3. ✅ Add secret key to backend `.env`

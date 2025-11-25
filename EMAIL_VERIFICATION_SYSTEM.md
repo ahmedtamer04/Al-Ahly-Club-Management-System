@@ -228,7 +228,7 @@ FRONTEND_URL=http://localhost:3000
 # Existing variables
 MONGO_URI=...
 JWT_SECRET=...
-PORT=5000
+PORT=5001
 ```
 
 ---

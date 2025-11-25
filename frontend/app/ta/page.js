@@ -27,7 +27,7 @@ export default function TADashboard() {
         const userId = user._id;
 
         // Fetch upcoming events count
-        const eventsResponse = await fetch('http://localhost:5000/api/events/upcoming', {
+        const eventsResponse = await fetch('http://localhost:5001/api/events/upcoming', {
           method: 'GET',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -41,7 +41,7 @@ export default function TADashboard() {
         }
 
         // Fetch my registered events count
-        const registrationsResponse = await fetch(`http://localhost:5000/api/registration/${userId}/events`, {
+        const registrationsResponse = await fetch(`http://localhost:5001/api/registration/${userId}/events`, {
           method: 'GET',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -56,7 +56,7 @@ export default function TADashboard() {
         }
 
         // Fetch gym sessions count
-        const gymResponse = await fetch('http://localhost:5000/api/gym-sessions/schedule', {
+        const gymResponse = await fetch('http://localhost:5001/api/gym-sessions/schedule', {
           method: 'GET',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -73,7 +73,7 @@ export default function TADashboard() {
         }
 
         // Fetch favorites count
-        const favoritesResponse = await fetch('http://localhost:5000/api/favorites', {
+        const favoritesResponse = await fetch('http://localhost:5001/api/favorites', {
           method: 'GET',
           headers: {
             'Authorization': `Bearer ${token}`,

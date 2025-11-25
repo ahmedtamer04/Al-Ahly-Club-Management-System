@@ -67,7 +67,7 @@ export default function AdminDocumentsPage() {
   const handleView = (documentId) => {
     // Open document in new tab for viewing
     const token = localStorage.getItem('token');
-    const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+    const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api';
     // Use Authorization header via fetch, then create blob URL
     fetch(`${API_BASE_URL}/documents/${documentId}/view`, {
       headers: {

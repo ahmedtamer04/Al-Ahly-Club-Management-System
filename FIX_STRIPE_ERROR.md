@@ -84,7 +84,7 @@ Then go back to Step 1 and fix your `.env.local` file.
 
 ### `frontend/.env.local`
 ```bash
-NEXT_PUBLIC_API_URL=http://localhost:5000/api
+NEXT_PUBLIC_API_URL=http://localhost:5001/api
 NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_51OhLiZ2JKldE4Fc3tQ4Fc3tQ4Fc3tQ4Fc3tQ4Fc3tQ4Fc3tQ4Fc3tQ4Fc3tQ4Fc3tQ4Fc3tQ4Fc3tQ4Fc3tQ4
 ```
 (Replace with YOUR actual key from Stripe Dashboard)
@@ -154,7 +154,7 @@ NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_abc123
    
    Paste this and save:
    ```
-   NEXT_PUBLIC_API_URL=http://localhost:5000/api
+   NEXT_PUBLIC_API_URL=http://localhost:5001/api
    NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=your_key_here
    ```
 
