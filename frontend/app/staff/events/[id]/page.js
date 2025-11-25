@@ -1,28 +1,24 @@
 'use client';
 
-import Link from 'next/link';
-import { useEffect, useState } from 'react';
-import '@/app/dashboard.css';
-import { eventAPI, registrationAPI, getUser } from '@/utils/api';
-import PaymentModal from '@/app/components/PaymentModal';
+import { useState, useEffect } from 'react';
+import { useParams, useRouter } from 'next/navigation';
+import { eventAPI } from '../../../utils/api';
+import RatingStars from '../../../components/RatingStars';
+import RatingForm from '../../../components/RatingForm';
+import RatingsList from '../../../components/RatingsList';
+import CommentForm from '../../../components/CommentForm';
+import CommentsList from '../../../components/CommentsList';
 
-export default function EventDetailsPage({ params }) {
+export default function StaffEventDetails({ params }) {
+  const router = useRouter();
+  const eventId = params.id;
+  
   const [event, setEvent] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  
-  // Registration modal states
-  const [showRegistrationModal, setShowRegistrationModal] = useState(false);
-  const [registrationForm, setRegistrationForm] = useState({
-    name: '',
-    email: '',
-    personalId: ''
-  });
-  const [registering, setRegistering] = useState(false);
-  
-  // Payment modal states
-  const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [paymentData, setPaymentData] = useState(null);
+  const [activeTab, setActiveTab] = useState('details');
+  const [showRatingForm, setShowRatingForm] = useState(false);
+  const [showCommentForm, setShowCommentForm] = useState(false);
 
   useEffect(() => {
     const loadEvent = async () => {
