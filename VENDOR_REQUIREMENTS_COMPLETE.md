@@ -1,6 +1,7 @@
 # Vendor Requirements Implementation - Complete
 
 ## Overview
+
 All 6 vendor requirements have been fully implemented on the `vendor-requirements-implementation` branch. This document outlines the complete implementation, API endpoints, database schema changes, and testing guide.
 
 ---
@@ -8,12 +9,15 @@ All 6 vendor requirements have been fully implemented on the `vendor-requirement
 ## Requirements Summary
 
 ### 1. ✅ Tax Card & Company Logo Upload
+
 **Status:** Complete  
 **Database Schema:** VendorApplication.js, User.js  
 **Endpoint:** `POST /api/vendor/documents/upload`
 
 #### Implementation Details
+
 - Added to `User.vendor_info`:
+
   - `tax_card_url` (String): URL to uploaded tax card file
   - `company_logo_url` (String): URL to uploaded logo file
   - `documents_verified` (Boolean): Verification status flag
@@ -35,6 +39,7 @@ All 6 vendor requirements have been fully implemented on the `vendor-requirement
   ```
 
 #### API Usage
+
 ```bash
 POST /api/vendor/documents/upload
 Headers: Authorization: Bearer {token}
@@ -46,6 +51,7 @@ Body:
 ```
 
 **Response:**
+
 ```json
 {
   "message": "Vendor documents uploaded successfully",
@@ -68,24 +74,29 @@ Body:
 ---
 
 ### 2. ✅ Attendee ID Upload
+
 **Status:** Complete  
 **Database Schema:** VendorApplication.js  
 **Endpoint:** `POST /api/vendor/applications/:application_id/attendee-ids/upload`
 
 #### Implementation Details
+
 - Added to `VendorApplication.attendee_id_uploads`:
   ```javascript
-  attendee_id_uploads: [{
-    staff_name: String,
-    staff_email: String,
-    id_file_url: String,
-    id_file_name: String,
-    uploaded_at: Date,
-    verification_status: String // 'pending', 'verified', 'rejected'
-  }]
+  attendee_id_uploads: [
+    {
+      staff_name: String,
+      staff_email: String,
+      id_file_url: String,
+      id_file_name: String,
+      uploaded_at: Date,
+      verification_status: String, // 'pending', 'verified', 'rejected'
+    },
+  ];
   ```
 
 #### API Usage
+
 ```bash
 POST /api/vendor/applications/{applicationId}/attendee-ids/upload
 Headers: Authorization: Bearer {token}
@@ -99,6 +110,7 @@ Body:
 ```
 
 **Response:**
+
 ```json
 {
   "message": "Attendee ID documents uploaded successfully",
@@ -119,15 +131,18 @@ Body:
 ---
 
 ### 3. ✅ Accept/Reject with 3-Day Payment Deadline & Email Notifications
+
 **Status:** Complete  
 **Email Service:** emailService.js  
-**Endpoints:** 
+**Endpoints:**
+
 - `POST /api/vendor/admin/applications/:application_id/accept`
 - `POST /api/vendor/admin/applications/:application_id/reject`
 
 #### Implementation Details
 
 **Accept Application:**
+
 - Sets `application.status = 'accepted'`
 - Calculates `participation_fee`:
   - **Bazaar:** $200-400 based on booth size (2x2=$250, 4x4=$400)
@@ -137,6 +152,7 @@ Body:
 - Updates `approved_by` and `approved_at` timestamps
 
 **Reject Application:**
+
 - Sets `application.status = 'rejected'`
 - Stores `rejection_reason`
 - Sends rejection email with reason
@@ -185,6 +201,7 @@ Response:
 #### Email Examples
 
 **Acceptance Email:**
+
 - Subject: "🎉 Congratulations! Your [Bazaar/Booth Event] Application Has Been Accepted"
 - Includes:
   - Company details
@@ -195,6 +212,7 @@ Response:
   - Warning: "If payment is not received by the deadline, your application may be cancelled"
 
 **Rejection Email:**
+
 - Subject: "Your [Bazaar/Booth Event] Application Status Update"
 - Includes:
   - Rejection reason with specific feedback
@@ -204,10 +222,12 @@ Response:
 ---
 
 ### 4. ✅ Payment Processing with Deadline
+
 **Status:** Complete  
 **Endpoint:** `POST /api/vendor/applications/:application_id/pay`
 
 #### Implementation Details
+
 - Checks if application status is 'accepted'
 - Verifies payment deadline hasn't passed
 - Marks application as 'paid'
@@ -216,6 +236,7 @@ Response:
 - Prevents payment if deadline exceeded
 
 #### API Usage
+
 ```bash
 POST /api/vendor/applications/{applicationId}/pay
 Headers: Authorization: Bearer {token}
@@ -244,6 +265,7 @@ Error (if deadline passed):
 ```
 
 #### Payment Deadline Calculation
+
 - **Basis:** 3 days from application acceptance
 - **Stored in:** `VendorApplication.payment_deadline`
 - **Validation:** `payment_deadline` vs current date/time
@@ -252,10 +274,12 @@ Error (if deadline passed):
 ---
 
 ### 5. ✅ QR Code Generation & Delivery
+
 **Status:** Complete  
 **Endpoint:** `POST /api/vendor/applications/:application_id/qr-codes/send`
 
 #### Implementation Details
+
 - Generates unique QR code for each registered visitor
 - QR data includes:
   - registration_id (unique identifier)
@@ -268,6 +292,7 @@ Error (if deadline passed):
 - Only available after payment is made
 
 #### API Usage
+
 ```bash
 POST /api/vendor/applications/{applicationId}/qr-codes/send
 Headers: Authorization: Bearer {token}
@@ -297,6 +322,7 @@ Response:
 ```
 
 #### Email Details
+
 - Subject: "🎫 Your QR Codes Ready - [Bazaar/Booth Event] Visitor Registration"
 - Includes:
   - Stats box: Total visitors count and company name
@@ -306,6 +332,7 @@ Response:
   - Tips for printing and using at event
 
 #### QR Code Features
+
 - **Format:** PNG, 300x300px
 - **Error Correction:** Level H (30% recovery)
 - **Data:** JSON-encoded visitor information
@@ -315,10 +342,12 @@ Response:
 ---
 
 ### 6. ✅ Cancellation Logic with Payment Guard
+
 **Status:** Complete  
 **Endpoint:** `DELETE /api/vendor/applications/:application_id`
 
 #### Implementation Details
+
 - Allows vendor to cancel their application
 - **Guard:** Can only cancel if `payment_status !== 'paid'`
 - Sets `application.status = 'cancelled'`
@@ -326,6 +355,7 @@ Response:
 - Prevents cancellation after payment to avoid disputes
 
 #### API Usage
+
 ```bash
 DELETE /api/vendor/applications/{applicationId}
 Headers: Authorization: Bearer {token}
@@ -347,6 +377,7 @@ Error (if already paid):
 ```
 
 #### Cancellation Flow
+
 1. Vendor requests cancellation
 2. System checks payment_status
 3. If NOT paid → Allow cancellation, mark as "cancelled"
@@ -357,6 +388,7 @@ Error (if already paid):
 ## Database Schema Changes
 
 ### VendorApplication.js
+
 ```javascript
 // Added/Modified fields:
 {
@@ -372,7 +404,7 @@ Error (if already paid):
       uploaded_at: Date
     }
   },
-  
+
   attendee_id_uploads: [{
     staff_name: String,
     staff_email: String,
@@ -381,7 +413,7 @@ Error (if already paid):
     uploaded_at: Date,
     verification_status: String // 'pending', 'verified', 'rejected'
   }],
-  
+
   status: String, // 'pending', 'accepted', 'rejected', 'cancelled'
   participation_fee: Number,
   payment_deadline: Date,
@@ -392,6 +424,7 @@ Error (if already paid):
 ```
 
 ### User.js (vendor_info)
+
 ```javascript
 vendor_info: {
   // ... existing fields ...
@@ -406,6 +439,7 @@ vendor_info: {
 ## File Structure
 
 ### Backend Files Modified/Created
+
 ```
 backend/
 ├── controllers/
@@ -422,6 +456,7 @@ backend/
 ```
 
 ### New Routes Added
+
 1. `POST /api/vendor/documents/upload` - Upload vendor docs
 2. `POST /api/vendor/applications/:id/attendee-ids/upload` - Upload attendee IDs
 3. `POST /api/vendor/admin/applications/:id/accept` - Accept application
@@ -436,6 +471,7 @@ backend/
 ## Testing Guide
 
 ### Prerequisites
+
 ```bash
 # 1. Switch to the branch
 git checkout vendor-requirements-implementation
@@ -454,6 +490,7 @@ FRONTEND_URL=http://localhost:3000
 ### Test Sequence
 
 #### Test 1: Upload Vendor Documents (Requirement 1)
+
 ```bash
 curl -X POST http://localhost:5001/api/vendor/documents/upload \
   -H "Authorization: Bearer {vendor_token}" \
@@ -464,6 +501,7 @@ curl -X POST http://localhost:5001/api/vendor/documents/upload \
 ```
 
 #### Test 2: Upload Attendee IDs (Requirement 2)
+
 ```bash
 curl -X POST http://localhost:5001/api/vendor/applications/{appId}/attendee-ids/upload \
   -H "Authorization: Bearer {vendor_token}" \
@@ -474,6 +512,7 @@ curl -X POST http://localhost:5001/api/vendor/applications/{appId}/attendee-ids/
 ```
 
 #### Test 3: Accept Application (Requirement 3)
+
 ```bash
 curl -X POST http://localhost:5001/api/vendor/admin/applications/{appId}/accept \
   -H "Authorization: Bearer {admin_token}" \
@@ -484,6 +523,7 @@ curl -X POST http://localhost:5001/api/vendor/admin/applications/{appId}/accept 
 ```
 
 #### Test 4: Process Payment (Requirement 4)
+
 ```bash
 curl -X POST http://localhost:5001/api/vendor/applications/{appId}/pay \
   -H "Authorization: Bearer {vendor_token}" \
@@ -495,6 +535,7 @@ curl -X POST http://localhost:5001/api/vendor/applications/{appId}/pay \
 ```
 
 #### Test 5: Generate QR Codes (Requirement 5)
+
 ```bash
 curl -X POST http://localhost:5001/api/vendor/applications/{appId}/qr-codes/send \
   -H "Authorization: Bearer {vendor_token}" \
@@ -506,6 +547,7 @@ curl -X POST http://localhost:5001/api/vendor/applications/{appId}/qr-codes/send
 ```
 
 #### Test 6: Cancel Application (Requirement 6)
+
 ```bash
 # Before payment (should succeed):
 curl -X DELETE http://localhost:5001/api/vendor/applications/{appId} \
@@ -519,6 +561,7 @@ curl -X DELETE http://localhost:5001/api/vendor/applications/{appId} \
 ```
 
 #### Test 7: Reject Application (Requirement 3b)
+
 ```bash
 curl -X POST http://localhost:5001/api/vendor/admin/applications/{appId}/reject \
   -H "Authorization: Bearer {admin_token}" \
@@ -530,6 +573,7 @@ curl -X POST http://localhost:5001/api/vendor/admin/applications/{appId}/reject 
 ```
 
 #### Test 8: Check Payment Deadline Validation
+
 ```bash
 # 1. Accept application (sets 3-day deadline)
 # 2. Manually set deadline to past date in MongoDB
@@ -574,21 +618,26 @@ All endpoints include comprehensive error handling:
 ## Integration Notes
 
 ### Frontend Implementation Needed
+
 1. **Vendor Profile Page**
+
    - Tax card upload component
    - Company logo upload component
    - Document verification status display
 
 2. **Booth/Bazaar Application Form**
+
    - Attendee ID file upload for each staff member
    - Verification status tracking
 
 3. **Payment Dashboard**
+
    - Show participation fee
    - Display 3-day payment deadline countdown
    - Payment button (link to wallet/Stripe)
 
 4. **QR Code Distribution**
+
    - Show button after payment confirmation
    - Display when QR codes email is sent
    - Store QR codes for reprint/download
@@ -599,11 +648,13 @@ All endpoints include comprehensive error handling:
    - Cancel button (disabled if paid)
 
 ### Email Configuration
+
 - Gmail: Set up app-specific password
 - Alternative: Configure SendGrid, Mailgun, or custom SMTP
 - Templates: All emails use HTML with inline styles (no template files needed)
 
 ### Payment Integration
+
 - Can use existing Stripe integration
 - Wallet system implemented for test payments
 - Both methods call same payment endpoint
@@ -617,7 +668,7 @@ All endpoints include comprehensive error handling:
 ✅ **Requirement 3:** Accept/reject with 3-day payment deadline + email notifications  
 ✅ **Requirement 4:** Participation fee calculation (bazaar size + booth weeks + location)  
 ✅ **Requirement 5:** QR code generation for each visitor + email delivery  
-✅ **Requirement 6:** Cancellation guard (only before payment)  
+✅ **Requirement 6:** Cancellation guard (only before payment)
 
 ---
 
@@ -640,6 +691,7 @@ All endpoints include comprehensive error handling:
 ## Troubleshooting
 
 ### Email Not Sending
+
 ```
 Solution: Check EMAIL_USER and EMAIL_PASS in .env
 Enable "Less secure app access" in Gmail settings
@@ -647,6 +699,7 @@ Or use app-specific password for Gmail
 ```
 
 ### File Upload Failing
+
 ```
 Solution: Ensure multer middleware is configured
 Check file size limits (min 5MB recommended)
@@ -654,6 +707,7 @@ Verify file permissions on upload directory
 ```
 
 ### Payment Deadline Issues
+
 ```
 Solution: Check system time synchronization
 Verify timezone in payment_deadline calculation
@@ -661,6 +715,7 @@ Test with manual deadline adjustment in MongoDB
 ```
 
 ### QR Code Email Issues
+
 ```
 Solution: Verify email transporter is working
 Check QRCode library installation (npm install qrcode)
@@ -672,22 +727,26 @@ Test with smaller visitor list first
 ## Future Enhancements
 
 1. **Admin Dashboard:**
+
    - View all applications with filter by status
    - Bulk accept/reject functionality
    - Download attendee ID verification reports
 
 2. **Vendor Dashboard:**
+
    - Upload progress tracker
    - Payment deadline countdown timer
    - QR code reprinting
    - Application history
 
 3. **Document Verification:**
+
    - Manual verification workflow for admin
    - Automated OCR for tax card validation
    - Document quality checks
 
 4. **Refund Processing:**
+
    - Admin refund portal
    - Automated refund for cancelled paid applications
    - Refund status tracking
@@ -702,6 +761,7 @@ Test with smaller visitor list first
 ## Contact & Support
 
 For questions or issues with this implementation:
+
 1. Check the test guide section
 2. Review error messages carefully
 3. Check MongoDB data for accurate schema

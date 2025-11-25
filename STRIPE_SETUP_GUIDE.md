@@ -1,6 +1,7 @@
 # Stripe Setup Guide - Fix "Failed to initialize card payment"
 
 ## The Problem
+
 You're seeing the error **"Failed to initialize card payment"** because Stripe is not properly configured with your API keys.
 
 ## The Solution
@@ -8,6 +9,7 @@ You're seeing the error **"Failed to initialize card payment"** because Stripe i
 ### Step 1: Get Stripe API Keys
 
 1. **Create a Stripe Account** (if you don't have one)
+
    - Go to https://stripe.com
    - Click "Sign up" or "Start now"
    - Complete the registration process
@@ -26,13 +28,16 @@ You're seeing the error **"Failed to initialize card payment"** because Stripe i
 1. **Open or create** `frontend/.env.local`
 
 2. **Add your Stripe Publishable Key**:
+
    ```bash
    NEXT_PUBLIC_API_URL=http://localhost:5001/api
    NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_51xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
    ```
-   
+
    Replace `pk_test_51xxx...` with YOUR actual publishable key from Stripe
+
 ### Step 3: Configure Backend (Node.js/Express)
+
 3. **Restart your frontend server**:
    ```bash
    cd frontend
@@ -42,16 +47,17 @@ You're seeing the error **"Failed to initialize card payment"** because Stripe i
 ### Step 3: Configure Backend (Node.js/Express)
 
 2. **Add your Stripe Secret Key**:
+
    ```bash
    # Existing variables
    MONGO_URI=your_mongodb_connection_string
    JWT_SECRET=your_jwt_secret
    PORT=5001
-   
+
    # Add Stripe Secret Key
    STRIPE_SECRET_KEY=sk_test_51xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
    ```
-   
+
    Replace `sk_test_51xxx...` with YOUR actual secret key from Stripe
 
 3. **Restart your backend server**:
@@ -65,6 +71,7 @@ You're seeing the error **"Failed to initialize card payment"** because Stripe i
 1. **Register for a paid workshop or trip**
 2. **Click "Pay with Credit/Debit Card"**
 3. **Use Stripe test card numbers**:
+
    - Card Number: `4242 4242 4242 4242`
    - Expiry: Any future date (e.g., `12/25`)
    - CVC: Any 3 digits (e.g., `123`)
@@ -76,11 +83,11 @@ You're seeing the error **"Failed to initialize card payment"** because Stripe i
 
 Stripe provides several test cards for different scenarios:
 
-| Card Number | Scenario |
-|-------------|----------|
-| `4242 4242 4242 4242` | Success |
-| `4000 0000 0000 0002` | Card declined |
-| `4000 0000 0000 9995` | Insufficient funds |
+| Card Number           | Scenario                            |
+| --------------------- | ----------------------------------- |
+| `4242 4242 4242 4242` | Success                             |
+| `4000 0000 0000 0002` | Card declined                       |
+| `4000 0000 0000 9995` | Insufficient funds                  |
 | `4000 0025 0000 3155` | Requires authentication (3D Secure) |
 
 ## Troubleshooting
@@ -88,6 +95,7 @@ Stripe provides several test cards for different scenarios:
 ### Issue: "Stripe is not configured" warning
 
 **Solution**: Make sure you added the publishable key to `frontend/.env.local` with the exact name:
+
 ```bash
 NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_your_key_here
 ```
@@ -100,7 +108,8 @@ NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_your_key_here
 
 ### Issue: "Invalid API key provided"
 
-**Solution**: 
+**Solution**:
+
 - Double-check you're using the TEST keys (start with `pk_test_` and `sk_test_`)
 - Make sure there are no extra spaces or quotes around the keys
 - Verify you copied the complete key (they're quite long!)
@@ -108,12 +117,13 @@ NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_your_key_here
 ### Issue: Changes don't take effect
 
 **Solution**: Restart both servers after updating `.env` files:
-```bash
+
+````bash
 # Terminal 1 - Frontend
 cd frontend
 npm run dev
 
-# Terminal 2 - Backend  
+# Terminal 2 - Backend
 
 ### ✅ What's Already Working:
 - Wallet payments
@@ -132,9 +142,10 @@ npm run dev
 ```bash
 NEXT_PUBLIC_API_URL=http://localhost:5001/api
 NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_YOUR_PUBLISHABLE_KEY_HERE
-```
+````
 
 ### backend/.env
+
 ```bash
 MONGO_URI=mongodb://localhost:27017/al-ahly-events
 JWT_SECRET=your_jwt_secret_key_here
@@ -156,6 +167,7 @@ Both `.env` and `.env.local` files should be in `.gitignore`:
 ```
 
 ✅ **Test vs Live Keys**:
+
 - **Test keys** (`pk_test_`, `sk_test_`) - For development, no real money
 - **Live keys** (`pk_live_`, `sk_live_`) - For production, real payments
 
@@ -193,14 +205,15 @@ If you're still having issues:
 ## Summary
 
 The error occurs because:
+
 1. ❌ Stripe publishable key is missing from `frontend/.env.local`
 2. ❌ Stripe secret key is missing from `backend/.env`
 
-1. ✅ Get API keys from Stripe Dashboard
-2. ✅ Add publishable key to frontend `.env.local`
-3. ✅ Add secret key to backend `.env`
-4. ✅ Restart both servers
-5. ✅ Test with card `4242 4242 4242 4242`
+3. ✅ Get API keys from Stripe Dashboard
+4. ✅ Add publishable key to frontend `.env.local`
+5. ✅ Add secret key to backend `.env`
+6. ✅ Restart both servers
+7. ✅ Test with card `4242 4242 4242 4242`
 
 ---
 
