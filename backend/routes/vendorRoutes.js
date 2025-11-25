@@ -31,6 +31,7 @@ import {
   cancelVendorApplication,
   getApplicationStatus
 } from "../controllers/vendorDocumentsController.js";
+import { upload } from "../controllers/documentController.js";
 
 const router = express.Router();
 
@@ -94,10 +95,33 @@ router.post("/loyalty-program/cancel", auth, requireVendor, cancelLoyaltyProgram
 // ========================================
 
 // 18. Upload vendor company documents (tax card & logo)
-router.post("/documents/upload", auth, requireVendor, uploadVendorDocuments);
+// Attach multer middleware to parse multipart/form-data fields: tax_card, company_logo
+router.post(
+  "/documents/upload",
+  auth,
+  requireVendor,
+  upload.fields([
+    { name: 'tax_card', maxCount: 1 },
+    { name: 'company_logo', maxCount: 1 }
+  ]),
+  uploadVendorDocuments
+);
 
 // 19. Upload attendee ID documents
-router.post("/applications/:application_id/attendee-ids/upload", auth, requireVendor, uploadAttendeeIds);
+// Attach multer middleware to parse multiple indexed id files: id_0 .. id_4
+router.post(
+  "/applications/:application_id/attendee-ids/upload",
+  auth,
+  requireVendor,
+  upload.fields([
+    { name: 'id_0', maxCount: 1 },
+    { name: 'id_1', maxCount: 1 },
+    { name: 'id_2', maxCount: 1 },
+    { name: 'id_3', maxCount: 1 },
+    { name: 'id_4', maxCount: 1 }
+  ]),
+  uploadAttendeeIds
+);
 
 // 20. Get application status with payment info
 router.get("/applications/:application_id/status", auth, requireVendor, getApplicationStatus);
