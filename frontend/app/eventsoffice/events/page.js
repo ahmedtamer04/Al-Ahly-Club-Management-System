@@ -43,23 +43,21 @@ export default function ViewAllEvents() {
     setLoading(true);
     setError('');
     try {
-      // use the same source Admin uses for events
+      // use the same source Admin uses for events + combine accepted booth applications
       const response = await api.get('/events/all');
       let eventsData = response;
       if (typeof response === 'string') {
         eventsData = JSON.parse(response);
       }
 
-      // Filter out Booth type events for now
+      // Filter out Booth type events - we'll get those from vendor applications
       const nonBoothEvents = eventsData?.filter(e => e.type !== 'Booth') || [];
 
-      // Attempt to fetch accepted booth applications separately.
-      // If this call fails (permission/404), we still show nonBoothEvents.
-      let boothEvents = [];
-      try {
-        const boothResponse = await api.get('/admin/vendor-requests?status=accepted&kind=booth_event');
-        // Transform booth applications to event-format
-        boothEvents = (boothResponse.applications || []).map(app => {
+      // Fetch accepted booth applications
+      const boothResponse = await api.get('/admin/vendor-requests?status=accepted&kind=booth_event');
+
+      // Transform booth applications to event-format
+      const boothEvents = (boothResponse.applications || []).map(app => {
         const startDate = app.preferred_start_date ? new Date(app.preferred_start_date) : new Date(app.applied_at);
         const endDate = new Date(startDate);
         endDate.setDate(endDate.getDate() + ((app.duration_weeks || 1) * 7));
@@ -103,7 +101,7 @@ export default function ViewAllEvents() {
       };
       setStats(eventStats);
 
-      // Fetch registration counts for each event (try admin counts first, then fallback to grouping registrations)
+      // Fetch registration counts for each event (only for non-booth events)
       if (nonBoothEvents && nonBoothEvents.length > 0) {
         await fetchRegistrationCounts(nonBoothEvents);
       }
@@ -120,37 +118,22 @@ export default function ViewAllEvents() {
   // Function to fetch registration counts for events
   const fetchRegistrationCounts = async (events) => {
     try {
-      // First try admin counts endpoint (may require Admin role)
+      // Use admin bulk endpoint to get counts per event
       const response = await api.get('/admin/registrations/counts');
       if (response && response.counts) {
         setRegistrationCounts(response.counts);
-        return;
+      } else {
+        // Fallback: initialize zero counts
+        const counts = {};
+        events.forEach(event => { counts[event._id] = 0; });
+        setRegistrationCounts(counts);
       }
-    } catch (err) {
-      // Admin endpoint may be restricted for EventsOffice in some setups; we'll fallback below
-      console.debug('Admin registrations/counts not available, falling back to grouping registrations', err?.message || err);
-    }
-
-    // Fallback: fetch registrations that the current user can see and compute counts
-    try {
-      const regsRes = await api.get('/registration/my-events');
-      const regs = regsRes.registrations || [];
+    } catch (error) {
+      console.error('Error fetching registration counts:', error);
       const counts = {};
-      events.forEach(ev => counts[ev._id] = 0);
-      regs.forEach(r => {
-        const evId = (r.event_id && (r.event_id._id || r.event_id)) || (r.event && r.event._id) || null;
-        if (evId && counts[evId] !== undefined) counts[evId] += 1;
-      });
+      events.forEach(event => { counts[event._id] = 0; });
       setRegistrationCounts(counts);
-      return;
-    } catch (err2) {
-      console.error('Failed to compute registration counts from user-visible registrations:', err2);
     }
-
-    // Final fallback: zero counts
-    const counts = {};
-    events.forEach(event => { counts[event._id] = 0; });
-    setRegistrationCounts(counts);
   };
 
   const applyFiltersAndSort = () => {
