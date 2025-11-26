@@ -308,6 +308,48 @@ export const getEventRegistrations = async (req, res) => {
   }
 };
 
+// Get registrations for events that belong to the requester, or all registrations for EventsOffice/Admin
+export const getRegistrationsForMyEvents = async (req, res) => {
+  try {
+    const user = req.user;
+
+    if (!user) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+
+    // EventsOffice and Admin should see all registrations
+    if (user.role === 'EventsOffice' || user.role === 'Admin') {
+      const registrations = await Registration.find().populate('user_id', 'first_name last_name email role id_number').populate('event_id', 'name type start_date end_date location');
+      const totals = {
+        all: registrations.length,
+        registered: registrations.filter(r => r.status === 'registered').length,
+        pending: registrations.filter(r => r.payment_status === 'pending').length,
+        canceled: registrations.filter(r => r.status === 'canceled').length
+      };
+
+      return res.json({ message: 'Registrations retrieved', registrations, totals });
+    }
+
+    // Otherwise return registrations for events created by this user
+    const myEvents = await Event.find({ created_by: user._id }).select('_id');
+    const myEventIds = myEvents.map(e => e._id);
+
+    const registrations = await Registration.find({ event_id: { $in: myEventIds } }).populate('user_id', 'first_name last_name email role id_number').populate('event_id', 'name type start_date end_date location');
+
+    const totals = {
+      all: registrations.length,
+      registered: registrations.filter(r => r.status === 'registered').length,
+      pending: registrations.filter(r => r.payment_status === 'pending').length,
+      canceled: registrations.filter(r => r.status === 'canceled').length
+    };
+
+    return res.json({ message: 'Registrations retrieved for your events', registrations, totals });
+  } catch (err) {
+    console.error('Error in getRegistrationsForMyEvents:', err);
+    res.status(500).json({ message: 'Server error', error: err.message });
+  }
+};
+
 // Get all registrations from database (Admin only - should be added to admin routes)
 export const getAllRegistrations = async (req, res) => {
   try {

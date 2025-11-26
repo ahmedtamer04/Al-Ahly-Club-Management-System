@@ -488,6 +488,11 @@ export const registrationAPI = {
   // Returns { upcoming: [], past: [] }
   getMyRegistrations: (userId) => api.get(`/registration/${userId}/events`),
 
+  // GET /api/registration/my-events
+  // Auth: requireAdminOrEventsOffice
+  // Returns full registrations list (Admin/EventsOffice) or registrations for events owned by user
+  getRegistrationsForMyEvents: () => api.get('/registration/my-events'),
+
   // PATCH /api/registration/cancel/:registrationId
   // Auth: requireRegistering
   // Cancels a registration

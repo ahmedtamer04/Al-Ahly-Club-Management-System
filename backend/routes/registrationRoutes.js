@@ -1,6 +1,6 @@
 import express from "express";
-import { registerForEvent, viewRegisteredEvents, cancelRegistration, getAllRegistrations, cancelUnpaidRegistration } from "../controllers/registrationController.js";
-import { auth, requireRegistering, requireAdmin } from "../middleware/auth.js";  
+import { registerForEvent, viewRegisteredEvents, cancelRegistration, getAllRegistrations, cancelUnpaidRegistration, getRegistrationsForMyEvents } from "../controllers/registrationController.js";
+import { auth, requireRegistering, requireAdmin, requireAdminOrEventsOffice } from "../middleware/auth.js";  
 
 
 const router = express.Router();
@@ -20,5 +20,9 @@ router.delete("/cancel-unpaid/:registrationId", auth, requireRegistering, cancel
 
 // GET /all - Get all registrations (Admin only)
 router.get("/all", auth, requireAdmin, getAllRegistrations);
+
+// GET /my-events - Get registrations for events belonging to the requester
+// Admin and EventsOffice can use this to view full registration list
+router.get("/my-events", auth, requireAdminOrEventsOffice, getRegistrationsForMyEvents);
 
 export default router;
