@@ -3,7 +3,6 @@
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { eventAPI, salesReportAPI } from '@/utils/api';
-import api from '@/utils/api';
 import '@/app/dashboard.css';
 
 export default function ViewAllEvents() {
@@ -29,7 +28,6 @@ export default function ViewAllEvents() {
   const [salesStartDateFilter, setSalesStartDateFilter] = useState('');
   const [salesEndDateFilter, setSalesEndDateFilter] = useState('');
   const [selectedEvent, setSelectedEvent] = useState(null);
-  const [registrationCounts, setRegistrationCounts] = useState({}); // registration counts per event
 
   useEffect(() => {
     fetchAllEvents();
@@ -43,96 +41,14 @@ export default function ViewAllEvents() {
     setLoading(true);
     setError('');
     try {
-      // use the same source Admin uses for events + combine accepted booth applications
-      const response = await api.get('/events/all');
-      let eventsData = response;
-      if (typeof response === 'string') {
-        eventsData = JSON.parse(response);
-      }
-
-      // Filter out Booth type events - we'll get those from vendor applications
-      const nonBoothEvents = eventsData?.filter(e => e.type !== 'Booth') || [];
-
-      // Fetch accepted booth applications
-      const boothResponse = await api.get('/admin/vendor-requests?status=accepted&kind=booth_event');
-
-      // Transform booth applications to event-format
-      const boothEvents = (boothResponse.applications || []).map(app => {
-        const startDate = app.preferred_start_date ? new Date(app.preferred_start_date) : new Date(app.applied_at);
-        const endDate = new Date(startDate);
-        endDate.setDate(endDate.getDate() + ((app.duration_weeks || 1) * 7));
-
-        return {
-          _id: app._id,
-          name: app.vendor?.company_name || `${app.vendor?.name}'s Booth`,
-          type: 'Booth',
-          location: app.application?.booth_location?.description || 
-                   `Zone ${app.application?.booth_location?.zone || 'N/A'} - ${app.platform_position?.wall || 'N/A'} Wall, Slot ${app.platform_position?.slot || 'N/A'}`,
-          short_description: `${app.duration_weeks || 1} week booth - ${app.application?.booth_size || 'Standard size'}`,
-          start_date: startDate,
-          end_date: endDate,
-          time: 'All Day',
-          status: 'active',
-          booth: {
-            vendors: [{
-              vendor_name: app.vendor?.name,
-              company_name: app.vendor?.company_name,
-              contact_info: { email: app.vendor?.email },
-              booth_assignment: `${app.platform_position?.wall || 'N/A'}-${app.platform_position?.slot || 'N/A'} (${app.application?.booth_size || 'N/A'})`,
-              setup_time: `${app.duration_weeks || 1} week(s)`
-            }]
-          },
-          _isBoothApplication: true,
-          _applicationData: app
-        };
-      });
-
-      const allEvents = [...nonBoothEvents, ...boothEvents];
-      setEvents(allEvents);
-      setFilteredEvents(allEvents);
-
-      // Compute basic stats
-      const eventStats = {
-        workshops: nonBoothEvents.filter(e => e.type === 'Workshop').length || 0,
-        trips: nonBoothEvents.filter(e => e.type === 'Trip').length || 0,
-        bazaars: nonBoothEvents.filter(e => e.type === 'Bazaar').length || 0,
-        booths: boothEvents.length || 0,
-        conferences: nonBoothEvents.filter(e => e.type === 'Conference').length || 0
-      };
-      setStats(eventStats);
-
-      // Fetch registration counts for each event (only for non-booth events)
-      if (nonBoothEvents && nonBoothEvents.length > 0) {
-        await fetchRegistrationCounts(nonBoothEvents);
-      }
+      const data = await eventAPI.getAll();
+      setEvents(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error('Error fetching events:', err);
       setError('Failed to load events. Please try again.');
       setEvents([]);
-      setFilteredEvents([]);
     } finally {
       setLoading(false);
-    }
-  };
-
-  // Function to fetch registration counts for events
-  const fetchRegistrationCounts = async (events) => {
-    try {
-      // Use admin bulk endpoint to get counts per event
-      const response = await api.get('/admin/registrations/counts');
-      if (response && response.counts) {
-        setRegistrationCounts(response.counts);
-      } else {
-        // Fallback: initialize zero counts
-        const counts = {};
-        events.forEach(event => { counts[event._id] = 0; });
-        setRegistrationCounts(counts);
-      }
-    } catch (error) {
-      console.error('Error fetching registration counts:', error);
-      const counts = {};
-      events.forEach(event => { counts[event._id] = 0; });
-      setRegistrationCounts(counts);
     }
   };
 
@@ -253,11 +169,6 @@ export default function ViewAllEvents() {
       return event.booth.vendors;
     }
     return [];
-  };
-
-  // Helper function to get event registration count
-  const getRegistrationCount = (eventId) => {
-    return registrationCounts[eventId] || 0;
   };
 
   const EventDetailsModal = ({ event, onClose }) => {
