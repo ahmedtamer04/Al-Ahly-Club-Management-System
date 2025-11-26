@@ -308,35 +308,6 @@ export const getEventRegistrations = async (req, res) => {
   }
 };
 
-// Get registrations for events the current user manages (EventsOffice sees all)
-export const getRegistrationsForMyEvents = async (req, res) => {
-  try {
-    const requestingUser = req.user;
-
-    // If EventsOffice or Admin - return all registrations
-    if (requestingUser.role === 'EventsOffice' || requestingUser.role === 'Admin') {
-      const regs = await Registration.find({ status: 'registered' })
-        .populate('user_id', 'first_name last_name email role id_number')
-        .populate('event_id', 'name type location start_date end_date time');
-
-      return res.json({ message: 'Registrations retrieved', registrations: regs, total: regs.length });
-    }
-
-    // Otherwise, return registrations for events created by the user
-    const myEvents = await Event.find({ created_by: requestingUser._id }).select('_id');
-    const myEventIds = myEvents.map(e => e._id);
-
-    const regs = await Registration.find({ event_id: { $in: myEventIds }, status: 'registered' })
-      .populate('user_id', 'first_name last_name email role id_number')
-      .populate('event_id', 'name type location start_date end_date time');
-
-    res.json({ message: 'Registrations for your events retrieved', registrations: regs, total: regs.length });
-  } catch (error) {
-    console.error('Error in getRegistrationsForMyEvents:', error);
-    res.status(500).json({ message: 'Server error while fetching registrations', error: error.message });
-  }
-};
-
 // Get all registrations from database (Admin only - should be added to admin routes)
 export const getAllRegistrations = async (req, res) => {
   try {
