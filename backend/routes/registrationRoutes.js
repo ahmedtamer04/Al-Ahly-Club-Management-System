@@ -1,5 +1,5 @@
 import express from "express";
-import { registerForEvent, viewRegisteredEvents, cancelRegistration, getAllRegistrations, cancelUnpaidRegistration } from "../controllers/registrationController.js";
+import { registerForEvent, viewRegisteredEvents, cancelRegistration, getAllRegistrations, cancelUnpaidRegistration, getRegistrationsForMyEvents } from "../controllers/registrationController.js";
 import { auth, requireRegistering, requireAdmin } from "../middleware/auth.js";  
 
 
@@ -20,5 +20,8 @@ router.delete("/cancel-unpaid/:registrationId", auth, requireRegistering, cancel
 
 // GET /all - Get all registrations (Admin only)
 router.get("/all", auth, requireAdmin, getAllRegistrations);
+
+// GET /my-events - Get registrations for events that belong to the requester (EventsOffice returns all)
+router.get('/my-events', auth, getRegistrationsForMyEvents);
 
 export default router;
