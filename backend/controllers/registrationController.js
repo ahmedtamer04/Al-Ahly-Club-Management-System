@@ -1,5 +1,4 @@
 import Registration from "../models/Registration.js";
-import ExcelJS from 'exceljs';
 import Event from "../models/Events.js";
 import mongoose from "mongoose";
 
@@ -306,67 +305,6 @@ export const getEventRegistrations = async (req, res) => {
   } catch (error) {
     console.error('Error fetching event registrations:', error);
     res.status(500).json({ message: "Server error.", error: error.message });
-  }
-};
-
-// Export event registrations as an Excel (.xlsx) file
-export const exportEventRegistrationsXlsx = async (req, res) => {
-  try {
-    const { event_id } = req.params;
-
-    const event = await Event.findById(event_id);
-    if (!event) return res.status(404).json({ message: 'Event not found.' });
-
-    // Disallow exporting conference attendees
-    if (event.type === 'Conference') {
-      return res.status(403).json({ message: 'Export for conference attendees is disabled.' });
-    }
-
-    // Authorization: Admin or EventsOffice or event creator
-    if (req.user.role !== 'EventsOffice' && req.user.role !== 'Admin' && event.created_by.toString() !== req.user._id.toString()) {
-      return res.status(403).json({ message: 'Not authorized to export this event registrations.' });
-    }
-
-    const regs = await Registration.find({ event_id }).populate('user_id', 'first_name last_name email id_number');
-
-    // Build workbook
-    const workbook = new ExcelJS.Workbook();
-    const worksheet = workbook.addWorksheet('Registrations');
-
-    worksheet.columns = [
-      { header: 'Name', key: 'name', width: 30 },
-      { header: 'Email', key: 'email', width: 30 },
-      { header: 'Personal ID', key: 'personalId', width: 20 },
-      { header: 'Role', key: 'role', width: 12 },
-      { header: 'Payment Status', key: 'payment_status', width: 15 },
-      { header: 'Registration Date', key: 'registration_date', width: 24 }
-    ];
-
-    regs.forEach(r => {
-      worksheet.addRow({
-        name: (r.user_id ? `${r.user_id.first_name || ''} ${r.user_id.last_name || ''}`.trim() : (r.name || '')),
-        email: r.user_id?.email || r.email || '',
-        personalId: r.personalId || r.user_id?.id_number || '',
-        role: r.role || '',
-        payment_status: r.payment_status || r.status || '',
-        registration_date: r.createdAt ? new Date(r.createdAt).toLocaleString() : ''
-      });
-    });
-
-    // Format header
-    worksheet.getRow(1).font = { bold: true };
-
-    // Write to buffer and send
-    const buffer = await workbook.xlsx.writeBuffer();
-
-    const fileName = `${(event.name || 'registrations').replace(/[^a-z0-9\-_. ]/gi, '').replace(/\s+/g, '_')}_registrations.xlsx`;
-
-    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
-    return res.send(buffer);
-  } catch (error) {
-    console.error('Error exporting registrations xlsx:', error);
-    return res.status(500).json({ message: 'Server error while exporting registrations', error: error.message });
   }
 };
 

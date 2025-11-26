@@ -493,26 +493,6 @@ export const registrationAPI = {
   // For EventsOffice this returns all registrations, otherwise returns registrations for events the user created
   getRegistrationsForMyEvents: () => api.get('/registration/my-events'),
 
-  // Export registrations for a specific event as Excel (.xlsx)
-  // Returns a Blob (binary) — NOT JSON
-  exportEventRegistrations: async (eventId) => {
-    const token = getToken();
-    const headers = {};
-    if (token) headers['Authorization'] = `Bearer ${token}`;
-
-    const res = await fetch(`${API_BASE_URL}/registration/event/${eventId}/export`, {
-      method: 'GET',
-      headers
-    });
-
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({}));
-      throw new Error(data.message || 'Export failed');
-    }
-
-    return res.blob();
-  },
-
   // PATCH /api/registration/cancel/:registrationId
   // Auth: requireRegistering
   // Cancels a registration

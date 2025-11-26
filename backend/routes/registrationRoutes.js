@@ -1,6 +1,6 @@
 import express from "express";
 import { registerForEvent, viewRegisteredEvents, cancelRegistration, getAllRegistrations, cancelUnpaidRegistration, getRegistrationsForMyEvents } from "../controllers/registrationController.js";
-import { auth, requireRegistering, requireAdmin, requireAdminOrEventsOffice } from "../middleware/auth.js";  
+import { auth, requireRegistering, requireAdmin } from "../middleware/auth.js";  
 
 
 const router = express.Router();
@@ -23,11 +23,5 @@ router.get("/all", auth, requireAdmin, getAllRegistrations);
 
 // GET /my-events - Get registrations for events that belong to the requester (EventsOffice returns all)
 router.get('/my-events', auth, getRegistrationsForMyEvents);
-
-// Export registrations for a specific event (.xlsx) - Admin or EventsOffice
-router.get('/event/:event_id/export', auth, requireAdminOrEventsOffice, (req, res, next) => {
-	// lazy import controller to avoid hoisting issues
-	import('../controllers/registrationController.js').then(mod => mod.exportEventRegistrationsXlsx(req, res, next)).catch(next);
-});
 
 export default router;
