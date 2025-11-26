@@ -866,7 +866,12 @@ export const salesReportAPI = {
   // Auth: requireAdminOrEventsOffice
   // Query params: event_type, start_date, end_date, sort_by, sort_order
   getSalesReport: (params = {}) => {
-    const queryString = new URLSearchParams(params).toString();
+    // Clean params: remove undefined, null or empty-string values so they don't
+    // turn into literal 'undefined'/'null' in the query string and confuse the backend
+    const clean = Object.entries(params)
+      .filter(([k, v]) => v !== undefined && v !== null && !(typeof v === 'string' && v.trim() === ''))
+      .reduce((acc, [k, v]) => ({ ...acc, [k]: v }), {});
+    const queryString = new URLSearchParams(clean).toString();
     return api.get(`/sales-report${queryString ? `?${queryString}` : ''}`);
   },
 };

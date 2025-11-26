@@ -199,8 +199,8 @@ export default function SalesReportPage() {
                   <div className="stat-card">
                     <div className="stat-icon">🎫</div>
                     <div className="stat-info">
-                      <h3>{report.totals?.total_registrations || 0}</h3>
-                      <p>Total Registrations</p>
+                      <h3>{report.totals?.total_attendees || 0}</h3>
+                      <p>Total Attendees</p>
                     </div>
                   </div>
                   <div className="stat-card">
@@ -208,6 +208,13 @@ export default function SalesReportPage() {
                     <div className="stat-info">
                       <h3>{report.totals?.total_paid_registrations || 0}</h3>
                       <p>Paid Registrations</p>
+                    </div>
+                  </div>
+                  <div className="stat-card">
+                    <div className="stat-icon">⚠️</div>
+                    <div className="stat-info">
+                      <h3>{report.totals?.total_unpaid_registrations || 0}</h3>
+                      <p>Unpaid Registrations</p>
                     </div>
                   </div>
                   <div className="stat-card">
@@ -236,7 +243,8 @@ export default function SalesReportPage() {
                           <th style={{ padding: '12px', textAlign: 'left' }}>Type</th>
                           <th style={{ padding: '12px', textAlign: 'left' }}>Date</th>
                           <th style={{ padding: '12px', textAlign: 'right' }}>Revenue</th>
-                          <th style={{ padding: '12px', textAlign: 'right' }}>Registrations</th>
+                          <th style={{ padding: '12px', textAlign: 'right' }}>Attendees</th>
+                          <th style={{ padding: '12px', textAlign: 'right' }}>Unpaid</th>
                           <th style={{ padding: '12px', textAlign: 'right' }}>Paid</th>
                           <th style={{ padding: '12px', textAlign: 'right' }}>Free</th>
                         </tr>
@@ -252,7 +260,8 @@ export default function SalesReportPage() {
                             <td style={{ padding: '12px', textAlign: 'right', fontWeight: 'bold', color: '#28a745' }}>
                               {formatCurrency(item.revenue)}
                             </td>
-                            <td style={{ padding: '12px', textAlign: 'right' }}>{item.total_registrations}</td>
+                            <td style={{ padding: '12px', textAlign: 'right' }}>{item.total_attendees}</td>
+                            <td style={{ padding: '12px', textAlign: 'right', color: '#e67e22' }}>{item.unpaid_registrations || 0}</td>
                             <td style={{ padding: '12px', textAlign: 'right', color: '#28a745' }}>{item.paid_registrations}</td>
                             <td style={{ padding: '12px', textAlign: 'right', color: '#6c757d' }}>{item.free_registrations}</td>
                           </tr>
