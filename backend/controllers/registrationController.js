@@ -313,37 +313,24 @@ export const getRegistrationsForMyEvents = async (req, res) => {
   try {
     const requestingUser = req.user;
 
-    // If EventsOffice or Admin - return all registrations (include pending/canceled)
+    // If EventsOffice or Admin - return all registrations
     if (requestingUser.role === 'EventsOffice' || requestingUser.role === 'Admin') {
-      const regs = await Registration.find({})
+      const regs = await Registration.find({ status: 'registered' })
         .populate('user_id', 'first_name last_name email role id_number')
         .populate('event_id', 'name type location start_date end_date time');
-      // compute breakdowns
-      const totals = {
-        all: regs.length,
-        registered: regs.filter(r => r.status === 'registered').length,
-        pending: regs.filter(r => r.payment_status === 'pending').length,
-        canceled: regs.filter(r => r.status === 'canceled').length,
-      };
 
-      return res.json({ message: 'Registrations retrieved', registrations: regs, totals });
+      return res.json({ message: 'Registrations retrieved', registrations: regs, total: regs.length });
     }
 
     // Otherwise, return registrations for events created by the user
     const myEvents = await Event.find({ created_by: requestingUser._id }).select('_id');
     const myEventIds = myEvents.map(e => e._id);
 
-    const regs = await Registration.find({ event_id: { $in: myEventIds } })
+    const regs = await Registration.find({ event_id: { $in: myEventIds }, status: 'registered' })
       .populate('user_id', 'first_name last_name email role id_number')
       .populate('event_id', 'name type location start_date end_date time');
-    const totals = {
-      all: regs.length,
-      registered: regs.filter(r => r.status === 'registered').length,
-      pending: regs.filter(r => r.payment_status === 'pending').length,
-      canceled: regs.filter(r => r.status === 'canceled').length,
-    };
 
-    res.json({ message: 'Registrations for your events retrieved', registrations: regs, totals });
+    res.json({ message: 'Registrations for your events retrieved', registrations: regs, total: regs.length });
   } catch (error) {
     console.error('Error in getRegistrationsForMyEvents:', error);
     res.status(500).json({ message: 'Server error while fetching registrations', error: error.message });
