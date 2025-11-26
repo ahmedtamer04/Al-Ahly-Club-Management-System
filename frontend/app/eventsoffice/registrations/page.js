@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { registrationAPI } from '@/utils/api';
 import '@/app/dashboard.css';
 
@@ -12,6 +12,7 @@ export default function EventsOfficeRegistrationsPage() {
   const [error, setError] = useState('');
   const [stats, setStats] = useState({ total: 0, Workshop: 0, Trip: 0, Bazaar: 0 });
   const [totalsBreakdown, setTotalsBreakdown] = useState({ all: 0, registered: 0, pending: 0, canceled: 0 });
+  const [exporting, setExporting] = useState({});
 
   useEffect(() => {
     fetchRegistrations();
@@ -181,14 +182,63 @@ export default function EventsOfficeRegistrationsPage() {
                       </td>
                     </tr>
                   ) : (
-                    registrations.filter(r => filter === 'all' || (r.event_id && r.event_id.type === filter) || (r.event && r.event.type === filter)).map(reg => (
-                      <tr key={reg._id}>
-                        <td>{reg.name || reg.user_id?.first_name + ' ' + reg.user_id?.last_name}</td>
-                        <td>{(reg.event_id && reg.event_id.name) || (reg.event && reg.event.name) || 'N/A' }</td>
-                        <td>{(reg.event_id && reg.event_id.type) || (reg.event && reg.event.type) || 'N/A'}</td>
-                        <td>{new Date(reg.registration_date || reg.createdAt || reg.created_at || reg.createdAt).toLocaleString()}</td>
-                        <td>{reg.payment_status || reg.status || 'registered'}</td>
-                      </tr>
+                    // Group registrations by event so we can provide per-event export buttons
+                    Object.values(registrations.reduce((acc, reg) => {
+                      const ev = reg.event_id || reg.event || {};
+                      const id = ev._id || ev.id || 'unknown';
+                      if (!acc[id]) acc[id] = { event: ev, regs: [] };
+                      acc[id].regs.push(reg);
+                      return acc;
+                    }, {})).filter(group => filter === 'all' || (group.event && group.event.type === filter)).map(group => (
+                      <React.Fragment key={group.event._id || group.event.id || Math.random()}>
+                        <tr style={{ background: '#f6f8fa' }}>
+                          <td colSpan="3"><strong>{group.event.name || 'Unnamed Event'}</strong> <small style={{ color: '#666', marginLeft: '8px' }}>({group.event.type || 'Type N/A'})</small></td>
+                          <td style={{ textAlign: 'right' }} colSpan="2">
+                            {group.event.type === 'Conference' ? (
+                              <button disabled className="btn-secondary" title="Exports disabled for conferences">📄 Export (disabled)</button>
+                            ) : (
+                              <button
+                                className="btn-primary"
+                                onClick={async () => {
+                                  const id = group.event._id || group.event.id;
+                                  try {
+                                    setExporting(prev => ({ ...prev, [id]: true }));
+                                    const blob = await registrationAPI.exportEventRegistrations(id);
+                                    const url = URL.createObjectURL(blob);
+                                    const a = document.createElement('a');
+                                    a.href = url;
+                                    const safeName = (group.event.name || id).replace(/[^a-z0-9\-_. ]/gi, '').replace(/\s+/g, '_');
+                                    a.download = `${safeName}_registrations.xlsx`;
+                                    document.body.appendChild(a);
+                                    a.click();
+                                    a.remove();
+                                    URL.revokeObjectURL(url);
+                                  } catch (err) {
+                                    console.error('Export failed:', err);
+                                    alert('Failed to export registrations: ' + (err.message || err));
+                                  } finally {
+                                    setExporting(prev => ({ ...prev, [group.event._id || group.event.id]: false }));
+                                  }
+                                }}
+                                disabled={exporting[group.event._id || group.event.id]}
+                                title="Export registrations to .xlsx"
+                              >
+                                {exporting[group.event._id || group.event.id] ? 'Exporting…' : 'Export .xlsx'}
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+
+                        {group.regs.map(reg => (
+                          <tr key={reg._id}>
+                            <td>{reg.name || reg.user_id?.first_name + ' ' + reg.user_id?.last_name}</td>
+                            <td>{group.event.name || (reg.event_id && reg.event_id.name) || 'N/A' }</td>
+                            <td>{group.event.type || (reg.event_id && reg.event_id.type) || 'N/A'}</td>
+                            <td>{new Date(reg.registration_date || reg.createdAt || reg.created_at || reg.createdAt).toLocaleString()}</td>
+                            <td>{reg.payment_status || reg.status || 'registered'}</td>
+                          </tr>
+                        ))}
+                      </React.Fragment>
                     ))
                   )}
                 </tbody>
