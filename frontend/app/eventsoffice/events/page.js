@@ -605,6 +605,7 @@ export default function ViewAllEvents() {
                       <p><strong>Type:</strong> {event.type}</p>
                       <p><strong>Location:</strong> {event.location}</p>
                       <p><strong>Date:</strong> {formatDate(event.start_date)}</p>
+                      <p><strong>Registered:</strong> {getRegistrationCount(event._id)}</p>
                       
                       {/* Show professor info for workshops and conferences */}
                       {event.type === 'Workshop' && event.workshop?.professors_participating && (
