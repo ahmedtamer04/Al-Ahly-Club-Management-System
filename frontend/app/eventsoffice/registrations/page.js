@@ -11,6 +11,7 @@ export default function EventsOfficeRegistrationsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [stats, setStats] = useState({ total: 0, Workshop: 0, Trip: 0, Bazaar: 0 });
+  const [totalsBreakdown, setTotalsBreakdown] = useState({ all: 0, registered: 0, pending: 0, canceled: 0 });
 
   useEffect(() => {
     fetchRegistrations();
@@ -31,6 +32,9 @@ export default function EventsOfficeRegistrationsPage() {
         if (t && s[t] !== undefined) s[t] += 1;
       });
       setStats(s);
+      // breakdown by status/payment
+      const breakdown = data.totals || { all: regs.length, registered: regs.filter(r => r.status === 'registered').length, pending: regs.filter(r => r.payment_status === 'pending').length, canceled: regs.filter(r => r.status === 'canceled').length };
+      setTotalsBreakdown(breakdown);
     } catch (err) {
       console.error('Failed to load registrations:', err);
       setError(err.message || 'Failed to load registrations');
@@ -72,13 +76,34 @@ export default function EventsOfficeRegistrationsPage() {
           <h1>All Registrations 🎫</h1>
 
           <div className="stats-grid">
-            <div className="stat-card">
+                <div className="stat-card">
               <div className="stat-icon">🎫</div>
               <div className="stat-info">
-                <h3>{loading ? '...' : stats.total}</h3>
+                    <h3>{loading ? '...' : stats.total}</h3>
                 <p>Total Registrations</p>
               </div>
             </div>
+                <div className="stat-card">
+                  <div className="stat-icon">✅</div>
+                  <div className="stat-info">
+                    <h3>{loading ? '...' : totalsBreakdown.registered}</h3>
+                    <p>Confirmed</p>
+                  </div>
+                </div>
+                <div className="stat-card">
+                  <div className="stat-icon">⏳</div>
+                  <div className="stat-info">
+                    <h3>{loading ? '...' : totalsBreakdown.pending}</h3>
+                    <p>Pending</p>
+                  </div>
+                </div>
+                <div className="stat-card">
+                  <div className="stat-icon">🗑️</div>
+                  <div className="stat-info">
+                    <h3>{loading ? '...' : totalsBreakdown.canceled}</h3>
+                    <p>Canceled</p>
+                  </div>
+                </div>
             <div className="stat-card">
               <div className="stat-icon">🎨</div>
               <div className="stat-info">
