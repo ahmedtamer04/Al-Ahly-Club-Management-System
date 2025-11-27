@@ -308,6 +308,31 @@ export const archiveEvent = async (req, res) => {
   }
 };
 
+/* -------------------------- PATCH /events/unarchive/:eventId -------------------------- */
+export const unarchiveEvent = async (req, res) => {
+  try {
+    const { eventId } = req.params;
+
+    if (!eventId) return res.status(400).json({ message: 'Event ID is required' });
+
+    const event = await Event.findById(eventId);
+    if (!event) return res.status(404).json({ message: 'Event not found' });
+
+    if (event.status !== 'archived') {
+      return res.status(400).json({ message: 'Event is not archived' });
+    }
+
+    // Restore archived events to completed (they are past events)
+    event.status = 'completed';
+    await event.save();
+
+    res.json({ message: 'Event unarchived successfully', event });
+  } catch (err) {
+    console.error('Error unarchiving event:', err);
+    res.status(500).json({ message: 'Server error', error: err.message });
+  }
+};
+
 // | Purpose                    | Method | Example URL                                              |
 // | -------------------------- | ------ | -------------------------------------------------------- |
 // | 🔹 Get upcoming events     | `GET`  | `http://localhost:5001/events/upcoming`                  |

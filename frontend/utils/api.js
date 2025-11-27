@@ -472,6 +472,11 @@ export const eventAPI = {
   // Archive an event that has already passed
   archive: (eventId) => api.patch(`/events/archive/${eventId}`, {}),
   
+  // PATCH /api/events/unarchive/:eventId
+  // Auth: requireAdminOrEventsOffice
+  // Unarchive an archived event
+  unarchive: (eventId) => api.patch(`/events/unarchive/${eventId}`, {}),
+  
   // GET /api/events/:event_id/comments
   // Auth: requireStudentOrAbove
   // Returns all comments for a specific event

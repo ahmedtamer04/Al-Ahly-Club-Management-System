@@ -11,6 +11,7 @@ export default function ViewAllEvents() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [archiving, setArchiving] = useState(false);
+  const [unarchiving, setUnarchiving] = useState(false);
   
   // Filter and search states
   const [searchTerm, setSearchTerm] = useState('');
@@ -300,9 +301,35 @@ export default function ViewAllEvents() {
                   }
                 }}
               >
-                {archiving ? 'Archiving…' : 'Archive Event'}
+                    {archiving ? 'Archiving…' : 'Archive Event'}
               </button>
             )}
+
+                {/* Show unarchive for archived events */}
+                {event.status === 'archived' && (
+                  <button
+                    className="btn-primary"
+                    disabled={unarchiving}
+                    onClick={async () => {
+                      if (!confirm('Unarchive this event? This will mark the event as completed and make it visible again.')) return;
+                      try {
+                        setUnarchiving(true);
+                        const res = await eventAPI.unarchive(event._id);
+                        setEvents(prev => prev.map(e => e._id === event._id ? res.event : e));
+                        setSelectedEvent(res.event);
+                        applyFiltersAndSort();
+                        alert('Event unarchived successfully');
+                      } catch (err) {
+                        console.error('Unarchive failed', err);
+                        alert(err?.message || 'Failed to unarchive event');
+                      } finally {
+                        setUnarchiving(false);
+                      }
+                    }}
+                  >
+                    {unarchiving ? 'Unarchiving…' : 'Unarchive Event'}
+                  </button>
+                )}
 
             <button onClick={onClose} className="btn-secondary">Close</button>
           </div>
