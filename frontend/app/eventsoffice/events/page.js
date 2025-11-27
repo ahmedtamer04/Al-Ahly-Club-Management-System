@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
-import { eventAPI, salesReportAPI } from '@/utils/api';
+import { eventAPI, salesReportAPI, registrationAPI } from '@/utils/api';
 import '@/app/dashboard.css';
 
 export default function ViewAllEvents() {
