@@ -466,6 +466,11 @@ export const eventAPI = {
   
   // GET /api/events/:id
   getById: (id) => api.get(`/events/${id}`),
+
+  // PATCH /api/events/archive/:eventId
+  // Auth: requireAdminOrEventsOffice
+  // Archive an event that has already passed
+  archive: (eventId) => api.patch(`/events/archive/${eventId}`, {}),
   
   // GET /api/events/:event_id/comments
   // Auth: requireStudentOrAbove

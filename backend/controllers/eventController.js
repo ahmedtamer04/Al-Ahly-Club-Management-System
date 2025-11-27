@@ -278,6 +278,36 @@ export const getEventComments = async (req, res) => {
   }
 };
 
+/* -------------------------- PATCH /events/archive/:eventId -------------------------- */
+export const archiveEvent = async (req, res) => {
+  try {
+    const { eventId } = req.params;
+
+    if (!eventId) return res.status(400).json({ message: 'Event ID is required' });
+
+    const event = await Event.findById(eventId);
+    if (!event) return res.status(404).json({ message: 'Event not found' });
+
+    // Only allow archiving if the event has already ended
+    const now = new Date();
+    if (event.end_date >= now) {
+      return res.status(400).json({ message: 'Event has not finished yet and cannot be archived' });
+    }
+
+    if (event.status === 'archived') {
+      return res.status(400).json({ message: 'Event is already archived' });
+    }
+
+    event.status = 'archived';
+    await event.save();
+
+    res.json({ message: 'Event archived successfully', event });
+  } catch (err) {
+    console.error('Error archiving event:', err);
+    res.status(500).json({ message: 'Server error', error: err.message });
+  }
+};
+
 // | Purpose                    | Method | Example URL                                              |
 // | -------------------------- | ------ | -------------------------------------------------------- |
 // | 🔹 Get upcoming events     | `GET`  | `http://localhost:5001/events/upcoming`                  |

@@ -10,6 +10,7 @@ export default function ViewAllEvents() {
   const [filteredEvents, setFilteredEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [archiving, setArchiving] = useState(false);
   
   // Filter and search states
   const [searchTerm, setSearchTerm] = useState('');
@@ -149,6 +150,10 @@ export default function ViewAllEvents() {
     if (event.status === 'completed') {
       return <span className="badge" style={{backgroundColor: '#9c27b0', color: 'white'}}>🎓 Completed</span>;
     }
+
+    if (event.status === 'archived') {
+      return <span className="badge badge-secondary">📦 Archived</span>;
+    }
     
     // Fall back to date-based status
     if (now < startDate) {
@@ -270,7 +275,35 @@ export default function ViewAllEvents() {
               </div>
             )}
           </div>
-          <div className="modal-footer">
+          <div className="modal-footer" style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+            {/* Show archive button for past events that haven't been archived yet */}
+            {new Date(event.end_date) < new Date() && event.status !== 'archived' && event.status !== 'cancelled' && (
+              <button
+                className="btn-warning"
+                disabled={archiving}
+                onClick={async () => {
+                  if (!confirm('Archive this event? This cannot be undone via UI.')) return;
+                  try {
+                    setArchiving(true);
+                    const res = await eventAPI.archive(event._id);
+                    // Update local event list and selected event
+                    setEvents(prev => prev.map(e => e._id === event._id ? res.event : e));
+                    setSelectedEvent(res.event);
+                    // refresh filters
+                    applyFiltersAndSort();
+                    alert('Event archived successfully');
+                  } catch (err) {
+                    console.error('Archive failed', err);
+                    alert(err?.message || 'Failed to archive event');
+                  } finally {
+                    setArchiving(false);
+                  }
+                }}
+              >
+                {archiving ? 'Archiving…' : 'Archive Event'}
+              </button>
+            )}
+
             <button onClick={onClose} className="btn-secondary">Close</button>
           </div>
         </div>

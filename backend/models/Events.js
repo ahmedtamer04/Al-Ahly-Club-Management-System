@@ -50,7 +50,8 @@ const eventSchema = new mongoose.Schema({
   
   status: {
     type: String,
-    enum: ["upcoming", "active", "completed", "cancelled"],
+    // Add 'archived' so events can be explicitly archived after they have passed
+    enum: ["upcoming", "active", "completed", "cancelled", "archived"],
     default: "upcoming"
   },
   

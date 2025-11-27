@@ -5,6 +5,7 @@ import {
   filterEvents,
   sortEventsByDate,
   deleteEvent,
+  archiveEvent,
   getEventComments,
   getEventById
 } from "../controllers/eventController.js";
@@ -26,6 +27,9 @@ router.get("/filter/:field/:value", auth, requireStudentOrAbove, filterEvents);
 router.get("/sort/date/:order", auth, requireStudentOrAbove, sortEventsByDate);
 
 router.delete("/delete/:eventId", auth, requireAdminOrEventsOffice, deleteEvent);
+
+// PATCH /archive/:eventId - Archive an event that has already passed
+router.patch('/archive/:eventId', auth, requireAdminOrEventsOffice, archiveEvent);
 
 // GET event by ID
 router.get("/:id", auth, requireStudentOrAbove, getEventById);
