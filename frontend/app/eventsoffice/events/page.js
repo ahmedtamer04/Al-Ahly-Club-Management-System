@@ -624,16 +624,49 @@ export default function ViewAllEvents() {
                       
                       <p style={{ marginTop: '8px', color: '#333' }}>{event.short_description?.substring(0, 100)}...</p>
                     </div>
-                    <button 
-                      className="btn-primary" 
-                      style={{ marginTop: '12px', width: '100%' }}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSelectedEvent(event);
-                      }}
-                    >
-                      View Details
-                    </button>
+                    <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
+                      <button 
+                        className="btn-primary" 
+                        style={{ flex: 1 }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedEvent(event);
+                        }}
+                      >
+                        View Details
+                      </button>
+
+                      {/* Per-card export button (non-conference only). Uses global exporting flag so only one export runs at a time. */}
+                      {event.type !== 'Conference' && (
+                        <button
+                          className="btn-success"
+                          disabled={exporting}
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            try {
+                              setExporting(true);
+                              const blob = await registrationAPI.exportEventRegistrations(event._id);
+                              const url = window.URL.createObjectURL(blob);
+                              const a = document.createElement('a');
+                              a.href = url;
+                              const safeName = event.name ? event.name.replace(/[^a-z0-9]/gi, '_').toLowerCase() : 'event';
+                              a.download = `${safeName}_attendees.xlsx`;
+                              document.body.appendChild(a);
+                              a.click();
+                              a.remove();
+                              window.URL.revokeObjectURL(url);
+                            } catch (err) {
+                              console.error('Export failed', err);
+                              alert(err?.message || 'Export failed');
+                            } finally {
+                              setExporting(false);
+                            }
+                          }}
+                        >
+                          {exporting ? 'Exporting…' : 'Export'}
+                        </button>
+                      )}
+                    </div>
                   </div>
                 );
               })}
