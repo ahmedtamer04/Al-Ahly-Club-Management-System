@@ -1,4 +1,5 @@
 import Registration from "../models/Registration.js";
+import ExcelJS from 'exceljs';
 import Event from "../models/Events.js";
 import mongoose from "mongoose";
 
@@ -383,6 +384,65 @@ export const getAllRegistrations = async (req, res) => {
       message: "Server error while fetching registrations.", 
       error: error.message 
     });
+  }
+};
+
+// Export registrations for a specific event as an .xlsx file
+export const exportEventRegistrationsXlsx = async (req, res) => {
+  try {
+    const { event_id } = req.params;
+
+    const event = await Event.findById(event_id);
+    if (!event) return res.status(404).json({ message: 'Event not found' });
+
+    // Conferences should not be exported
+    if (event.type === 'Conference') {
+      return res.status(400).json({ message: 'Export not allowed for conference events' });
+    }
+
+    // Only EventsOffice or Admin or the event creator can export
+    if (req.user.role !== 'EventsOffice' && req.user.role !== 'Admin' && event.created_by.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: 'Not authorized to export registrations for this event' });
+    }
+
+    const registrations = await Registration.find({ event_id, status: 'registered' }).populate('user_id', 'first_name last_name email');
+
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('Attendees');
+
+    worksheet.columns = [
+      { header: 'Name', key: 'name', width: 30 },
+      { header: 'Email', key: 'email', width: 30 },
+      { header: 'Personal ID', key: 'personalId', width: 20 },
+      { header: 'Role', key: 'role', width: 12 },
+      { header: 'Payment Status', key: 'payment_status', width: 12 },
+      { header: 'Registered At', key: 'registeredAt', width: 22 }
+    ];
+
+    // Add rows
+    registrations.forEach(reg => {
+      const name = reg.user_id ? `${reg.user_id.first_name || ''} ${reg.user_id.last_name || ''}`.trim() : reg.name;
+      worksheet.addRow({
+        name,
+        email: reg.email,
+        personalId: reg.personalId,
+        role: reg.role,
+        payment_status: reg.payment_status,
+        registeredAt: reg.createdAt ? new Date(reg.createdAt).toLocaleString() : ''
+      });
+    });
+
+    // Format header
+    worksheet.getRow(1).font = { bold: true };
+
+    const buffer = await workbook.xlsx.writeBuffer();
+
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename="${event.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_attendees.xlsx"`);
+    return res.send(buffer);
+  } catch (err) {
+    console.error('Error exporting registrations:', err);
+    return res.status(500).json({ message: 'Server error', error: err.message });
   }
 };
 

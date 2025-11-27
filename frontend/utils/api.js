@@ -507,6 +507,33 @@ export const registrationAPI = {
   // Auth: requireRegistering
   // Cancels a registration
   cancel: (registrationId) => api.patch(`/registration/cancel/${registrationId}`, {}),
+
+  // GET /api/registration/event/:event_id/export
+  // Auth: requireAdminOrEventsOffice
+  // Returns a blob (xlsx) for download
+  exportEventRegistrations: async (eventId) => {
+    const token = getToken();
+    const res = await fetch(`${API_BASE_URL}/registration/event/${eventId}/export`, {
+      method: 'GET',
+      headers: {
+        Authorization: token ? `Bearer ${token}` : ''
+      }
+    });
+
+    if (!res.ok) {
+      // Try to parse JSON error
+      const text = await res.text();
+      try {
+        const json = JSON.parse(text);
+        throw new Error(json.message || 'Export failed');
+      } catch (e) {
+        throw new Error(text || 'Export failed');
+      }
+    }
+
+    const blob = await res.blob();
+    return blob;
+  },
 };
 
 // ================================

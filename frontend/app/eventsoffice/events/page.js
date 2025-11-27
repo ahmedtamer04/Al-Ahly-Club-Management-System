@@ -12,6 +12,7 @@ export default function ViewAllEvents() {
   const [error, setError] = useState('');
   const [archiving, setArchiving] = useState(false);
   const [unarchiving, setUnarchiving] = useState(false);
+  const [exporting, setExporting] = useState(false);
   
   // Filter and search states
   const [searchTerm, setSearchTerm] = useState('');
@@ -277,6 +278,36 @@ export default function ViewAllEvents() {
             )}
           </div>
           <div className="modal-footer" style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+            {/* Export attendees (all event types except Conference) */}
+            {event.type !== 'Conference' && (
+              <button
+                className="btn-success"
+                disabled={exporting}
+                onClick={async () => {
+                  try {
+                    setExporting(true);
+                    const blob = await registrationAPI.exportEventRegistrations(event._id);
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    const safeName = event.name ? event.name.replace(/[^a-z0-9]/gi, '_').toLowerCase() : 'event';
+                    a.download = `${safeName}_attendees.xlsx`;
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                    window.URL.revokeObjectURL(url);
+                  } catch (err) {
+                    console.error('Export failed', err);
+                    alert(err?.message || 'Export failed');
+                  } finally {
+                    setExporting(false);
+                  }
+                }}
+              >
+                {exporting ? 'Exporting…' : 'Export Attendees'}
+              </button>
+            )}
+
             {/* Show archive button for past events that haven't been archived yet */}
             {new Date(event.end_date) < new Date() && event.status !== 'archived' && event.status !== 'cancelled' && (
               <button
