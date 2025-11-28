@@ -466,6 +466,16 @@ export const eventAPI = {
   
   // GET /api/events/:id
   getById: (id) => api.get(`/events/${id}`),
+
+  // PATCH /api/events/archive/:eventId
+  // Auth: requireAdminOrEventsOffice
+  // Archive an event that has already passed
+  archive: (eventId) => api.patch(`/events/archive/${eventId}`, {}),
+  
+  // PATCH /api/events/unarchive/:eventId
+  // Auth: requireAdminOrEventsOffice
+  // Unarchive an archived event
+  unarchive: (eventId) => api.patch(`/events/unarchive/${eventId}`, {}),
   
   // GET /api/events/:event_id/comments
   // Auth: requireStudentOrAbove
@@ -488,10 +498,42 @@ export const registrationAPI = {
   // Returns { upcoming: [], past: [] }
   getMyRegistrations: (userId) => api.get(`/registration/${userId}/events`),
 
+  // GET /api/registration/my-events
+  // Auth: requireAdminOrEventsOffice
+  // Returns full registrations list (Admin/EventsOffice) or registrations for events owned by user
+  getRegistrationsForMyEvents: () => api.get('/registration/my-events'),
+
   // PATCH /api/registration/cancel/:registrationId
   // Auth: requireRegistering
   // Cancels a registration
   cancel: (registrationId) => api.patch(`/registration/cancel/${registrationId}`, {}),
+
+  // GET /api/registration/event/:event_id/export
+  // Auth: requireAdminOrEventsOffice
+  // Returns a blob (xlsx) for download
+  exportEventRegistrations: async (eventId) => {
+    const token = getToken();
+    const res = await fetch(`${API_BASE_URL}/registration/event/${eventId}/export`, {
+      method: 'GET',
+      headers: {
+        Authorization: token ? `Bearer ${token}` : ''
+      }
+    });
+
+    if (!res.ok) {
+      // Try to parse JSON error
+      const text = await res.text();
+      try {
+        const json = JSON.parse(text);
+        throw new Error(json.message || 'Export failed');
+      } catch (e) {
+        throw new Error(text || 'Export failed');
+      }
+    }
+
+    const blob = await res.blob();
+    return blob;
+  },
 };
 
 // ================================
@@ -866,7 +908,12 @@ export const salesReportAPI = {
   // Auth: requireAdminOrEventsOffice
   // Query params: event_type, start_date, end_date, sort_by, sort_order
   getSalesReport: (params = {}) => {
-    const queryString = new URLSearchParams(params).toString();
+    // Clean params: remove undefined, null or empty-string values so they don't
+    // turn into literal 'undefined'/'null' in the query string and confuse the backend
+    const clean = Object.entries(params)
+      .filter(([k, v]) => v !== undefined && v !== null && !(typeof v === 'string' && v.trim() === ''))
+      .reduce((acc, [k, v]) => ({ ...acc, [k]: v }), {});
+    const queryString = new URLSearchParams(clean).toString();
     return api.get(`/sales-report${queryString ? `?${queryString}` : ''}`);
   },
 };

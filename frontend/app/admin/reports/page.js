@@ -2,6 +2,8 @@
 
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { eventAPI } from '@/utils/api';
 import { salesReportAPI } from '@/utils/api';
 import '@/app/dashboard.css';
 
@@ -16,8 +18,14 @@ export default function ReportsPage() {
   const [endDate, setEndDate] = useState('');
   const [sortBy, setSortBy] = useState('revenue');
   const [sortOrder, setSortOrder] = useState('desc');
+  const [eventId, setEventId] = useState(null);
+  const [eventName, setEventName] = useState('');
+  const searchParams = useSearchParams();
 
   useEffect(() => {
+    // Prefill eventId from URL if present
+    const id = searchParams?.get ? searchParams.get('event_id') : null;
+    if (id) setEventId(id);
     fetchReport();
   }, []);
 
@@ -27,12 +35,28 @@ export default function ReportsPage() {
     try {
       const params = {};
       if (eventType !== 'all') params.event_type = eventType;
+      // Allow reading the event id from URL search params on first load
+      const effectiveEventId = eventId || (searchParams?.get ? searchParams.get('event_id') : null);
+      if (effectiveEventId) params.event_id = effectiveEventId;
       if (startDate) params.start_date = startDate;
       if (endDate) params.end_date = endDate;
       params.sort_by = sortBy;
       params.sort_order = sortOrder;
 
       const data = await salesReportAPI.getSalesReport(params);
+      // If eventId was specified, try to fetch and show the event name for context
+      const effectiveEventIdForName = eventId || (searchParams?.get ? searchParams.get('event_id') : null);
+      if (effectiveEventIdForName) {
+        try {
+          const ev = await eventAPI.getById(eventId);
+          setEventName(ev.name || ev.event_name || '');
+        } catch (e) {
+          console.warn('Failed to fetch event details:', e);
+          setEventName('');
+        }
+      } else {
+        setEventName('');
+      }
       setReport(data);
     } catch (err) {
       console.error('Error fetching sales report:', err);
@@ -91,6 +115,16 @@ export default function ReportsPage() {
         <main className="main-content">
           <div className="section-header">
             <h1>💰 Sales Report</h1>
+            {eventId && (
+              <div style={{marginTop: '6px', color: '#333'}}>
+                <strong>Filtered for:</strong> {eventName || eventId}
+                <button
+                  className="btn btn-secondary btn-sm"
+                  style={{ marginLeft: '8px' }}
+                  onClick={() => { setEventId(null); window.history.replaceState({}, '', '/admin/reports'); fetchReport(); }}
+                >Clear Event Filter</button>
+              </div>
+            )}
             <button onClick={fetchReport} className="btn-secondary" disabled={loading}>
               {loading ? 'Loading...' : '🔄 Refresh'}
             </button>
@@ -198,8 +232,8 @@ export default function ReportsPage() {
                   <div className="stat-card">
                     <div className="stat-icon">🎫</div>
                     <div className="stat-info">
-                      <h3>{report.totals?.total_registrations || 0}</h3>
-                      <p>Total Registrations</p>
+                      <h3>{report.totals?.total_attendees || 0}</h3>
+                      <p>Total Attendees</p>
                     </div>
                   </div>
                   <div className="stat-card">
@@ -207,6 +241,13 @@ export default function ReportsPage() {
                     <div className="stat-info">
                       <h3>{report.totals?.total_paid_registrations || 0}</h3>
                       <p>Paid Registrations</p>
+                    </div>
+                  </div>
+                  <div className="stat-card">
+                    <div className="stat-icon">⚠️</div>
+                    <div className="stat-info">
+                      <h3>{report.totals?.total_unpaid_registrations || 0}</h3>
+                      <p>Unpaid Registrations</p>
                     </div>
                   </div>
                   <div className="stat-card">
@@ -235,7 +276,8 @@ export default function ReportsPage() {
                           <th style={{ padding: '12px', textAlign: 'left' }}>Type</th>
                           <th style={{ padding: '12px', textAlign: 'left' }}>Date</th>
                           <th style={{ padding: '12px', textAlign: 'right' }}>Revenue</th>
-                          <th style={{ padding: '12px', textAlign: 'right' }}>Registrations</th>
+                          <th style={{ padding: '12px', textAlign: 'right' }}>Attendees</th>
+                          <th style={{ padding: '12px', textAlign: 'right' }}>Unpaid</th>
                           <th style={{ padding: '12px', textAlign: 'right' }}>Paid</th>
                           <th style={{ padding: '12px', textAlign: 'right' }}>Free</th>
                         </tr>
@@ -251,7 +293,8 @@ export default function ReportsPage() {
                             <td style={{ padding: '12px', textAlign: 'right', fontWeight: 'bold', color: '#28a745' }}>
                               {formatCurrency(item.revenue)}
                             </td>
-                            <td style={{ padding: '12px', textAlign: 'right' }}>{item.total_registrations}</td>
+                            <td style={{ padding: '12px', textAlign: 'right' }}>{item.total_attendees}</td>
+                            <td style={{ padding: '12px', textAlign: 'right', color: '#e67e22' }}>{item.unpaid_registrations || 0}</td>
                             <td style={{ padding: '12px', textAlign: 'right', color: '#28a745' }}>{item.paid_registrations}</td>
                             <td style={{ padding: '12px', textAlign: 'right', color: '#6c757d' }}>{item.free_registrations}</td>
                           </tr>

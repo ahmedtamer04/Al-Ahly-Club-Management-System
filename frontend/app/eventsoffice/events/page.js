@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
-import { eventAPI } from '@/utils/api';
+import { eventAPI, salesReportAPI, registrationAPI } from '@/utils/api';
 import '@/app/dashboard.css';
 
 export default function ViewAllEvents() {
@@ -10,6 +10,9 @@ export default function ViewAllEvents() {
   const [filteredEvents, setFilteredEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [archiving, setArchiving] = useState(false);
+  const [unarchiving, setUnarchiving] = useState(false);
+  const [exporting, setExporting] = useState(false);
   
   // Filter and search states
   const [searchTerm, setSearchTerm] = useState('');
@@ -17,6 +20,16 @@ export default function ViewAllEvents() {
   const [filterLocation, setFilterLocation] = useState('');
   const [filterProfessor, setFilterProfessor] = useState('');
   const [sortOrder, setSortOrder] = useState('asc');
+  // Sales report modal state
+  const [salesModalOpen, setSalesModalOpen] = useState(false);
+  const [salesReport, setSalesReport] = useState(null);
+  const [salesLoading, setSalesLoading] = useState(false);
+  const [salesError, setSalesError] = useState('');
+  // modal filter states
+  const [salesNameFilter, setSalesNameFilter] = useState('');
+  const [salesTypeFilter, setSalesTypeFilter] = useState('all');
+  const [salesStartDateFilter, setSalesStartDateFilter] = useState('');
+  const [salesEndDateFilter, setSalesEndDateFilter] = useState('');
   const [selectedEvent, setSelectedEvent] = useState(null);
 
   useEffect(() => {
@@ -139,6 +152,10 @@ export default function ViewAllEvents() {
     if (event.status === 'completed') {
       return <span className="badge" style={{backgroundColor: '#9c27b0', color: 'white'}}>🎓 Completed</span>;
     }
+
+    if (event.status === 'archived') {
+      return <span className="badge badge-secondary">📦 Archived</span>;
+    }
     
     // Fall back to date-based status
     if (now < startDate) {
@@ -260,7 +277,63 @@ export default function ViewAllEvents() {
               </div>
             )}
           </div>
-          <div className="modal-footer">
+          <div className="modal-footer" style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+            {/* Export (per-card) still available on event cards; removed modal 'Export Attendees' button per request */}
+
+            {/* Show archive button for past events that haven't been archived yet */}
+            {new Date(event.end_date) < new Date() && event.status !== 'archived' && event.status !== 'cancelled' && (
+              <button
+                className="btn-warning"
+                disabled={archiving}
+                onClick={async () => {
+                  if (!confirm('Archive this event? This cannot be undone via UI.')) return;
+                  try {
+                    setArchiving(true);
+                    const res = await eventAPI.archive(event._id);
+                    // Update local event list and selected event
+                    setEvents(prev => prev.map(e => e._id === event._id ? res.event : e));
+                    setSelectedEvent(res.event);
+                    // refresh filters
+                    applyFiltersAndSort();
+                    alert('Event archived successfully');
+                  } catch (err) {
+                    console.error('Archive failed', err);
+                    alert(err?.message || 'Failed to archive event');
+                  } finally {
+                    setArchiving(false);
+                  }
+                }}
+              >
+                    {archiving ? 'Archiving…' : 'Archive Event'}
+              </button>
+            )}
+
+                {/* Show unarchive for archived events */}
+                {event.status === 'archived' && (
+                  <button
+                    className="btn-primary"
+                    disabled={unarchiving}
+                    onClick={async () => {
+                      if (!confirm('Unarchive this event? This will mark the event as completed and make it visible again.')) return;
+                      try {
+                        setUnarchiving(true);
+                        const res = await eventAPI.unarchive(event._id);
+                        setEvents(prev => prev.map(e => e._id === event._id ? res.event : e));
+                        setSelectedEvent(res.event);
+                        applyFiltersAndSort();
+                        alert('Event unarchived successfully');
+                      } catch (err) {
+                        console.error('Unarchive failed', err);
+                        alert(err?.message || 'Failed to unarchive event');
+                      } finally {
+                        setUnarchiving(false);
+                      }
+                    }}
+                  >
+                    {unarchiving ? 'Unarchiving…' : 'Unarchive Event'}
+                  </button>
+                )}
+
             <button onClick={onClose} className="btn-secondary">Close</button>
           </div>
         </div>
@@ -422,13 +495,41 @@ export default function ViewAllEvents() {
                   <option value="desc">Newest First</option>
                 </select>
               </div>
-              <button 
-                onClick={clearFilters} 
-                className="btn-secondary"
-                style={{ marginLeft: 'auto' }}
-              >
-                🔄 Clear All Filters
-              </button>
+              <div style={{ display: 'flex', gap: '8px', marginLeft: 'auto', alignItems: 'center' }}>
+                <button
+                  onClick={async () => {
+                    setSalesModalOpen(true);
+                    const params = {};
+                    if (salesTypeFilter && salesTypeFilter !== 'all') params.event_type = salesTypeFilter;
+                    if (salesNameFilter && salesNameFilter.trim().length > 0) params.name = salesNameFilter.trim();
+                    if (salesStartDateFilter) params.start_date = salesStartDateFilter;
+                    if (salesEndDateFilter) params.end_date = salesEndDateFilter;
+                    try {
+                      setSalesLoading(true);
+                      setSalesError('');
+                      const data = await salesReportAPI.getSalesReport(params);
+                      setSalesReport(data);
+                    } catch (err) {
+                      console.error('Failed to fetch sales report:', err);
+                      setSalesError(err.message || 'Failed to load report');
+                      setSalesReport(null);
+                    } finally {
+                      setSalesLoading(false);
+                    }
+                  }}
+                  className="btn btn-secondary btn-sm"
+                  title="View attendees across all events"
+                >
+                  📊 View All Attendees
+                </button>
+
+                <button 
+                  onClick={clearFilters} 
+                  className="btn-secondary"
+                >
+                  🔄 Clear All Filters
+                </button>
+              </div>
             </div>
 
             {/* Results Count */}
@@ -495,16 +596,49 @@ export default function ViewAllEvents() {
                       
                       <p style={{ marginTop: '8px', color: '#333' }}>{event.short_description?.substring(0, 100)}...</p>
                     </div>
-                    <button 
-                      className="btn-primary" 
-                      style={{ marginTop: '12px', width: '100%' }}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSelectedEvent(event);
-                      }}
-                    >
-                      View Details
-                    </button>
+                    <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
+                      <button 
+                        className="btn-primary" 
+                        style={{ flex: 1 }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedEvent(event);
+                        }}
+                      >
+                        View Details
+                      </button>
+
+                      {/* Per-card export button (non-conference only). Uses global exporting flag so only one export runs at a time. */}
+                      {event.type !== 'Conference' && (
+                        <button
+                          className="btn-success"
+                          disabled={exporting}
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            try {
+                              setExporting(true);
+                              const blob = await registrationAPI.exportEventRegistrations(event._id);
+                              const url = window.URL.createObjectURL(blob);
+                              const a = document.createElement('a');
+                              a.href = url;
+                              const safeName = event.name ? event.name.replace(/[^a-z0-9]/gi, '_').toLowerCase() : 'event';
+                              a.download = `${safeName}_attendees.xlsx`;
+                              document.body.appendChild(a);
+                              a.click();
+                              a.remove();
+                              window.URL.revokeObjectURL(url);
+                            } catch (err) {
+                              console.error('Export failed', err);
+                              alert(err?.message || 'Export failed');
+                            } finally {
+                              setExporting(false);
+                            }
+                          }}
+                        >
+                          {exporting ? 'Exporting…' : 'Export'}
+                        </button>
+                      )}
+                    </div>
                   </div>
                 );
               })}
@@ -519,6 +653,165 @@ export default function ViewAllEvents() {
           event={selectedEvent} 
           onClose={() => setSelectedEvent(null)} 
         />
+      )}
+
+      {/* Sales / Attendees Modal */}
+      {salesModalOpen && (
+        <div className="modal-overlay" onClick={() => setSalesModalOpen(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3 className="modal-title">📊 Attendees & Sales Report (All Events)</h3>
+              <button className="close-btn" onClick={() => setSalesModalOpen(false)}>&times;</button>
+            </div>
+
+            <div style={{ padding: '8px 0 16px 0' }}>
+              <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '10px' }}>
+                <input
+                  type="text"
+                  placeholder="Search by event name or description"
+                  value={salesNameFilter}
+                  onChange={(e) => setSalesNameFilter(e.target.value)}
+                  style={{ padding: '8px', borderRadius: '6px', border: '1px solid #ddd', minWidth: '220px' }}
+                />
+
+                <select
+                  value={salesTypeFilter}
+                  onChange={(e) => setSalesTypeFilter(e.target.value)}
+                  style={{ padding: '8px', borderRadius: '6px', border: '1px solid #ddd' }}
+                >
+                  <option value="all">All Types</option>
+                  <option value="Workshop">Workshop</option>
+                  <option value="Trip">Trip</option>
+                  <option value="Bazaar">Bazaar</option>
+                  <option value="Booth">Booth</option>
+                  <option value="Conference">Conference</option>
+                </select>
+
+                <input
+                  type="date"
+                  value={salesStartDateFilter}
+                  onChange={(e) => setSalesStartDateFilter(e.target.value)}
+                  style={{ padding: '8px', borderRadius: '6px', border: '1px solid #ddd' }}
+                />
+
+                <input
+                  type="date"
+                  value={salesEndDateFilter}
+                  onChange={(e) => setSalesEndDateFilter(e.target.value)}
+                  style={{ padding: '8px', borderRadius: '6px', border: '1px solid #ddd' }}
+                />
+
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button
+                    className="btn btn-primary btn-sm"
+                    onClick={async () => {
+                      const params = {
+                        event_type: salesTypeFilter !== 'all' ? salesTypeFilter : undefined,
+                        name: salesNameFilter || undefined,
+                        start_date: salesStartDateFilter || undefined,
+                        end_date: salesEndDateFilter || undefined
+                      };
+                      try {
+                        setSalesLoading(true);
+                        setSalesError('');
+                        const data = await salesReportAPI.getSalesReport(params);
+                        setSalesReport(data);
+                      } catch (err) {
+                        console.error('Failed to fetch sales report:', err);
+                        setSalesError(err.message || 'Failed to load report');
+                        setSalesReport(null);
+                      } finally {
+                        setSalesLoading(false);
+                      }
+                    }}
+                    disabled={salesLoading}
+                  >
+                    Apply
+                  </button>
+
+                  <button
+                    className="btn btn-secondary btn-sm"
+                    onClick={async () => {
+                      setSalesNameFilter('');
+                      setSalesTypeFilter('all');
+                      setSalesStartDateFilter('');
+                      setSalesEndDateFilter('');
+                      try {
+                        setSalesLoading(true);
+                        setSalesError('');
+                        const data = await salesReportAPI.getSalesReport({});
+                        setSalesReport(data);
+                      } catch (err) {
+                        console.error('Failed to clear sales filters:', err);
+                        setSalesError(err.message || 'Failed to load report');
+                        setSalesReport(null);
+                      } finally {
+                        setSalesLoading(false);
+                      }
+                    }}
+                    disabled={salesLoading}
+                  >
+                    Clear
+                  </button>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                <strong>Summary</strong>
+                {salesLoading && <small style={{ color: '#666' }}>Loading...</small>}
+                {salesError && <small style={{ color: 'red' }}>{salesError}</small>}
+              </div>
+
+              {!salesLoading && salesReport && (
+                <div style={{ marginTop: '12px' }}>
+                  <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                    <div className="stat-card" style={{ padding: '12px' }}>
+                      <div className="stat-icon">💰</div>
+                      <div className="stat-info">
+                        <h3>{new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(salesReport.totals?.total_revenue || 0)}</h3>
+                        <p>Total Revenue</p>
+                      </div>
+                    </div>
+                    <div className="stat-card" style={{ padding: '12px' }}>
+                      <div className="stat-icon">🎫</div>
+                      <div className="stat-info">
+                        <h3>{salesReport.totals?.total_attendees || 0}</h3>
+                        <p>Total Attendees</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style={{ marginTop: '16px', maxHeight: '60vh', overflowY: 'auto' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                      <thead>
+                        <tr style={{ background: '#f8f9fa' }}>
+                          <th style={{ padding: '8px', textAlign: 'left' }}>Event</th>
+                          <th style={{ padding: '8px', textAlign: 'left' }}>Type</th>
+                          <th style={{ padding: '8px', textAlign: 'right' }}>Attendees</th>
+                          <th style={{ padding: '8px', textAlign: 'right' }}>Paid</th>
+                          <th style={{ padding: '8px', textAlign: 'right' }}>Free</th>
+                          <th style={{ padding: '8px', textAlign: 'right' }}>Unpaid</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {salesReport.report?.map((r, i) => (
+                          <tr key={r.event_id || i} style={{ borderBottom: '1px solid #eee' }}>
+                            <td style={{ padding: '8px' }}>{r.event_name}</td>
+                            <td style={{ padding: '8px' }}>{r.event_type}</td>
+                            <td style={{ padding: '8px', textAlign: 'right' }}>{r.total_attendees}</td>
+                            <td style={{ padding: '8px', textAlign: 'right' }}>{r.paid_registrations}</td>
+                            <td style={{ padding: '8px', textAlign: 'right' }}>{r.free_registrations}</td>
+                            <td style={{ padding: '8px', textAlign: 'right' }}>{r.unpaid_registrations}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       )}
 
       <style jsx>{`

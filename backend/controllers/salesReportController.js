@@ -9,28 +9,65 @@ import Payment from "../models/Payment.js";
  */
 export const getSalesReport = async (req, res) => {
   try {
-    const { event_type, start_date, end_date, sort_by = 'revenue', sort_order = 'desc' } = req.query;
+    const { event_id, event_type, name, start_date, end_date, sort_by = 'revenue', sort_order = 'desc' } = req.query;
     
     // Build base filter for events
     const eventFilter = {};
+    // Prefer explicit event_id filter when provided (single event or comma-separated list)
+    if (event_id) {
+      // support comma-separated list of ids
+      const ids = String(event_id).split(',').map(id => id.trim()).filter(Boolean);
+      if (ids.length === 1) eventFilter._id = ids[0];
+      else eventFilter._id = { $in: ids };
+    }
+
     if (event_type && event_type !== 'all') {
       eventFilter.type = event_type;
+    }
+
+    // Filter by event name (search) - match against name or short_description
+    if (name && name.trim().length > 0) {
+      const regex = new RegExp(name.trim(), 'i');
+      eventFilter.$or = [
+        { name: regex },
+        { short_description: regex }
+      ];
+    }
+
+    // Filter events by event date overlap (only if valid start_date/end_date values were provided)
+    // This keeps filters independent: passing invalid/empty dates won't break the query.
+    const parseValidDate = (v) => {
+      if (!v && v !== 0) return null; // treat empty/undefined as no-date
+      const d = new Date(v);
+      return isNaN(d.getTime()) ? null : d;
+    };
+
+    const parsedStart = parseValidDate(start_date);
+    const parsedEnd = parseValidDate(end_date);
+
+    if (parsedStart || parsedEnd) {
+      if (parsedStart && parsedEnd) {
+        // overlap: event.start_date <= filterEnd AND event.end_date >= filterStart
+        eventFilter.$and = [
+          { start_date: { $lte: parsedEnd } },
+          { end_date: { $gte: parsedStart } }
+        ];
+      } else if (parsedStart) {
+        // events that end on or after filterStart
+        eventFilter.end_date = { $gte: parsedStart };
+      } else if (parsedEnd) {
+        // events that start on or before filterEnd
+        eventFilter.start_date = { $lte: parsedEnd };
+      }
     }
     
     // Get all events matching the filter
     const events = await Event.find(eventFilter);
     
-    // Build date filter for registrations/payments
-    const dateFilter = {};
-    if (start_date || end_date) {
-      dateFilter.createdAt = {};
-      if (start_date) {
-        dateFilter.createdAt.$gte = new Date(start_date);
-      }
-      if (end_date) {
-        dateFilter.createdAt.$lte = new Date(end_date);
-      }
-    }
+    // NOTE: start_date/end_date are treated here as event date filters (events overlapping the window).
+    // We DO NOT filter payments/registrations by createdAt using these params because that would make
+    // the filters dependent on each other (e.g. event date + registration date). If you need registration
+    // date filtering separately, we can add explicit params later (e.g. reg_start/reg_end).
     
     // Aggregate revenue by event
     const reportData = await Promise.all(
@@ -38,8 +75,7 @@ export const getSalesReport = async (req, res) => {
         // Fetch payments first (treat Payment records as authoritative)
         const payments = await Payment.find({
           event_id: event._id,
-          payment_status: 'completed',
-          ...dateFilter
+          payment_status: 'completed'
         });
 
         // Sum completed payments
@@ -50,30 +86,28 @@ export const getSalesReport = async (req, res) => {
           if (payment.registration_id) paymentRegistrationIds.add(payment.registration_id.toString());
         });
 
-        // Get registrations for this event — only count active (registered) ones
+        // Get registrations for this event — count all active (registered) ones (attendees)
         const registrations = await Registration.find({
           event_id: event._id,
-          status: 'registered',
-          payment_status: { $in: ['paid', 'free'] },
-          ...dateFilter
+          status: 'registered'
         });
 
         // Calculate revenue coming from registrations that DO NOT have a linked Payment record.
         // This avoids double-counting when a Payment document exists for the same registration.
         let paidCount = 0;
         let freeCount = 0;
+        let pendingCount = 0;
 
         registrations.forEach(reg => {
           const regId = reg._id?.toString();
-          if (reg.payment_status === 'paid') {
-            // Only add registration.payment_amount when there's no corresponding Payment record
-            if (!regId || !paymentRegistrationIds.has(regId)) {
-              revenue += reg.payment_amount || 0;
-            }
-            paidCount++;
-          } else if (reg.payment_status === 'free') {
-            freeCount++;
+          // Only add registration.payment_amount when there's no corresponding Payment record
+          if (reg.payment_status === 'paid' && !paymentRegistrationIds.has(regId)) {
+            revenue += reg.payment_amount || 0;
           }
+
+          if (reg.payment_status === 'paid') paidCount++;
+          else if (reg.payment_status === 'free') freeCount++;
+          else if (reg.payment_status === 'pending') pendingCount++;
         });
 
         return {
@@ -84,9 +118,11 @@ export const getSalesReport = async (req, res) => {
           end_date: event.end_date,
           location: event.location,
           revenue: revenue,
-          total_registrations: registrations.length,
+          // attendees = all active registrations (regardless of payment status)
+          total_attendees: registrations.length,
           paid_registrations: paidCount,
           free_registrations: freeCount,
+          unpaid_registrations: pendingCount,
           capacity: event.type === 'Workshop' ? event.workshop?.capacity : 
                    event.type === 'Trip' ? event.trip?.capacity : null
         };
@@ -132,9 +168,11 @@ export const getSalesReport = async (req, res) => {
     // Calculate totals
     const totals = {
       total_revenue: filteredReport.reduce((sum, item) => sum + item.revenue, 0),
-      total_registrations: filteredReport.reduce((sum, item) => sum + item.total_registrations, 0),
+      // total_attendees is the sum of all registered (attendees)
+      total_attendees: filteredReport.reduce((sum, item) => sum + (item.total_attendees || 0), 0),
       total_paid_registrations: filteredReport.reduce((sum, item) => sum + item.paid_registrations, 0),
       total_free_registrations: filteredReport.reduce((sum, item) => sum + item.free_registrations, 0),
+      total_unpaid_registrations: filteredReport.reduce((sum, item) => sum + (item.unpaid_registrations || 0), 0),
       total_events: filteredReport.length
     };
     
@@ -144,7 +182,7 @@ export const getSalesReport = async (req, res) => {
       // Build CSV header
       const headers = [
         'event_id', 'event_name', 'event_type', 'start_date', 'end_date', 'location',
-        'revenue', 'total_registrations', 'paid_registrations', 'free_registrations', 'capacity'
+        'revenue', 'total_attendees', 'paid_registrations', 'free_registrations', 'unpaid_registrations', 'capacity'
       ];
 
       const escapeCsv = (value) => {
@@ -157,7 +195,7 @@ export const getSalesReport = async (req, res) => {
       };
 
       const rows = filteredReport.map(row => (
-        headers.map(h => escapeCsv(row[h] ?? ''))
+        headers.map(h => escapeCsv(row[h] ?? (h === 'unpaid_registrations' ? row['unpaid_registrations'] ?? '' : '')))
       ));
 
       const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
