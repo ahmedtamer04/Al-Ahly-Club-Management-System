@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { paymentAPI } from '@/utils/api';
 import '@/app/dashboard.css';
@@ -101,14 +102,33 @@ export default function PaymentHistoryPage() {
   };
 
   return (
-    <div className="dashboard-container">
-      <div className="dashboard-header">
-        <button onClick={() => router.back()} className="back-button">
-          ← Back
-        </button>
-        <h1>💰 Payment History</h1>
-        <p>View your payment history and wallet transactions</p>
-      </div>
+    <div className="dashboard">
+      <nav className="dashboard-nav">
+        <div className="nav-container">
+          <h1 className="nav-brand">Al-Ahly Events</h1>
+          <div className="nav-links">
+            <span className="nav-user">👨‍💼 Staff Dashboard</span>
+            <Link href="/">Logout</Link>
+          </div>
+        </div>
+      </nav>
+
+      <div className="dashboard-content">
+        <aside className="sidebar">
+          <ul className="sidebar-menu">
+            <li><Link href="/staff">🏠 Dashboard</Link></li>
+            <li><Link href="/staff/events">📅 Browse Events</Link></li>
+            <li><Link href="/staff/favorites">⭐ My Favorites</Link></li>
+            <li><Link href="/staff/payment-history">💰 Payment History</Link></li>
+            <li><Link href="/polls-voting">📊 Vote for Vendors</Link></li>
+            <li><Link href="/loyalty-program">🎁 Loyalty Program</Link></li>
+            <li><Link href="/staff/gym/schedule">💪 Gym Schedule</Link></li>
+            <li><Link href="/staff/profile">👤 Profile</Link></li>
+          </ul>
+        </aside>
+
+        <main className="main-content">
+          <div className="section">
 
       <div className="tabs">
         <button
@@ -520,6 +540,9 @@ export default function PaymentHistoryPage() {
           color: #ef4444;
         }
       `}</style>
+          </div>
+        </main>
+      </div>
     </div>
   );
 }

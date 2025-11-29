@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { paymentAPI } from '@/utils/api';
@@ -101,16 +102,43 @@ export default function PaymentHistoryPage() {
   };
 
   return (
-    <div className="dashboard-container">
-      <div className="dashboard-header">
-        <button onClick={() => router.back()} className="back-button">
-          ← Back
-        </button>
-        <h1>💰 Payment History</h1>
-        <p>View your payment history and wallet transactions</p>
-      </div>
+    <div className="dashboard">
+      <nav className="dashboard-nav">
+        <div className="nav-container">
+          <h1 className="nav-brand">Al-Ahly Events</h1>
+          <div className="nav-links">
+            <span className="nav-user">👨‍🏫 Professor Dashboard</span>
+            <Link href="/">Logout</Link>
+          </div>
+        </div>
+      </nav>
 
-      <div className="tabs">
+      <div className="dashboard-content">
+        <aside className="sidebar">
+          <ul className="sidebar-menu">
+            <li><Link href="/professor">🏠 Dashboard</Link></li>
+            <li><Link href="/professor/events">📅 Events</Link></li>
+            <li><Link href="/professor/favorites">⭐ My Favorites</Link></li>
+            <li><Link href="/professor/workshops">🎨 My Workshops</Link></li>
+            <li><Link href="/professor/payment-history">💰 Payment History</Link></li>
+            <li><Link href="/polls-voting">📊 Vote for Vendors</Link></li>
+            <li><Link href="/loyalty-program">🎁 Loyalty Program</Link></li>
+            <li><Link href="/professor/gym">💪 Gym Schedule</Link></li>
+            <li><Link href="/professor/profile">👤 Profile</Link></li>
+          </ul>
+        </aside>
+
+        <main className="main-content">
+          <div className="dashboard-container">
+            <div className="dashboard-header">
+              <button onClick={() => router.back()} className="back-button">
+                ← Back
+              </button>
+              <h1>💰 Payment History</h1>
+              <p>View your payment history and wallet transactions</p>
+            </div>
+
+            <div className="tabs">
         <button
           className={`tab ${activeTab === 'payments' ? 'active' : ''}`}
           onClick={() => setActiveTab('payments')}
@@ -520,6 +548,9 @@ export default function PaymentHistoryPage() {
           color: #ef4444;
         }
       `}</style>
+          </div>
+        </main>
+      </div>
     </div>
   );
 }

@@ -128,30 +128,50 @@ export default function PollsVotingPage() {
       case 'Student':
         return [
           { href: '/student', label: '🏠 Dashboard' },
-          { href: '/student/events', label: '📅 Events' },
+          { href: '/student/events', label: '📅 Browse Events' },
+          { href: '/student/favorites', label: '⭐ My Favorites' },
+          { href: '/student/my-registrations', label: '🎫 My Registrations' },
+          { href: '/student/payment-history', label: '💰 Payment History' },
           { href: '/polls-voting', label: '📊 Vote for Vendors', active: true },
-          { href: '/loyalty-program', label: '🎁 Loyalty Program' }
+          { href: '/loyalty-program', label: '🎁 Loyalty Program' },
+          { href: '/student/facilities', label: '🏢 Facilities' },
+          { href: '/student/gym/schedule', label: '💪 Gym Schedule' },
+          { href: '/student/profile', label: '👤 Profile' }
         ];
       case 'Staff':
         return [
           { href: '/staff', label: '🏠 Dashboard' },
           { href: '/staff/events', label: '📅 Events' },
+          { href: '/staff/favorites', label: '⭐ My Favorites' },
+          { href: '/staff/payment-history', label: '💰 Payment History' },
           { href: '/polls-voting', label: '📊 Vote for Vendors', active: true },
-          { href: '/loyalty-program', label: '🎁 Loyalty Program' }
+          { href: '/loyalty-program', label: '🎁 Loyalty Program' },
+          { href: '/staff/gym/schedule', label: '💪 Gym Schedule' },
+          { href: '/staff/profile', label: '👤 Profile' }
         ];
       case 'TA':
         return [
           { href: '/ta', label: '🏠 Dashboard' },
-          { href: '/ta/events', label: '📅 Events' },
+          { href: '/ta/events', label: '📅 Browse Events' },
+          { href: '/ta/favorites', label: '⭐ My Favorites' },
+          { href: '/ta/my-events', label: '✏️ My Events' },
+          { href: '/ta/payment-history', label: '💰 Payment History' },
           { href: '/polls-voting', label: '📊 Vote for Vendors', active: true },
-          { href: '/loyalty-program', label: '🎁 Loyalty Program' }
+          { href: '/loyalty-program', label: '🎁 Loyalty Program' },
+          { href: '/ta/gym', label: '💪 Gym Schedule' },
+          { href: '/ta/profile', label: '👤 Profile' }
         ];
       case 'Professor':
         return [
           { href: '/professor', label: '🏠 Dashboard' },
           { href: '/professor/events', label: '📅 Events' },
+          { href: '/professor/favorites', label: '⭐ My Favorites' },
+          { href: '/professor/workshops', label: '🎨 My Workshops' },
+          { href: '/professor/payment-history', label: '💰 Payment History' },
           { href: '/polls-voting', label: '📊 Vote for Vendors', active: true },
-          { href: '/loyalty-program', label: '🎁 Loyalty Program' }
+          { href: '/loyalty-program', label: '🎁 Loyalty Program' },
+          { href: '/professor/gym', label: '💪 Gym Schedule' },
+          { href: '/professor/profile', label: '👤 Profile' }
         ];
       default:
         return [];
