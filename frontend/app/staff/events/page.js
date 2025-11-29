@@ -191,7 +191,15 @@ export default function StaffEventsPage() {
       });
 
       if (response.ok) {
-        alert('Registration cancelled successfully!');
+        const data = await response.json();
+        
+        // Show refund information if available
+        let alertMessage = data.message || 'Registration cancelled successfully!';
+        if (data.refund) {
+          alertMessage = `Registration cancelled successfully!\n\nRefund: $${data.refund.amount} has been added to your wallet.`;
+        }
+        alert(alertMessage);
+        
         // Refresh both registered and available events
         await fetchRegisteredEvents();
         await fetchEvents();

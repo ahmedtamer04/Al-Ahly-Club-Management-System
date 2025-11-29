@@ -15,6 +15,7 @@ export default function PaymentHistoryPage() {
   const [activeTab, setActiveTab] = useState('payments'); // 'payments' or 'transactions'
   const [payments, setPayments] = useState([]);
   const [transactions, setTransactions] = useState([]);
+  const [walletBalance, setWalletBalance] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -33,6 +34,9 @@ export default function PaymentHistoryPage() {
       } else {
         const response = await paymentAPI.getWalletTransactions();
         setTransactions(response.transactions || []);
+        // Get current wallet balance from API (includes all refunds)
+        const balanceResponse = await paymentAPI.getWalletBalance();
+        setWalletBalance(balanceResponse.wallet?.balance || 0);
       }
     } catch (err) {
       setError(err.message || 'Failed to load data');
@@ -75,7 +79,7 @@ export default function PaymentHistoryPage() {
       credit: '#10b981',
       debit: '#ef4444',
       payment: '#0070f3',
-      refund: '#6b7280',
+      refund: '#10b981',
       'top-up': '#8b5cf6',
     };
 
@@ -121,6 +125,20 @@ export default function PaymentHistoryPage() {
           💰 Wallet Transactions
         </button>
       </div>
+
+      {activeTab === 'transactions' && (
+        <div className="wallet-balance-card" style={{
+          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          color: 'white',
+          padding: '1.5rem',
+          borderRadius: '12px',
+          marginBottom: '1.5rem',
+          boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
+        }}>
+          <div style={{ fontSize: '0.9rem', opacity: 0.9, marginBottom: '0.5rem' }}>💰 Current Wallet Balance</div>
+          <div style={{ fontSize: '2rem', fontWeight: 'bold' }}>${walletBalance.toFixed(2)}</div>
+        </div>
+      )}
 
       {error && (
         <div className="error-message">
@@ -220,12 +238,12 @@ export default function PaymentHistoryPage() {
                       <div className="transaction-right">
                         <span
                           className={`transaction-amount ${
-                            transaction.type === 'credit' || transaction.type === 'top-up'
+                            transaction.type === 'credit' || transaction.type === 'top-up' || transaction.type === 'refund'
                               ? 'positive'
                               : 'negative'
                           }`}
                         >
-                          {transaction.type === 'credit' || transaction.type === 'top-up'
+                          {transaction.type === 'credit' || transaction.type === 'top-up' || transaction.type === 'refund'
                             ? '+'
                             : '-'}
                           ${transaction.amount?.toFixed(2) || '0.00'}

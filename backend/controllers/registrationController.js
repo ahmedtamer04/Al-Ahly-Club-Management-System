@@ -1,6 +1,7 @@
 import Registration from "../models/Registration.js";
 import ExcelJS from 'exceljs';
 import Event from "../models/Events.js";
+import User from "../models/User.js";
 import mongoose from "mongoose";
 
 // Register for a workshop or trip
@@ -238,7 +239,7 @@ export const cancelRegistration = async (req, res) => {
     const registration = await Registration.findOne({
       _id: registrationId,
       user_id
-    });
+    }).populate('event_id');
 
     console.log('Found registration:', registration);
 
@@ -247,20 +248,93 @@ export const cancelRegistration = async (req, res) => {
       return res.status(404).json({ message: "Registration not found." });
     }
 
-    // Check if event has started (get event from registration)
-    const event = await Event.findById(registration.event_id);
-    if (event && event.start_date <= new Date()) {
+    // Check if already canceled
+    if (registration.status === 'canceled') {
+      return res.status(400).json({ message: "Registration is already canceled." });
+    }
+
+    const event = registration.event_id;
+    if (!event) {
+      return res.status(404).json({ message: "Event not found." });
+    }
+
+    // Check if event has already started
+    if (event.start_date <= new Date()) {
       console.log('Event has already started, cannot cancel');
       return res.status(400).json({ 
         message: "Cannot cancel registration for events that have already started." 
       });
     }
 
-    console.log('Deleting registration');
-    await Registration.findByIdAndDelete(registrationId);
+    // Check if event is at least 2 weeks away
+    const twoWeeksInMs = 14 * 24 * 60 * 60 * 1000; // 14 days in milliseconds
+    const timeUntilEvent = new Date(event.start_date) - new Date();
+    
+    if (timeUntilEvent < twoWeeksInMs) {
+      return res.status(400).json({ 
+        message: "Cancellation is only allowed if there are at least 2 weeks before the event." 
+      });
+    }
 
-    console.log('Registration deleted successfully');
-    res.json({ message: "Registration canceled and removed successfully." });
+    // Process refund if payment was made
+    let refundProcessed = false;
+    let refundAmount = 0;
+
+    if (registration.payment_status === 'paid' && registration.payment_amount > 0) {
+      const user = await User.findById(user_id);
+
+      if (!user) {
+        return res.status(404).json({ message: "User not found." });
+      }
+
+      // Refund to wallet
+      refundAmount = registration.payment_amount;
+      
+      // Update user's wallet balance
+      user.wallet.balance += refundAmount;
+      
+      // Add refund transaction to wallet history
+      user.wallet.transactions.push({
+        type: 'refund',
+        amount: refundAmount,
+        description: `Refund for canceled registration: ${event.name}`,
+        reference: registration._id.toString(),
+        payment_method: registration.payment_method || 'wallet',
+        timestamp: new Date()
+      });
+
+      await user.save();
+      refundProcessed = true;
+
+      console.log(`Refunded ${refundAmount} to user's wallet. New balance: ${user.wallet.balance}`);
+    }
+
+    // Update registration status to canceled and set payment status to refunded if applicable
+    registration.status = 'canceled';
+    if (refundProcessed) {
+      registration.payment_status = 'refunded';
+    }
+    await registration.save();
+
+    // Increase available spots for the event (if applicable)
+    if (event.type === 'Workshop' || event.type === 'Trip') {
+      event.available_spots = (event.available_spots || 0) + 1;
+      await event.save();
+    }
+
+    console.log('Registration canceled successfully');
+    
+    const responseMessage = refundProcessed 
+      ? `Registration canceled successfully. ${refundAmount} has been refunded to your wallet.`
+      : "Registration canceled successfully.";
+
+    res.json({ 
+      message: responseMessage,
+      refund: refundProcessed ? {
+        amount: refundAmount,
+        currency: 'USD'
+      } : null
+    });
 
   } catch (error) {
     console.error('Error canceling registration:', error);

@@ -26,9 +26,11 @@ export const getWalletBalance = async (req, res) => {
     }
 
     res.json({
-      balance: user.wallet?.balance || 0,
-      currency: user.wallet?.currency || 'USD',
-      transactions: user.wallet?.transactions || []
+      wallet: {
+        balance: user.wallet?.balance || 0,
+        currency: user.wallet?.currency || 'USD',
+        transactions: user.wallet?.transactions || []
+      }
     });
   } catch (err) {
     res.status(500).json({ message: err.message });
