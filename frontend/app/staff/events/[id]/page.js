@@ -77,7 +77,7 @@ export default function EventDetailsPage({ params }) {
         return;
       }
 
-      const response = await fetch('http://localhost:5000/api/registration/register', {
+      const response = await fetch('http://localhost:5001/api/registration/register', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
@@ -139,7 +139,7 @@ export default function EventDetailsPage({ params }) {
       // User closed modal without paying - cancel the pending registration
       try {
         const token = localStorage.getItem('token');
-        await fetch(`http://localhost:5000/api/registration/cancel-unpaid/${paymentData.registrationId}`, {
+        await fetch(`http://localhost:5001/api/registration/cancel-unpaid/${paymentData.registrationId}`, {
           method: 'DELETE',
           headers: {
             'Authorization': `Bearer ${token}`,

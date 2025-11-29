@@ -116,6 +116,8 @@ export default function StudentDashboard() {
             <li><Link href="/student/favorites">⭐ My Favorites</Link></li>
             <li><Link href="/student/my-registrations">🎫 My Registrations</Link></li>
             <li><Link href="/student/payment-history">💰 Payment History</Link></li>
+            <li><Link href="/polls-voting">📊 Vote for Vendors</Link></li>
+            <li><Link href="/loyalty-program">🎁 Loyalty Program</Link></li>
             <li><Link href="/student/facilities">🏢 Facilities</Link></li>
             <li><Link href="/student/gym/schedule">💪 Gym Schedule</Link></li>
             <li><Link href="/student/profile">👤 Profile</Link></li>

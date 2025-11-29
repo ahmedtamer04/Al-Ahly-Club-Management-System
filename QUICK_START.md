@@ -3,6 +3,7 @@
 ## ✅ Everything is Ready!
 
 Your system is configured for **immediate testing** with:
+
 - ✅ Any email accepted (Gmail, Outlook, Yahoo, etc.)
 - ✅ No email verification needed
 - ✅ Instant account activation
@@ -12,14 +13,16 @@ Your system is configured for **immediate testing** with:
 ## 🚀 Start Testing (2 Steps)
 
 ### Step 1: Start Backend
+
 ```powershell
 cd "C:\Projects\Q3 2025\Al-Ahly\backend"
 npm start
 ```
 
 Wait for:
+
 ```
-Server running on port 5000
+Server running on port 5001
 ✅ Mongo connected
 ```
 
@@ -28,6 +31,7 @@ Server running on port 5000
 **Go to:** http://localhost:3000/auth/register
 
 **Register as Student:**
+
 ```
 First Name: Test
 Last Name: Student
@@ -39,12 +43,14 @@ Role: Student
 ```
 
 **You'll see:**
+
 ```
-✅ Account created successfully! You can login immediately. 
+✅ Account created successfully! You can login immediately.
 (Development mode: Email verification skipped)
 ```
 
 **Now Login:** http://localhost:3000/auth/login
+
 ```
 Email: test@gmail.com
 Password: TestPass123
@@ -75,6 +81,7 @@ Email ends with @guc.edu.eg: false
 ## 🧪 Test Staff/TA/Professor
 
 ### Step 1: Register as Staff
+
 ```
 Email: staff@gmail.com
 Role: Staff
@@ -82,25 +89,30 @@ Role: Staff
 ```
 
 ### Step 2: Try Login (Will Fail)
+
 ```
 ❌ Your account is pending admin approval
 ```
 
 ### Step 3: Login as Admin
+
 Use your admin credentials
 
 ### Step 4: Approve User
+
 - Go to: Admin → Manage Users
 - Find "Test Staff" in pending list
 - Click "✅ Approve as Staff"
 
 **You'll see:**
+
 ```
-✅ Staff user approved and activated. 
+✅ Staff user approved and activated.
 (Email verification skipped in development mode)
 ```
 
 ### Step 5: Staff Can Now Login
+
 Login with staff credentials → Success! ✅
 
 ---
@@ -108,6 +120,7 @@ Login with staff credentials → Success! ✅
 ## 🎮 Multiple Test Accounts
 
 Use Gmail + trick for multiple accounts:
+
 ```
 test+1@gmail.com       → Student
 test+staff@gmail.com   → Staff
@@ -151,6 +164,7 @@ A: Change `.env`: `SKIP_EMAIL_VERIFICATION=false` and configure EMAIL_USER/EMAIL
 The frontend NO LONGER checks for `@guc.edu.eg` emails.
 
 **Label changed from:**
+
 ```
 "GUC Email *" → "Email *"
 "Must end with @guc.edu.eg" → "Any email works in development mode"
@@ -161,6 +175,7 @@ The frontend NO LONGER checks for `@guc.edu.eg` emails.
 ## 🎉 You're Ready!
 
 Just:
+
 1. Start backend (`npm start`)
 2. Go to registration page
 3. Use ANY email
@@ -174,11 +189,13 @@ Just:
 ## 🐛 If Something Goes Wrong
 
 ### "Email must be a valid GUC email"
+
 - Refresh the frontend page (Ctrl+F5)
 - Clear browser cache
 - Frontend changes take effect on next page load
 
 ### Backend won't start
+
 ```powershell
 # Check if already running
 Get-Process -Name node -ErrorAction SilentlyContinue
@@ -192,7 +209,9 @@ npm start
 ```
 
 ### Can't login after registration
+
 Check backend console for errors. Should see:
+
 ```
 ✅ User account created and auto-verified for testing
 ```

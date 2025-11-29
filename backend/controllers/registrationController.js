@@ -1,4 +1,5 @@
 import Registration from "../models/Registration.js";
+import ExcelJS from 'exceljs';
 import Event from "../models/Events.js";
 import mongoose from "mongoose";
 
@@ -60,6 +61,17 @@ export const registerForEvent = async (req, res) => {
         return res.status(403).json({ 
           message: "This workshop is not available for registration.", 
           approval_status: approvalStatus 
+        });
+      }
+    }
+
+    // CHECK: Verify user role is allowed for this event
+    const userRole = req.user?.role;
+    if (event.allowed_roles && event.allowed_roles.length > 0) {
+      if (!event.allowed_roles.includes(userRole)) {
+        return res.status(403).json({ 
+          message: "You do not have permission to register for this event.",
+          allowed_roles: event.allowed_roles
         });
       }
     }
@@ -297,6 +309,48 @@ export const getEventRegistrations = async (req, res) => {
   }
 };
 
+// Get registrations for events that belong to the requester, or all registrations for EventsOffice/Admin
+export const getRegistrationsForMyEvents = async (req, res) => {
+  try {
+    const user = req.user;
+
+    if (!user) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+
+    // EventsOffice and Admin should see all registrations
+    if (user.role === 'EventsOffice' || user.role === 'Admin') {
+      const registrations = await Registration.find().populate('user_id', 'first_name last_name email role id_number').populate('event_id', 'name type start_date end_date location');
+      const totals = {
+        all: registrations.length,
+        registered: registrations.filter(r => r.status === 'registered').length,
+        pending: registrations.filter(r => r.payment_status === 'pending').length,
+        canceled: registrations.filter(r => r.status === 'canceled').length
+      };
+
+      return res.json({ message: 'Registrations retrieved', registrations, totals });
+    }
+
+    // Otherwise return registrations for events created by this user
+    const myEvents = await Event.find({ created_by: user._id }).select('_id');
+    const myEventIds = myEvents.map(e => e._id);
+
+    const registrations = await Registration.find({ event_id: { $in: myEventIds } }).populate('user_id', 'first_name last_name email role id_number').populate('event_id', 'name type start_date end_date location');
+
+    const totals = {
+      all: registrations.length,
+      registered: registrations.filter(r => r.status === 'registered').length,
+      pending: registrations.filter(r => r.payment_status === 'pending').length,
+      canceled: registrations.filter(r => r.status === 'canceled').length
+    };
+
+    return res.json({ message: 'Registrations retrieved for your events', registrations, totals });
+  } catch (err) {
+    console.error('Error in getRegistrationsForMyEvents:', err);
+    res.status(500).json({ message: 'Server error', error: err.message });
+  }
+};
+
 // Get all registrations from database (Admin only - should be added to admin routes)
 export const getAllRegistrations = async (req, res) => {
   try {
@@ -330,6 +384,65 @@ export const getAllRegistrations = async (req, res) => {
       message: "Server error while fetching registrations.", 
       error: error.message 
     });
+  }
+};
+
+// Export registrations for a specific event as an .xlsx file
+export const exportEventRegistrationsXlsx = async (req, res) => {
+  try {
+    const { event_id } = req.params;
+
+    const event = await Event.findById(event_id);
+    if (!event) return res.status(404).json({ message: 'Event not found' });
+
+    // Conferences should not be exported
+    if (event.type === 'Conference') {
+      return res.status(400).json({ message: 'Export not allowed for conference events' });
+    }
+
+    // Only EventsOffice or Admin or the event creator can export
+    if (req.user.role !== 'EventsOffice' && req.user.role !== 'Admin' && event.created_by.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: 'Not authorized to export registrations for this event' });
+    }
+
+    const registrations = await Registration.find({ event_id, status: 'registered' }).populate('user_id', 'first_name last_name email');
+
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('Attendees');
+
+    worksheet.columns = [
+      { header: 'Name', key: 'name', width: 30 },
+      { header: 'Email', key: 'email', width: 30 },
+      { header: 'Personal ID', key: 'personalId', width: 20 },
+      { header: 'Role', key: 'role', width: 12 },
+      { header: 'Payment Status', key: 'payment_status', width: 12 },
+      { header: 'Registered At', key: 'registeredAt', width: 22 }
+    ];
+
+    // Add rows
+    registrations.forEach(reg => {
+      const name = reg.user_id ? `${reg.user_id.first_name || ''} ${reg.user_id.last_name || ''}`.trim() : reg.name;
+      worksheet.addRow({
+        name,
+        email: reg.email,
+        personalId: reg.personalId,
+        role: reg.role,
+        payment_status: reg.payment_status,
+        registeredAt: reg.createdAt ? new Date(reg.createdAt).toLocaleString() : ''
+      });
+    });
+
+    // Format header
+    worksheet.getRow(1).font = { bold: true };
+
+    const buffer = await workbook.xlsx.writeBuffer();
+
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename="${event.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_attendees.xlsx"`);
+    return res.send(buffer);
+  } catch (err) {
+    console.error('Error exporting registrations:', err);
+    return res.status(500).json({ message: 'Server error', error: err.message });
   }
 };
 

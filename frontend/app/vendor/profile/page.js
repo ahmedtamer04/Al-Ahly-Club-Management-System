@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
-import { getUser } from '@/utils/api';
+import { getUser, setUser, api } from '@/utils/api';
 import '@/app/dashboard.css';
 
 export default function VendorProfilePage() {
@@ -20,6 +20,11 @@ export default function VendorProfilePage() {
   });
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
+  const [taxCardFile, setTaxCardFile] = useState(null);
+  const [companyLogoFile, setCompanyLogoFile] = useState(null);
+  const [taxCardPreview, setTaxCardPreview] = useState('');
+  const [companyLogoPreview, setCompanyLogoPreview] = useState('');
+  const [uploading, setUploading] = useState(false);
 
   // Load user data on client side only
   useEffect(() => {
@@ -37,6 +42,19 @@ export default function VendorProfilePage() {
           businessType: userData.vendor_info?.business_type || '',
           businessDescription: userData.vendor_info?.business_description || ''
         });
+        // helper: normalize file URLs returned by backend (they are stored as '/uploads/...')
+        const API_ORIGIN = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api').replace(/\/api$/, '');
+        const normalizeUrl = (url) => {
+          if (!url) return '';
+          // if already absolute, return as-is
+          if (url.startsWith('http://') || url.startsWith('https://')) return url;
+          // otherwise assume it's a backend-relative path and prepend origin
+          return `${API_ORIGIN}${url.startsWith('/') ? '' : '/'}${url}`;
+        };
+
+        // set previews if URLs available
+        if (userData.vendor_info?.tax_card_url) setTaxCardPreview(normalizeUrl(userData.vendor_info.tax_card_url));
+        if (userData.vendor_info?.company_logo_url) setCompanyLogoPreview(normalizeUrl(userData.vendor_info.company_logo_url));
       }
     }
     setLoading(false);
@@ -72,7 +90,10 @@ export default function VendorProfilePage() {
             <li><Link href="/vendor/applications">📋 My Applications</Link></li>
             <li><Link href="/vendor/bazaars">🎪 Browse Bazaars</Link></li>
             <li><Link href="/vendor/booths">🏪 My Booths</Link></li>
+            <li><Link href="/vendor/polls">📊 Polls</Link></li>
+            <li><Link href="/vendor/loyalty-program">🎁 Loyalty Program</Link></li>
             <li><Link href="/vendor/profile" className="active">👤 Profile</Link></li>
+            <li><Link href="/vendor/email-preferences">📧 Email Preferences</Link></li>
           </ul>
         </aside>
 
@@ -185,6 +206,120 @@ export default function VendorProfilePage() {
                       rows="3"
                       style={{padding: '0.75rem', borderRadius: '8px', border: '2px solid #E5E5E5', width: '100%', fontFamily: 'inherit'}}
                     />
+                  </div>
+                </div>
+              </section>
+
+              <section className="section">
+                <h2>Vendor Documents</h2>
+                <div className="settings-form">
+                  <div className="form-group">
+                    <label>Tax Card (PDF / Image)</label>
+                    {taxCardPreview && (
+                      <div style={{marginBottom: '0.5rem'}}>
+                        <a href={taxCardPreview} target="_blank" rel="noreferrer">View current tax card</a>
+                      </div>
+                    )}
+                    <input
+                      type="file"
+                      accept="application/pdf,image/*"
+                      onChange={(e) => {
+                        const file = e.target.files[0];
+                        setTaxCardFile(file || null);
+                        if (file) {
+                          const url = URL.createObjectURL(file);
+                          setTaxCardPreview(url);
+                        }
+                      }}
+                      // Allow selecting files any time (upload still gated)
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label>Company Logo (PNG / JPG)</label>
+                    {companyLogoPreview && (
+                      <div style={{marginBottom: '0.5rem'}}>
+                        <img src={companyLogoPreview} alt="company logo" style={{height: 80, objectFit: 'contain'}} />
+                      </div>
+                    )}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files[0];
+                        setCompanyLogoFile(file || null);
+                        if (file) {
+                          const url = URL.createObjectURL(file);
+                          setCompanyLogoPreview(url);
+                        }
+                      }}
+                      // Allow selecting files any time (upload still gated)
+                    />
+                  </div>
+
+                    <div style={{display: 'flex', gap: '1rem'}}>
+                    <button className="btn-primary" onClick={async () => {
+                      // upload files
+                      if (!taxCardFile && !companyLogoFile) {
+                        alert('Please choose at least one file to upload.');
+                        return;
+                      }
+
+                      setUploading(true);
+                      try {
+                        const formData = new FormData();
+                        if (taxCardFile) formData.append('tax_card', taxCardFile);
+                        if (companyLogoFile) formData.append('company_logo', companyLogoFile);
+
+                        const res = await api.upload('/vendor/documents/upload', formData);
+                        alert(res.message || 'Documents uploaded');
+
+                        // update local user vendor_info if available and normalize URLs
+                        const localUser = getUser();
+                        const API_ORIGIN = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api').replace(/\/api$/, '');
+                        const normalizeUrl = (url) => {
+                          if (!url) return '';
+                          if (url.startsWith('http://') || url.startsWith('https://')) return url;
+                          return `${API_ORIGIN}${url.startsWith('/') ? '' : '/'}${url}`;
+                        };
+
+                        if (localUser) {
+                          localUser.vendor_info = localUser.vendor_info || {};
+                          if (res.documents?.tax_card?.file_url) {
+                            const full = normalizeUrl(res.documents.tax_card.file_url);
+                            localUser.vendor_info.tax_card_url = res.documents.tax_card.file_url;
+                            setTaxCardPreview(full);
+                          }
+                          if (res.documents?.company_logo?.file_url) {
+                            const full = normalizeUrl(res.documents.company_logo.file_url);
+                            localUser.vendor_info.company_logo_url = res.documents.company_logo.file_url;
+                            setCompanyLogoPreview(full);
+                          }
+                          setUser(localUser);
+                        }
+                        setTaxCardFile(null);
+                        setCompanyLogoFile(null);
+                      } catch (err) {
+                        console.error(err);
+                        alert(err.message || 'Upload failed');
+                      } finally {
+                        setUploading(false);
+                      }
+                    }} disabled={uploading || (!taxCardFile && !companyLogoFile)}>
+                      {uploading ? 'Uploading...' : 'Upload Documents'}
+                    </button>
+
+                    <button className="btn-secondary" onClick={() => {
+                      setTaxCardFile(null);
+                      setCompanyLogoFile(null);
+                      const userData = getUser();
+                      if (userData) {
+                        setTaxCardPreview(userData.vendor_info?.tax_card_url || '');
+                        setCompanyLogoPreview(userData.vendor_info?.company_logo_url || '');
+                      }
+                    }} disabled={uploading}>
+                      Reset
+                    </button>
                   </div>
                 </div>
               </section>

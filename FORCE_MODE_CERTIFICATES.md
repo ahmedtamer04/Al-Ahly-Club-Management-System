@@ -7,18 +7,22 @@ Admin/EventsOffice can now send workshop certificates **even before the workshop
 ## How to Use
 
 ### Normal Mode (Default)
+
 ```http
 PATCH /api/workshop/:workshopId/complete
 Authorization: Bearer <token>
 ```
+
 ✅ Only works after workshop end_date  
 ❌ Blocked if workshop hasn't ended yet
 
 ### Force Mode (Override)
+
 ```http
 PATCH /api/workshop/:workshopId/complete?force=true
 Authorization: Bearer <token>
 ```
+
 ✅ Works anytime - before, during, or after workshop  
 ✅ Bypasses end_date validation  
 ⚠️ Use responsibly
@@ -28,11 +32,13 @@ Authorization: Bearer <token>
 ### ✅ Good Reasons
 
 1. **Testing**
+
    - Test certificate generation before workshop
    - Verify email system is working
    - Check PDF formatting
 
 2. **Early Completion**
+
    - Workshop ended earlier than scheduled
    - Don't want to wait for original end_date
    - Participants completed all requirements early
@@ -58,7 +64,7 @@ Authorization: Bearer <token>
 Workshop is scheduled for **December 2025**, but you want to test certificates now:
 
 ```bash
-curl -X PATCH "http://localhost:5000/api/workshop/ABC123/complete?force=true" \
+curl -X PATCH "http://localhost:5001/api/workshop/ABC123/complete?force=true" \
   -H "Authorization: Bearer YOUR_TOKEN"
 ```
 
@@ -70,7 +76,7 @@ Workshop scheduled to end **December 31**, but actually ended **December 15**:
 
 ```bash
 # Option 1: Use force mode
-curl -X PATCH "http://localhost:5000/api/workshop/ABC123/complete?force=true" \
+curl -X PATCH "http://localhost:5001/api/workshop/ABC123/complete?force=true" \
   -H "Authorization: Bearer YOUR_TOKEN"
 
 # Option 2: Update end_date first, then complete normally
@@ -83,7 +89,7 @@ Workshop ended on schedule:
 
 ```bash
 # No force needed - will work automatically if end_date passed
-curl -X PATCH "http://localhost:5000/api/workshop/ABC123/complete" \
+curl -X PATCH "http://localhost:5001/api/workshop/ABC123/complete" \
   -H "Authorization: Bearer YOUR_TOKEN"
 ```
 
@@ -105,6 +111,7 @@ curl -X PATCH "http://localhost:5000/api/workshop/ABC123/complete" \
   "certificates": { "total": 20, "sent": 20, "failed": 0 }
 }
 ```
+
 ✅ `end_date` is before `current_date` (workshop has ended)
 
 ### With Force
@@ -123,6 +130,7 @@ curl -X PATCH "http://localhost:5000/api/workshop/ABC123/complete" \
   "certificates": { "total": 20, "sent": 20, "failed": 0 }
 }
 ```
+
 ⚠️ `end_date` is AFTER `current_date` (workshop hasn't ended yet)  
 ℹ️ `force_mode: true` indicates override was used
 
@@ -149,32 +157,32 @@ No error - certificates are sent immediately!
 
 ```javascript
 async function completeWorkshop(workshopId, forceMode = false) {
-  const url = forceMode 
+  const url = forceMode
     ? `/api/workshop/${workshopId}/complete?force=true`
     : `/api/workshop/${workshopId}/complete`;
-  
+
   const response = await fetch(url, {
-    method: 'PATCH',
+    method: "PATCH",
     headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json'
-    }
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
   });
-  
+
   const result = await response.json();
-  
+
   if (result.force_mode) {
-    console.warn('⚠️ Force mode was used - workshop completed early');
+    console.warn("⚠️ Force mode was used - workshop completed early");
   }
-  
+
   return result;
 }
 
 // Normal completion
-await completeWorkshop('ABC123', false);
+await completeWorkshop("ABC123", false);
 
 // Force completion
-await completeWorkshop('ABC123', true);
+await completeWorkshop("ABC123", true);
 ```
 
 ### React Component Example
@@ -183,31 +191,31 @@ await completeWorkshop('ABC123', true);
 function CompleteWorkshopButton({ workshopId, endDate }) {
   const [forceMode, setForceMode] = useState(false);
   const workshopEnded = new Date(endDate) < new Date();
-  
+
   const handleComplete = async () => {
     try {
       const result = await completeWorkshop(workshopId, forceMode);
-      
+
       if (result.force_mode) {
-        alert('⚠️ Workshop completed with force mode - certificates sent early!');
+        alert(
+          "⚠️ Workshop completed with force mode - certificates sent early!"
+        );
       } else {
-        alert('✅ Workshop completed - certificates sent!');
+        alert("✅ Workshop completed - certificates sent!");
       }
     } catch (error) {
-      alert('Error: ' + error.message);
+      alert("Error: " + error.message);
     }
   };
-  
+
   return (
     <div>
-      <button onClick={handleComplete}>
-        Complete Workshop
-      </button>
-      
+      <button onClick={handleComplete}>Complete Workshop</button>
+
       {!workshopEnded && (
         <label>
-          <input 
-            type="checkbox" 
+          <input
+            type="checkbox"
             checked={forceMode}
             onChange={(e) => setForceMode(e.target.checked)}
           />
@@ -255,6 +263,7 @@ Same as normal completion - requires `requireAdminOrEventsOffice` middleware.
 ### Force Mode Not Working
 
 **Check:**
+
 1. Query parameter is exactly `?force=true` (lowercase)
 2. User has Admin or EventsOffice role
 3. Workshop exists and is of type "Workshop"
@@ -263,6 +272,7 @@ Same as normal completion - requires `requireAdminOrEventsOffice` middleware.
 ### Certificates Still Not Sending
 
 Force mode only bypasses the date check. Other requirements still apply:
+
 - Participants must have paid (or event is free)
 - Registrations must not be canceled
 - Participants must be Student/Staff/TA/Professor
@@ -271,11 +281,13 @@ Force mode only bypasses the date check. Other requirements still apply:
 ### Sent Certificates by Mistake
 
 Unfortunately, force mode action cannot be easily undone:
+
 - Emails have been sent
 - Workshop status is "completed"
 - Certificates are already in participants' inboxes
 
 **Options:**
+
 1. Send follow-up email explaining the situation
 2. Re-issue corrected certificates if needed
 3. Update workshop status manually in database if necessary

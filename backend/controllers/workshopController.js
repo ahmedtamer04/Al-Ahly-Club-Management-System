@@ -62,6 +62,8 @@ export const createWorkshop = async (req, res) => {
       endDate.setHours(hours, minutes, 0, 0);
     }
 
+    const { allowed_roles } = req.body;
+    
     const workshop = await Event.create({
       type: "Workshop",
       name,
@@ -72,7 +74,8 @@ export const createWorkshop = async (req, res) => {
       time,
       created_by: req.user._id,
       status: "upcoming",
-      workshop: {
+      allowed_roles: Array.isArray(allowed_roles) ? allowed_roles : [],
+      workshop: { // ← REQUIRED: Workshop-specific fields
         full_agenda,
         faculty_responsible,
         professors_participating: Array.isArray(professors_participating) 
@@ -202,7 +205,8 @@ export const getPendingWorkshops = async (req, res) => {
   try {
     const pendingWorkshops = await Event.find({
       type: "Workshop",
-      "workshop.approval_status": "pending"
+      // Include both newly submitted and those that have requested revisions
+      "workshop.approval_status": { $in: ["pending", "revision_requested"] }
     })
     .populate('created_by', 'first_name last_name email')
     .sort({ createdAt: -1 });

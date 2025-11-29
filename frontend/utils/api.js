@@ -3,7 +3,7 @@
 // ================================
 // Base configuration and helper functions for all API calls
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api';
 
 // Get token from localStorage
 export const getToken = () => {
@@ -97,6 +97,26 @@ export const api = {
   }),
   
   delete: (endpoint) => fetchWithAuth(endpoint, { method: 'DELETE' }),
+  // Upload FormData (multipart). Does NOT set Content-Type so browser can set boundary.
+  upload: async (endpoint, formData) => {
+    const token = getToken();
+    const headers = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    try {
+      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+        method: 'POST',
+        headers,
+        body: formData
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || 'Upload failed');
+      return data;
+    } catch (error) {
+      console.error('Upload Error:', error);
+      throw error;
+    }
+  }
 };
 
 // ================================
@@ -294,6 +314,48 @@ export const conferenceAPI = {
 export const gymAPI = {
   // GET /api/gym-sessions/schedule
   // Auth: requireStudentOrAbove
+  // Query params: month?, year?, type?
+  // View gym schedule
+  getSchedule: (params = {}) => {
+    const queryString = new URLSearchParams(params).toString();
+    return api.get(`/gym-sessions/schedule${queryString ? `?${queryString}` : ''}`);
+  },
+
+  // POST /api/gym-sessions/create
+  // Auth: requireAdminOrEventsOffice
+  // Required: { date, time, duration, type, maxParticipants }
+  // Create a new gym session
+  create: (sessionData) => api.post('/gym-sessions/create', sessionData),
+
+  // PUT /api/gym-sessions/edit/:id
+  // Auth: requireAdminOrEventsOffice
+  // Edit a gym session (triggers email notifications to registered users)
+  edit: (id, updates) => api.put(`/gym-sessions/edit/${id}`, updates),
+
+  // PATCH /api/gym-sessions/cancel/:id
+  // Auth: requireAdminOrEventsOffice
+  // Cancel a gym session (triggers email notifications to registered users)
+  cancel: (id) => api.patch(`/gym-sessions/cancel/${id}`, {}),
+
+  // POST /api/gym-sessions/register/:sessionId
+  // Auth: requireStudentOrAbove
+  // Register for a gym session
+  register: (sessionId) => api.post(`/gym-sessions/register/${sessionId}`, {}),
+
+  // GET /api/gym-sessions/my-registrations
+  // Auth: requireStudentOrAbove
+  // Get user's gym session registrations
+  getMyRegistrations: () => api.get('/gym-sessions/my-registrations'),
+
+  // DELETE /api/gym-sessions/registrations/:registrationId
+  // Auth: requireStudentOrAbove
+  // Cancel gym session registration
+  cancelRegistration: (registrationId) => api.delete(`/gym-sessions/registrations/${registrationId}`)
+};
+
+export const gymSessionAPI = {
+  // GET /api/gym-sessions/schedule
+  // Auth: requireStudentOrAbove
   // Query params: month, year, type
   getSchedule: (params = {}) => {
     const queryString = new URLSearchParams(params).toString();
@@ -312,11 +374,53 @@ export const gymAPI = {
   // PATCH /api/gym-sessions/cancel/:id
   // Auth: requireAdminOrEventsOffice
   cancel: (id) => api.patch(`/gym-sessions/cancel/${id}`, {}),
+
+  // POST /api/gym-sessions/register/:sessionId
+  // Auth: requireStudentOrAbove
+  // Register for a gym session
+  register: (sessionId) => api.post(`/gym-sessions/register/${sessionId}`, {}),
+
+  // GET /api/gym-sessions/my-registrations
+  // Auth: requireStudentOrAbove
+  // Get user's gym session registrations
+  getMyRegistrations: () => api.get('/gym-sessions/my-registrations'),
+
+  // DELETE /api/gym-sessions/registrations/:registrationId
+  // Auth: requireStudentOrAbove
+  // Cancel gym session registration
+  cancelRegistration: (registrationId) => api.delete(`/gym-sessions/registrations/${registrationId}`)
 };
 
 // ================================
 // FACILITY APIs (EventsOffice can add, Students can view)
 // ================================
+
+export const courtReservationAPI = {
+  // GET /api/facilities/courts/available
+  // Auth: requireStudent
+  // Query params: sport?, date?
+  // Get available courts with free time slots
+  getAvailableCourts: (params = {}) => {
+    const queryString = new URLSearchParams(params).toString();
+    return api.get(`/facilities/courts/available${queryString ? `?${queryString}` : ''}`);
+  },
+
+  // POST /api/facilities/courts/reserve
+  // Auth: requireStudent
+  // Body: { facility_id, reservation_date, reservation_time }
+  // Create court reservation
+  createReservation: (data) => api.post('/facilities/courts/reserve', data),
+
+  // GET /api/facilities/courts/my-reservations
+  // Auth: requireStudent
+  // Get student's court reservations
+  getMyReservations: () => api.get('/facilities/courts/my-reservations'),
+
+  // DELETE /api/facilities/courts/reservations/:reservationId
+  // Auth: requireStudent
+  // Cancel court reservation
+  cancelReservation: (reservationId) => api.delete(`/facilities/courts/reservations/${reservationId}`)
+};
 
 export const facilityAPI = {
   // GET /api/facilities/getAll
@@ -362,6 +466,16 @@ export const eventAPI = {
   
   // GET /api/events/:id
   getById: (id) => api.get(`/events/${id}`),
+
+  // PATCH /api/events/archive/:eventId
+  // Auth: requireAdminOrEventsOffice
+  // Archive an event that has already passed
+  archive: (eventId) => api.patch(`/events/archive/${eventId}`, {}),
+  
+  // PATCH /api/events/unarchive/:eventId
+  // Auth: requireAdminOrEventsOffice
+  // Unarchive an archived event
+  unarchive: (eventId) => api.patch(`/events/unarchive/${eventId}`, {}),
   
   // GET /api/events/:event_id/comments
   // Auth: requireStudentOrAbove
@@ -384,10 +498,42 @@ export const registrationAPI = {
   // Returns { upcoming: [], past: [] }
   getMyRegistrations: (userId) => api.get(`/registration/${userId}/events`),
 
+  // GET /api/registration/my-events
+  // Auth: requireAdminOrEventsOffice
+  // Returns full registrations list (Admin/EventsOffice) or registrations for events owned by user
+  getRegistrationsForMyEvents: () => api.get('/registration/my-events'),
+
   // PATCH /api/registration/cancel/:registrationId
   // Auth: requireRegistering
   // Cancels a registration
   cancel: (registrationId) => api.patch(`/registration/cancel/${registrationId}`, {}),
+
+  // GET /api/registration/event/:event_id/export
+  // Auth: requireAdminOrEventsOffice
+  // Returns a blob (xlsx) for download
+  exportEventRegistrations: async (eventId) => {
+    const token = getToken();
+    const res = await fetch(`${API_BASE_URL}/registration/event/${eventId}/export`, {
+      method: 'GET',
+      headers: {
+        Authorization: token ? `Bearer ${token}` : ''
+      }
+    });
+
+    if (!res.ok) {
+      // Try to parse JSON error
+      const text = await res.text();
+      try {
+        const json = JSON.parse(text);
+        throw new Error(json.message || 'Export failed');
+      } catch (e) {
+        throw new Error(text || 'Export failed');
+      }
+    }
+
+    const blob = await res.blob();
+    return blob;
+  },
 };
 
 // ================================
@@ -443,8 +589,152 @@ export const vendorAPI = {
   // Query params: start_date (YYYY-MM-DD), duration_weeks (1-4)
   // Returns occupied booth positions
   getBoothAvailability: (startDate, durationWeeks) => {
-    return api.get(`/vendor/booth-availability?start_date=${startDate}&duration_weeks=${durationWeeks}`);
+    const queryString = `?start_date=${startDate}&duration_weeks=${durationWeeks}`;
+    return api.get(`/vendor/booth-availability${queryString}`);
   },
+
+  // GET /api/vendor/applications/:applicationId/payment
+  // Auth: requireVendor
+  // Returns payment information for accepted application
+  getPaymentInfo: (applicationId) => api.get(`/vendor/applications/${applicationId}/payment`),
+
+  // POST /api/vendor/pay/wallet
+  // Auth: requireVendor
+  // Body: { application_id }
+  // Pay participation fee with wallet
+  payWithWallet: (applicationId) => api.post('/vendor/pay/wallet', { application_id: applicationId }),
+
+  // POST /api/vendor/pay/stripe/create
+  // Auth: requireVendor
+  // Body: { application_id }
+  // Create Stripe payment intent
+  createStripePayment: (applicationId) => api.post('/vendor/pay/stripe/create', { application_id: applicationId }),
+
+  // POST /api/vendor/pay/stripe/confirm
+  // Auth: requireVendor
+  // Body: { payment_id, payment_intent_id }
+  // Confirm Stripe payment
+  confirmStripePayment: (paymentId, paymentIntentId) => api.post('/vendor/pay/stripe/confirm', {
+    payment_id: paymentId,
+    payment_intent_id: paymentIntentId
+  }),
+
+  // POST /api/vendor/applications/:application_id/send-qr-codes
+  // Auth: requireVendor
+  // Send QR codes for registered visitors
+  sendQRCodes: (applicationId) => api.post(`/vendor/applications/${applicationId}/send-qr-codes`, {}),
+
+  // POST /api/vendor/loyalty-program/apply
+  // Auth: requireVendor
+  // Body: { discount_rate, promo_code, terms_and_conditions }
+  // Apply to GUC Loyalty Program
+  applyToLoyaltyProgram: (data) => api.post('/vendor/loyalty-program/apply', data),
+
+  // GET /api/vendor/loyalty-program/status
+  // Auth: requireVendor
+  // Get loyalty program status
+  getLoyaltyProgramStatus: () => api.get('/vendor/loyalty-program/status'),
+
+  // POST /api/vendor/loyalty-program/cancel
+  // Auth: requireVendor
+  // Body: { cancellation_reason? }
+  // Cancel loyalty program participation
+  cancelLoyaltyProgram: (reason) => api.post('/vendor/loyalty-program/cancel', { cancellation_reason: reason })
+};
+
+// ================================
+// PUBLIC APIs (Loyalty Program - For Students, Staff, TA, Professor, EventsOffice, Admin)
+// ================================
+
+export const loyaltyProgramAPI = {
+  // GET /api/vendor/loyalty-program/vendors
+  // Auth: requireStudentOrAbove
+  // Get all active loyalty program vendors
+  getAllLoyaltyVendors: () => api.get('/vendor/loyalty-program/vendors')
+};
+
+// ================================
+// POLL APIs (Events Office & Vendors)
+// ================================
+
+export const pollAPI = {
+  // POST /api/polls/create
+  // Auth: requireEventsOffice
+  // Body: { title, description, start_date, end_date, application_deadline, max_vendors, available_positions }
+  // Create a new poll
+  createPoll: (data) => api.post('/polls/create', data),
+
+  // GET /api/polls/all
+  // Auth: requireEventsOffice
+  // Query params: status?
+  // Get all polls
+  getAllPolls: (params = {}) => {
+    const queryString = new URLSearchParams(params).toString();
+    return api.get(`/polls/all${queryString ? `?${queryString}` : ''}`);
+  },
+
+  // GET /api/polls/:pollId
+  // Auth: requireEventsOffice
+  // Get poll by ID with applications
+  getPollById: (pollId) => api.get(`/polls/${pollId}`),
+
+  // PUT /api/polls/:pollId
+  // Auth: requireEventsOffice
+  // Update poll
+  updatePoll: (pollId, data) => api.put(`/polls/${pollId}`, data),
+
+  // POST /api/polls/:pollId/open
+  // Auth: requireEventsOffice
+  // Open poll (make it available for applications)
+  openPoll: (pollId) => api.post(`/polls/${pollId}/open`, {}),
+
+  // POST /api/polls/:pollId/close
+  // Auth: requireEventsOffice
+  // Body: { selected_vendors: [{ application_id, assigned_position }] }
+  // Close poll and select vendors
+  closePoll: (pollId, data) => api.post(`/polls/${pollId}/close`, data),
+
+  // POST /api/polls/:pollId/cancel
+  // Auth: requireEventsOffice
+  // Body: { cancellation_reason? }
+  // Cancel poll
+  cancelPoll: (pollId, reason) => api.post(`/polls/${pollId}/cancel`, { cancellation_reason: reason }),
+
+  // GET /api/polls/vendor/open
+  // Auth: requireVendor
+  // Get all open polls (for vendors)
+  getOpenPolls: () => api.get('/polls/vendor/open'),
+
+  // POST /api/polls/vendor/:pollId/apply
+  // Auth: requireVendor
+  // Body: { business_name, business_type, business_description, products_offered, contact_phone, contact_email, staff, preferred_booth_size, preferred_positions, notes }
+  // Apply to a poll
+  applyToPoll: (pollId, data) => api.post(`/polls/vendor/${pollId}/apply`, data),
+
+  // GET /api/polls/vendor/applications
+  // Auth: requireVendor
+  // Get vendor's poll applications
+  getMyPollApplications: () => api.get('/polls/vendor/applications'),
+
+  // GET /api/polls/voting/open
+  // Auth: requireStudentOrAbove
+  // Get open polls with applications for voting
+  getPollsForVoting: () => api.get('/polls/voting/open'),
+
+  // POST /api/polls/voting/:pollId/vote/:applicationId
+  // Auth: requireStudentOrAbove
+  // Vote for a vendor application
+  voteForApplication: (pollId, applicationId) => api.post(`/polls/voting/${pollId}/vote/${applicationId}`, {}),
+
+  // DELETE /api/polls/voting/:pollId/vote/:applicationId
+  // Auth: requireStudentOrAbove
+  // Remove vote (unvote)
+  removeVote: (pollId, applicationId) => api.delete(`/polls/voting/${pollId}/vote/${applicationId}`),
+
+  // GET /api/polls/voting/:pollId/my-votes
+  // Auth: requireStudentOrAbove
+  // Get user's votes for a poll
+  getMyVotes: (pollId) => api.get(`/polls/voting/${pollId}/my-votes`)
 };
 
 // ================================
@@ -476,6 +766,31 @@ export const adminAPI = {
   // Auth: requireAdminOrEventsOffice
   // Required: { rejection_reason: "rejection reason" }
   rejectVendorRequest: (id, rejection_reason) => api.post(`/admin/vendor-requests/${id}/reject`, { rejection_reason }),
+
+  // GET /api/admin/loyalty-program/applications
+  // Auth: requireAdmin
+  // Query params: status, page, limit
+  getLoyaltyProgramApplications: (params = {}) => {
+    const queryString = new URLSearchParams(params).toString();
+    return api.get(`/admin/loyalty-program/applications${queryString ? `?${queryString}` : ''}`);
+  },
+
+  // GET /api/admin/loyalty-program/applications/stats
+  // Auth: requireAdmin
+  getLoyaltyProgramStats: () => api.get('/admin/loyalty-program/applications/stats'),
+
+  // GET /api/admin/loyalty-program/applications/:applicationId
+  // Auth: requireAdmin
+  getLoyaltyProgramApplicationById: (id) => api.get(`/admin/loyalty-program/applications/${id}`),
+
+  // POST /api/admin/loyalty-program/applications/:applicationId/accept
+  // Auth: requireAdmin
+  acceptLoyaltyProgramApplication: (id) => api.post(`/admin/loyalty-program/applications/${id}/accept`, {}),
+
+  // POST /api/admin/loyalty-program/applications/:applicationId/reject
+  // Auth: requireAdmin
+  // Required: { rejection_reason: "rejection reason" }
+  rejectLoyaltyProgramApplication: (id, rejection_reason) => api.post(`/admin/loyalty-program/applications/${id}/reject`, { rejection_reason }),
 
   // GET /api/admin/pending-users
   // Auth: requireAdmin
@@ -583,6 +898,83 @@ export const notificationAPI = {
   // Auth: required
   // Delete a notification
   deleteNotification: (notificationId) => api.delete(`/notifications/${notificationId}`),
+};
+
+// ================================
+// SALES REPORT API
+// ================================
+export const salesReportAPI = {
+  // GET /api/sales-report
+  // Auth: requireAdminOrEventsOffice
+  // Query params: event_type, start_date, end_date, sort_by, sort_order
+  getSalesReport: (params = {}) => {
+    // Clean params: remove undefined, null or empty-string values so they don't
+    // turn into literal 'undefined'/'null' in the query string and confuse the backend
+    const clean = Object.entries(params)
+      .filter(([k, v]) => v !== undefined && v !== null && !(typeof v === 'string' && v.trim() === ''))
+      .reduce((acc, [k, v]) => ({ ...acc, [k]: v }), {});
+    const queryString = new URLSearchParams(clean).toString();
+    return api.get(`/sales-report${queryString ? `?${queryString}` : ''}`);
+  },
+};
+
+// ================================
+// DOCUMENT API
+// ================================
+export const documentAPI = {
+  // POST /api/documents/upload
+  // Auth: requireAdminOrEventsOffice
+  // FormData: { file, description?, event_id?, category? }
+  upload: async (formData) => {
+    const token = getToken();
+    const response = await fetch(`${API_BASE_URL}/documents/upload`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`
+        // Don't set Content-Type, let browser set it with boundary for FormData
+      },
+      body: formData
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.message || 'Upload failed');
+    }
+    return data;
+  },
+
+  // GET /api/documents
+  // Auth: requireAdminOrEventsOffice
+  // Query: event_id?, category?, uploaded_by?
+  getAll: (params = {}) => {
+    const queryString = new URLSearchParams(params).toString();
+    return api.get(`/documents${queryString ? `?${queryString}` : ''}`);
+  },
+
+  // GET /api/documents/:id/download
+  // Auth: requireAdminOrEventsOffice
+  download: (documentId) => {
+    const token = getToken();
+    return fetch(`${API_BASE_URL}/documents/${documentId}/download`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    }).then(res => {
+      if (!res.ok) throw new Error('Download failed');
+      return res.blob();
+    });
+  },
+
+  // GET /api/documents/:id/view
+  // Auth: requireAdminOrEventsOffice
+  view: (documentId) => {
+    const token = getToken();
+    return `${API_BASE_URL}/documents/${documentId}/view?token=${token}`;
+  },
+
+  // DELETE /api/documents/:id
+  // Auth: requireAdminOrEventsOffice
+  delete: (documentId) => api.delete(`/documents/${documentId}`),
 };
 
 export default api;

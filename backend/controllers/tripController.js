@@ -57,6 +57,8 @@ export const createTrip = async (req, res) => {
       return res.status(400).json({ message: "Invalid date format" });
     }
 
+    const { allowed_roles } = req.body;
+    
     // Create trip using Events model
     const trip = await Event.create({
       type: "Trip",
@@ -68,7 +70,8 @@ export const createTrip = async (req, res) => {
       time,
       created_by: req.user._id,
       status: "upcoming",
-      trip: {
+      allowed_roles: Array.isArray(allowed_roles) ? allowed_roles : [],
+      trip: { // ← REQUIRED: Trip-specific fields
         price: Number(price),
         capacity: Number(capacity),
         registration_deadline: regDeadline
@@ -148,6 +151,11 @@ export const updateTrip = async (req, res) => {
     }
     if (updates.end_date) {
       updates.end_date = new Date(updates.end_date);
+    }
+
+    // Handle allowed_roles update
+    if (updates.allowed_roles !== undefined) {
+      updates.allowed_roles = Array.isArray(updates.allowed_roles) ? updates.allowed_roles : [];
     }
 
     const updated = await Event.findByIdAndUpdate(

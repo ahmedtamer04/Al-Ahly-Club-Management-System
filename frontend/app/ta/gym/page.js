@@ -2,57 +2,91 @@
 
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
+import { gymAPI } from '@/utils/api';
 import '@/app/dashboard.css';
 
 export default function TAGymPage() {
   const [sessions, setSessions] = useState([]);
+  const [myRegistrations, setMyRegistrations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [success, setSuccess] = useState('');
   const [selectedSession, setSelectedSession] = useState(null);
+  const [registering, setRegistering] = useState({});
 
   useEffect(() => {
     loadGymSchedule();
+    fetchMyRegistrations();
   }, []);
 
   const loadGymSchedule = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
-
-      if (!token) {
-        setError('Not authenticated');
-        setLoading(false);
-        return;
-      }
-
-      const response = await fetch('http://localhost:5000/api/gym-sessions/schedule', {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        if (response.status === 404) {
-          setSessions([]);
-          setError(null);
-          setLoading(false);
-          return;
-        }
-        throw new Error('Failed to fetch gym schedule');
-      }
-
-      const data = await response.json();
-      const sessionsData = data.sessions || data || [];
-      setSessions(sessionsData);
+      const response = await gymAPI.getSchedule({});
+      setSessions(response.sessions || []);
       setError(null);
     } catch (err) {
       console.error('Error loading gym schedule:', err);
-      setError(err.message);
+      setError(err.response?.data?.message || 'Failed to load gym schedule');
+      setSessions([]);
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchMyRegistrations = async () => {
+    try {
+      const res = await gymAPI.getMyRegistrations();
+      setMyRegistrations(res.registrations || []);
+    } catch (err) {
+      console.error('Failed to fetch registrations:', err);
+      setMyRegistrations([]);
+    }
+  };
+
+  const handleRegister = async (sessionId) => {
+    setRegistering(prev => ({ ...prev, [sessionId]: true }));
+    setError('');
+    setSuccess('');
+
+    try {
+      await gymAPI.register(sessionId);
+      setSuccess('Successfully registered for gym session!');
+      fetchMyRegistrations();
+      loadGymSchedule(); // Refresh to update capacity
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to register for session');
+    } finally {
+      setRegistering(prev => ({ ...prev, [sessionId]: false }));
+    }
+  };
+
+  const handleCancelRegistration = async (registrationId) => {
+    if (!confirm('Are you sure you want to cancel your registration?')) {
+      return;
+    }
+
+    try {
+      await gymAPI.cancelRegistration(registrationId);
+      setSuccess('Registration cancelled successfully!');
+      fetchMyRegistrations();
+      loadGymSchedule();
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to cancel registration');
+    }
+  };
+
+  const isRegistered = (sessionId) => {
+    return myRegistrations.some(reg => 
+      reg.session._id === sessionId && reg.status === 'registered'
+    );
+  };
+
+  const getRegistrationId = (sessionId) => {
+    const reg = myRegistrations.find(reg => 
+      reg.session._id === sessionId && reg.status === 'registered'
+    );
+    return reg?._id;
   };
 
   const formatDate = (dateString) => {
@@ -163,8 +197,14 @@ export default function TAGymPage() {
           {loading && <p>Loading gym schedule...</p>}
 
           {error && (
-            <div style={{ color: 'red', padding: '1rem', backgroundColor: '#ffe6e6', borderRadius: '4px' }}>
+            <div style={{ color: 'red', padding: '1rem', backgroundColor: '#ffe6e6', borderRadius: '4px', marginBottom: '1rem' }}>
               ⚠️ Error: {error}
+            </div>
+          )}
+
+          {success && (
+            <div style={{ color: '#155724', padding: '1rem', backgroundColor: '#d4edda', borderRadius: '4px', marginBottom: '1rem', border: '1px solid #c3e6cb' }}>
+              ✅ {success}
             </div>
           )}
 
@@ -378,13 +418,37 @@ export default function TAGymPage() {
               </p>
             </div>
 
-            <button
-              className="btn-primary"
-              style={{ marginTop: '1.5rem', width: '100%' }}
-              onClick={() => setSelectedSession(null)}
-            >
-              Close
-            </button>
+            <div style={{marginTop: '2rem', display: 'flex', gap: '1rem', justifyContent: 'flex-end'}}>
+              {!isRegistered(selectedSession._id) && 
+               selectedSession.status !== 'cancelled' && 
+               new Date(selectedSession.date) >= new Date() && (
+                <button 
+                  onClick={() => {
+                    handleRegister(selectedSession._id);
+                    setSelectedSession(null);
+                  }}
+                  disabled={registering[selectedSession._id]}
+                  className="btn-primary"
+                >
+                  {registering[selectedSession._id] ? 'Registering...' : 'Register for Session'}
+                </button>
+              )}
+              {isRegistered(selectedSession._id) && (
+                <button
+                  onClick={() => {
+                    handleCancelRegistration(getRegistrationId(selectedSession._id));
+                    setSelectedSession(null);
+                  }}
+                  className="btn-secondary"
+                  style={{ background: '#dc3545', color: 'white' }}
+                >
+                  Cancel Registration
+                </button>
+              )}
+              <button onClick={() => setSelectedSession(null)} className="btn-secondary">
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}

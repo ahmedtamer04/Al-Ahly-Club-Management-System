@@ -1,5 +1,5 @@
 import express from "express";
-import { auth, requireEventsOffice, requireStudentOrAbove} from "../middleware/auth.js";
+import { auth, requireEventsOffice, requireStudentOrAbove, requireAdminOrEventsOffice } from "../middleware/auth.js";
 import { createTrip, updateTrip, getTrip, listTrips } from "../controllers/tripController.js";
 
 const router = express.Router();
@@ -10,8 +10,8 @@ router.use(auth);
 // Create trip (EventsOffice only)
 router.post("/createTrip", requireEventsOffice, createTrip);
 
-// Edit trip (EventsOffice only, with server-side edit lock)
-router.put("/updateTrip/:id", requireEventsOffice, updateTrip);
+// Edit trip (Admin or EventsOffice) — Admin should be able to edit upcoming events too
+router.put("/updateTrip/:id", requireAdminOrEventsOffice, updateTrip);
 
 // Fetch single trip (any authenticated)
 router.get("/getTrip/:id", requireStudentOrAbove, getTrip);

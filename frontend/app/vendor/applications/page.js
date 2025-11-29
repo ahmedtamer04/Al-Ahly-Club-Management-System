@@ -22,6 +22,14 @@ export default function VendorApplicationsPage() {
   const [activeFilter, setActiveFilter] = useState('all'); // 'all', 'approved', 'pending-rejected'
   const [selectedApplication, setSelectedApplication] = useState(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [paymentInfo, setPaymentInfo] = useState(null);
+  const [loadingPayment, setLoadingPayment] = useState(false);
+  const [paymentError, setPaymentError] = useState(null);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState('wallet'); // 'wallet' or 'stripe'
+  const [processingPayment, setProcessingPayment] = useState(false);
+  const [sendingQRCodes, setSendingQRCodes] = useState(false);
+  const [paymentSuccess, setPaymentSuccess] = useState(null);
 
   // Load user data on client side only
   useEffect(() => {
@@ -138,14 +146,108 @@ export default function VendorApplicationsPage() {
     return true;
   });
 
-  const handleViewDetails = (app) => {
+  const handleViewDetails = async (app) => {
     setSelectedApplication(app);
     setShowDetailsModal(true);
+    setPaymentError(null);
+    
+    // If application is accepted, fetch payment info
+    if (app.status === 'accepted') {
+      try {
+        setLoadingPayment(true);
+        const paymentData = await vendorAPI.getPaymentInfo(app._id);
+        setPaymentInfo(paymentData);
+      } catch (error) {
+        console.error('Error fetching payment info:', error);
+        setPaymentError(error.response?.data?.message || error.message || 'Unable to load payment information');
+        setPaymentInfo(null);
+      } finally {
+        setLoadingPayment(false);
+      }
+    }
   };
 
   const closeDetailsModal = () => {
     setShowDetailsModal(false);
     setSelectedApplication(null);
+    setPaymentInfo(null);
+    setPaymentError(null);
+    setShowPaymentModal(false);
+    setPaymentSuccess(null);
+  };
+
+  const handlePayWithWallet = async () => {
+    if (!selectedApplication) return;
+    
+    if (!confirm(`Pay $${paymentInfo?.application?.participation_fee || 0} participation fee with wallet?`)) {
+      return;
+    }
+
+    try {
+      setProcessingPayment(true);
+      setPaymentError(null);
+      const result = await vendorAPI.payWithWallet(selectedApplication._id);
+      setPaymentSuccess('✅ Payment successful! Receipt email sent to your registered email address.');
+      
+      // Refresh payment info
+      setTimeout(async () => {
+        const paymentData = await vendorAPI.getPaymentInfo(selectedApplication._id);
+        setPaymentInfo(paymentData);
+        
+        // Update application in list
+        fetchApplications();
+      }, 2000);
+    } catch (error) {
+      setPaymentError(`Payment failed: ${error.response?.data?.message || error.message}`);
+    } finally {
+      setProcessingPayment(false);
+    }
+  };
+
+  const handlePayWithStripe = async () => {
+    if (!selectedApplication) return;
+
+    try {
+      setProcessingPayment(true);
+      setPaymentError(null);
+      
+      // Create payment intent
+      const { client_secret, payment_id } = await vendorAPI.createStripePayment(selectedApplication._id);
+      
+      // Use Stripe Elements to confirm payment
+      // For now, we'll use a simple approach - in production, use Stripe Elements
+      setPaymentSuccess('ℹ️ Stripe payment integration requires Stripe Elements. Please implement Stripe checkout.');
+      
+      // TODO: Implement Stripe Elements integration
+      // const stripe = await loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY);
+      // const { error } = await stripe.confirmCardPayment(client_secret, {
+      //   payment_method: { card: cardElement }
+      // });
+      
+    } catch (error) {
+      setPaymentError(`Payment failed: ${error.response?.data?.message || error.message}`);
+    } finally {
+      setProcessingPayment(false);
+    }
+  };
+
+  const handleSendQRCodes = async () => {
+    if (!selectedApplication) return;
+
+    if (!confirm('Send QR codes for all registered visitors to your email?')) {
+      return;
+    }
+
+    try {
+      setSendingQRCodes(true);
+      setPaymentSuccess(null);
+      const result = await vendorAPI.sendQRCodes(selectedApplication._id);
+      setPaymentSuccess(`✅ QR codes sent successfully! Check your email for ${result.visitors_count} visitor QR code(s).`);
+    } catch (error) {
+      setPaymentError(`Failed to send QR codes: ${error.response?.data?.message || error.message}`);
+    } finally {
+      setSendingQRCodes(false);
+    }
   };
 
   return (
@@ -164,10 +266,13 @@ export default function VendorApplicationsPage() {
         <aside className="sidebar">
           <ul className="sidebar-menu">
             <li><Link href="/vendor">🏠 Dashboard</Link></li>
-            <li><Link href="/vendor/applications">📋 My Applications</Link></li>
+            <li><Link href="/vendor/applications" className="active">📋 My Applications</Link></li>
             <li><Link href="/vendor/bazaars">🎪 Browse Bazaars</Link></li>
             <li><Link href="/vendor/booths">🏪 My Booths</Link></li>
+            <li><Link href="/vendor/polls">📊 Polls</Link></li>
+            <li><Link href="/vendor/loyalty-program">🎁 Loyalty Program</Link></li>
             <li><Link href="/vendor/profile">👤 Profile</Link></li>
+            <li><Link href="/vendor/email-preferences">📧 Email Preferences</Link></li>
           </ul>
         </aside>
 
@@ -536,6 +641,232 @@ export default function VendorApplicationsPage() {
                   <div className="notes-box">
                     {selectedApplication.notes}
                   </div>
+                </div>
+              )}
+
+              {/* Payment Section - Only for accepted applications (works for both bazaar and booth_event) */}
+              {selectedApplication.status === 'accepted' && (
+                <div className="detail-section" style={{borderLeftColor: '#ffc107'}}>
+                  <h3 className="detail-section-title">
+                    <span className="section-icon">💰</span>
+                    Payment Information
+                  </h3>
+                  
+                  {paymentSuccess && (
+                    <div style={{
+                      marginBottom: '1.5rem',
+                      padding: '1rem',
+                      background: '#d4edda',
+                      borderRadius: '8px',
+                      border: '1px solid #28a745',
+                      color: '#155724',
+                      fontWeight: '500'
+                    }}>
+                      {paymentSuccess}
+                      <p style={{margin: '0.5rem 0 0 0', fontSize: '0.9em'}}>
+                        Check your email for the payment receipt.
+                      </p>
+                    </div>
+                  )}
+                  
+                  {loadingPayment ? (
+                    <div style={{textAlign: 'center', padding: '2rem'}}>Loading payment info...</div>
+                  ) : paymentInfo ? (
+                    <div>
+                      {/* Application Details Summary in Payment Section */}
+                      <div style={{
+                        marginBottom: '1.5rem',
+                        padding: '1rem',
+                        background: '#f8f9fa',
+                        borderRadius: '8px',
+                        border: '1px solid #dee2e6'
+                      }}>
+                        <h4 style={{margin: '0 0 1rem 0', color: '#495057', fontSize: '0.95rem', fontWeight: '600'}}>
+                          📋 Application Summary
+                        </h4>
+                        <div className="detail-grid">
+                          {paymentInfo.application?.location && (
+                            <div className="detail-item">
+                              <span className="detail-label">📍 Location:</span>
+                              <span className="detail-value">{paymentInfo.application.location}</span>
+                            </div>
+                          )}
+                          {paymentInfo.application?.booth_size && (
+                            <div className="detail-item">
+                              <span className="detail-label">📦 Booth Size:</span>
+                              <span className="detail-value">{paymentInfo.application.booth_size}</span>
+                            </div>
+                          )}
+                          {paymentInfo.application?.duration && (
+                            <div className="detail-item">
+                              <span className="detail-label">⏱️ Duration:</span>
+                              <span className="detail-value">{paymentInfo.application.duration}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="detail-grid">
+                        <div className="detail-item">
+                          <span className="detail-label">Participation Fee:</span>
+                          <span className="detail-value" style={{fontSize: '1.2em', fontWeight: 'bold', color: '#c41e3a'}}>
+                            ${paymentInfo.application?.participation_fee?.toFixed(2) || '0.00'}
+                          </span>
+                        </div>
+                        <div className="detail-item">
+                          <span className="detail-label">Payment Status:</span>
+                          <span style={{
+                            padding: '6px 12px',
+                            borderRadius: '4px',
+                            background: paymentInfo.application?.payment_status === 'paid' ? '#28a745' : '#ffc107',
+                            color: 'white',
+                            fontWeight: '500',
+                            display: 'inline-block'
+                          }}>
+                            {paymentInfo.application?.payment_status === 'paid' ? '✅ Paid' : '⏳ Not Paid'}
+                          </span>
+                        </div>
+                        {paymentInfo.application?.payment_deadline && (
+                          <div className="detail-item">
+                            <span className="detail-label">Payment Deadline:</span>
+                            <span className="detail-value" style={{
+                              color: paymentInfo.is_deadline_passed ? '#dc3545' : (paymentInfo.days_until_deadline <= 1 ? '#ffc107' : '#333'),
+                              fontWeight: paymentInfo.days_until_deadline <= 1 ? 'bold' : 'normal'
+                            }}>
+                              {formatDate(paymentInfo.application.payment_deadline)}
+                              {paymentInfo.days_until_deadline !== null && (
+                                <span style={{marginLeft: '0.5rem', fontSize: '0.9em'}}>
+                                  ({paymentInfo.is_deadline_passed 
+                                    ? '⚠️ Deadline Passed' 
+                                    : `${paymentInfo.days_until_deadline} day(s) remaining`})
+                                </span>
+                              )}
+                            </span>
+                          </div>
+                        )}
+                        {paymentInfo.application?.payment_date && (
+                          <div className="detail-item">
+                            <span className="detail-label">Paid On:</span>
+                            <span className="detail-value">{formatDate(paymentInfo.application.payment_date)}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {paymentInfo.application?.payment_status !== 'paid' && (
+                        <div style={{
+                          marginTop: '1.5rem',
+                          padding: '1rem',
+                          background: '#fff3cd',
+                          borderRadius: '8px',
+                          border: '1px solid #ffc107'
+                        }}>
+                          <p style={{margin: '0 0 1rem 0', color: '#856404', fontWeight: '600'}}>
+                            ⚠️ Payment Required
+                          </p>
+                          <div style={{display: 'flex', gap: '1rem', flexWrap: 'wrap'}}>
+                            <button
+                              onClick={handlePayWithWallet}
+                              disabled={processingPayment}
+                              style={{
+                                padding: '0.75rem 1.5rem',
+                                background: '#28a745',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '6px',
+                                cursor: processingPayment ? 'not-allowed' : 'pointer',
+                                fontWeight: '600',
+                                opacity: processingPayment ? 0.6 : 1
+                              }}
+                            >
+                              {processingPayment ? 'Processing...' : '💰 Pay with Wallet'}
+                            </button>
+                            <button
+                              onClick={() => setShowPaymentModal(true)}
+                              disabled={processingPayment}
+                              style={{
+                                padding: '0.75rem 1.5rem',
+                                background: '#007bff',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '6px',
+                                cursor: processingPayment ? 'not-allowed' : 'pointer',
+                                fontWeight: '600',
+                                opacity: processingPayment ? 0.6 : 1
+                              }}
+                            >
+                              💳 Pay with Card
+                            </button>
+                          </div>
+                          <div style={{
+                            marginTop: '1rem',
+                            padding: '0.75rem',
+                            background: '#e3f2fd',
+                            borderRadius: '6px',
+                            border: '1px solid #1976d2'
+                          }}>
+                            <p style={{margin: '0', color: '#1565c0', fontSize: '0.85rem'}}>
+                              💡 <strong>After payment:</strong> You'll be able to request QR codes for all registered visitors via email.
+                            </p>
+                          </div>
+                        </div>
+                      )}
+
+                      {paymentInfo.application?.payment_status === 'paid' && (
+                        <div style={{
+                          marginTop: '1.5rem',
+                          padding: '1rem',
+                          background: '#d4edda',
+                          borderRadius: '8px',
+                          border: '1px solid #28a745'
+                        }}>
+                          <p style={{margin: '0 0 1rem 0', color: '#155724', fontWeight: '600'}}>
+                            ✅ Payment Completed
+                          </p>
+                          <div style={{
+                            marginTop: '1rem',
+                            padding: '1rem',
+                            background: '#e3f2fd',
+                            borderRadius: '8px',
+                            border: '1px solid #1976d2'
+                          }}>
+                            <p style={{margin: '0 0 1rem 0', color: '#1565c0', fontWeight: '600', fontSize: '0.95rem'}}>
+                              📱 QR Codes for Registered Visitors
+                            </p>
+                            <p style={{margin: '0 0 1rem 0', color: '#1976d2', fontSize: '0.9rem'}}>
+                              Request QR codes for all visitors registered for this {selectedApplication.kind === 'bazaar' ? 'bazaar' : 'booth event'}. 
+                              QR codes will be sent to your email as PNG attachments.
+                            </p>
+                            <button
+                              onClick={handleSendQRCodes}
+                              disabled={sendingQRCodes}
+                              style={{
+                                padding: '0.75rem 1.5rem',
+                                background: '#17a2b8',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '6px',
+                                cursor: sendingQRCodes ? 'not-allowed' : 'pointer',
+                                fontWeight: '600',
+                                opacity: sendingQRCodes ? 0.6 : 1,
+                                width: '100%'
+                              }}
+                            >
+                              {sendingQRCodes ? '⏳ Sending QR Codes...' : '📱 Request QR Codes for All Visitors'}
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div style={{textAlign: 'center', padding: '1rem', color: '#dc3545'}}>
+                      <p>❌ {paymentError || 'Unable to load payment information'}</p>
+                      {paymentError && paymentError.includes('accepted') && (
+                        <p style={{fontSize: '0.9em', marginTop: '0.5rem', color: '#666'}}>
+                          Make sure your application has been accepted by admin staff.
+                        </p>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
             </div>

@@ -22,10 +22,11 @@ import eventRoutes from "./routes/eventRoutes.js";
 import favoriteRoutes from "./routes/favoriteRoutes.js";
 import paymentRoutes from "./routes/paymentRoutes.js";
 import certificateRoutes from "./routes/certificateRoutes.js";
-import notificationRoutes from "./routes/notificationRoutes.js";
-
-// ✅ ADD THIS: Import reminder service
 import { startReminderScheduler } from "./services/eventReminderService.js";
+import pollRoutes from "./routes/pollRoutes.js";
+import notificationRoutes from "./routes/notificationRoutes.js";
+import salesReportRoutes from "./routes/salesReportRoutes.js";
+import documentRoutes from "./routes/documentRoutes.js";
 
 
 const app = express();
@@ -46,7 +47,7 @@ const startServer = async () => {
   try {
     await connectDB();
 
-    const PORT = process.env.PORT || 5000;
+    const PORT = process.env.PORT || 5001;
 
     app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
@@ -88,7 +89,10 @@ app.use("/api/events", eventRoutes);
 app.use("/api/favorites", favoriteRoutes);
 app.use("/api/payment", paymentRoutes);
 app.use("/api/certificates", certificateRoutes);
+app.use("/api/polls", pollRoutes);
 app.use("/api/notifications", notificationRoutes);
+app.use("/api/sales-report", salesReportRoutes);
+app.use("/api/documents", documentRoutes);
 
 
 

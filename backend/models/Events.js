@@ -50,7 +50,8 @@ const eventSchema = new mongoose.Schema({
   
   status: {
     type: String,
-    enum: ["upcoming", "active", "completed", "cancelled"],
+    // Add 'archived' so events can be explicitly archived after they have passed
+    enum: ["upcoming", "active", "completed", "cancelled", "archived"],
     default: "upcoming"
   },
   
@@ -58,6 +59,13 @@ const eventSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: "User",
     required: true
+  },
+  
+  // Event access restrictions - which roles can view/register
+  allowed_roles: {
+    type: [String],
+    enum: ["Student", "Staff", "TA", "Professor", "Vendor", "Admin", "EventsOffice"],
+    default: [] // Empty array means all roles can access
   },
   
   // ========================================

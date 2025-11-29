@@ -1,8 +1,0 @@
-{
-  "/staff/page": "app/staff/page.js",
-  "/auth/login/page": "app/auth/login/page.js",
-  "/professor/page": "app/professor/page.js",
-  "/professor/events/page": "app/professor/events/page.js",
-  "/professor/workshops/create/page": "app/professor/workshops/create/page.js",
-  "/professor/gym/page": "app/professor/gym/page.js"
-}

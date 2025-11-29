@@ -358,7 +358,7 @@ export default function BrowseEventsPage() {
       // User closed modal without paying - cancel the pending registration
       try {
         const token = localStorage.getItem('token');
-        await fetch(`http://localhost:5000/api/registration/cancel-unpaid/${paymentData.registrationId}`, {
+        await fetch(`http://localhost:5001/api/registration/cancel-unpaid/${paymentData.registrationId}`, {
           method: 'DELETE',
           headers: {
             'Authorization': `Bearer ${token}`,

@@ -54,6 +54,8 @@ export const createConference = async (req, res) => {
       return res.status(400).json({ message: "Start date must be in the future" });
     }
 
+    const { allowed_roles } = req.body;
+    
     const conference = await Event.create({
       type: "Conference",
       name,
@@ -64,7 +66,8 @@ export const createConference = async (req, res) => {
       time,
       created_by: req.user._id,
       status: "upcoming",
-      conference: {
+      allowed_roles: Array.isArray(allowed_roles) ? allowed_roles : [],
+      conference: { // ← REQUIRED: Conference-specific fields
         campus,
         professors_participating: Array.isArray(professors_participating) 
           ? professors_participating 
@@ -149,6 +152,11 @@ export const editConference = async (req, res) => {
     }
     if (updates.end_date) {
       updates.end_date = new Date(updates.end_date);
+    }
+
+    // Handle allowed_roles update
+    if (updates.allowed_roles !== undefined) {
+      updates.allowed_roles = Array.isArray(updates.allowed_roles) ? updates.allowed_roles : [];
     }
 
     const updatedConference = await Event.findByIdAndUpdate(

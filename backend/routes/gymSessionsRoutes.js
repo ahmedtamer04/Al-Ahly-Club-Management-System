@@ -23,6 +23,11 @@ import {
   cancelGymSession,
   viewGymSchedule
 } from "../controllers/gymSessionController.js";
+import {
+  registerForGymSession,
+  getMyGymSessionRegistrations,
+  cancelGymSessionRegistration
+} from "../controllers/gymSessionRegistrationController.js";
 
 import {
   auth,
@@ -43,5 +48,10 @@ router.put("/edit/:id", auth, requireAdminOrEventsOffice, editGymSession);
 
 // Cancel Gym Session (only Events Office or Admin)
 router.patch("/cancel/:id", auth, requireAdminOrEventsOffice, cancelGymSession);
+
+// Gym Session Registration Routes (Students, Staff, TA, Professor)
+router.post("/register/:sessionId", auth, requireStudentOrAbove, registerForGymSession);
+router.get("/my-registrations", auth, requireStudentOrAbove, getMyGymSessionRegistrations);
+router.delete("/registrations/:registrationId", auth, requireStudentOrAbove, cancelGymSessionRegistration);
 
 export default router;
