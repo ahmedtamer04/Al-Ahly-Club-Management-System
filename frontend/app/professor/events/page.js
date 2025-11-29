@@ -166,10 +166,14 @@ export default function ProfessorEvents() {
   const [registrationLoading, setRegistrationLoading] = useState(false);
   const [registrationMessage, setRegistrationMessage] = useState({ text: '', type: '' });
   const [registeredEventIds, setRegisteredEventIds] = useState(new Set());
+  const [registrationMap, setRegistrationMap] = useState({}); // Map of eventId -> registrationId
   
   // Payment modal states
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [paymentData, setPaymentData] = useState(null);
+  
+  // Cancellation states
+  const [cancelling, setCancelling] = useState(false);
   
   // My Registrations view states
   const [viewMode, setViewMode] = useState('all'); // 'all' or 'registrations'
@@ -335,7 +339,7 @@ export default function ProfessorEvents() {
     return favorites.has(eventId);
   };
 
-  // Load user data and auto-fill form + load registered events from localStorage
+  // Load user data and auto-fill form + load registered events from database
   useEffect(() => {
     const user = getUser();
     if (user) {
@@ -346,20 +350,44 @@ export default function ProfessorEvents() {
         staffId: user.id_number || ''
       });
 
-      // Load registered events from localStorage
-      const storedRegistrations = localStorage.getItem(`registeredEvents_${user.id_number}`);
-      if (storedRegistrations) {
+      // Load registered events from database
+      const loadRegistrationsFromDB = async () => {
         try {
-          const registeredArray = JSON.parse(storedRegistrations);
-          const registeredSet = new Set(registeredArray);
-          setRegisteredEventIds(registeredSet);
-          
-          // Fetch full details of registered events
-          fetchRegisteredEvents(registeredSet);
+          const response = await registrationAPI.getMyRegistrations(user._id);
+          if (response && response.upcoming) {
+            // Extract event IDs from registrations and create mapping
+            const eventIds = new Set();
+            const regMap = {};
+            response.upcoming.forEach(reg => {
+              const eventId = reg.event_id._id || reg.event_id;
+              eventIds.add(eventId);
+              regMap[eventId] = reg._id; // Store registration ID for cancellation
+            });
+            
+            setRegisteredEventIds(eventIds);
+            setRegistrationMap(regMap);
+            
+            // Fetch full details of registered events
+            fetchRegisteredEvents(eventIds);
+          }
         } catch (error) {
-          console.error('Error loading registered events:', error);
+          console.error('Error loading registrations from database:', error);
+          // Fallback: try to load from localStorage
+          const storedRegistrations = localStorage.getItem(`registeredEvents_${user.id_number}`);
+          if (storedRegistrations) {
+            try {
+              const registeredArray = JSON.parse(storedRegistrations);
+              const registeredSet = new Set(registeredArray);
+              setRegisteredEventIds(registeredSet);
+              fetchRegisteredEvents(registeredSet);
+            } catch (e) {
+              console.error('Error loading from localStorage:', e);
+            }
+          }
         }
-      }
+      };
+      
+      loadRegistrationsFromDB();
     }
 
     // NEW: Load favorites
@@ -609,6 +637,24 @@ export default function ProfessorEvents() {
     return registeredEventIds.has(eventId);
   };
 
+  // Check if cancellation is allowed (must be at least 2 weeks before event start)
+  const canCancelRegistration = (event) => {
+    if (!event || !event.start_date) return false;
+    const eventStart = new Date(event.start_date);
+    const now = new Date();
+    const daysUntilEvent = (eventStart - now) / (1000 * 60 * 60 * 24);
+    return daysUntilEvent >= 14; // 14 days = 2 weeks
+  };
+
+  // Get days remaining until event for display
+  const getDaysUntilEvent = (event) => {
+    if (!event || !event.start_date) return 0;
+    const eventStart = new Date(event.start_date);
+    const now = new Date();
+    const daysUntilEvent = Math.ceil((eventStart - now) / (1000 * 60 * 60 * 24));
+    return Math.max(0, daysUntilEvent);
+  };
+
   // Helper functions to separate upcoming and past events
   const getUpcomingEvents = (events) => {
     const now = new Date();
@@ -651,6 +697,11 @@ export default function ProfessorEvents() {
 
       const response = await registrationAPI.register(payload);
       
+      // Update local state with registration from database
+      const eventId = selectedEvent._id || selectedEvent.id;
+      const updatedRegistrations = new Set([...registeredEventIds, eventId]);
+      setRegisteredEventIds(updatedRegistrations);
+      
       // Check if event requires payment
       const eventPrice = selectedEvent.workshop?.price || selectedEvent.trip?.price || 0;
       
@@ -668,21 +719,7 @@ export default function ProfessorEvents() {
         setShowPaymentModal(true);
       } else {
         // Free event - registration complete
-        // Add event to registered set
-        const eventId = selectedEvent._id || selectedEvent.id;
-        const updatedRegistrations = new Set([...registeredEventIds, eventId]);
-        setRegisteredEventIds(updatedRegistrations);
-        
-        // Save to localStorage for persistence
-        const currentUser = getUser();
-        if (currentUser) {
-          localStorage.setItem(
-            `registeredEvents_${currentUser.id_number}`,
-            JSON.stringify([...updatedRegistrations])
-          );
-        }
-        
-        // Refresh registered events list
+        // Refresh registered events list from database
         fetchRegisteredEvents(updatedRegistrations);
         
         setRegistrationMessage({ text: 'Successfully registered for the event!', type: 'success' });
@@ -714,16 +751,7 @@ export default function ProfessorEvents() {
     const updatedRegistrations = new Set([...registeredEventIds, eventId]);
     setRegisteredEventIds(updatedRegistrations);
     
-    // Save to localStorage for persistence
-    const currentUser = getUser();
-    if (currentUser) {
-      localStorage.setItem(
-        `registeredEvents_${currentUser.id_number}`,
-        JSON.stringify([...updatedRegistrations])
-      );
-    }
-    
-    // Refresh registered events list
+    // Refresh registered events list from database
     fetchRegisteredEvents(updatedRegistrations);
     
     alert('Payment completed! Registration confirmed.');
@@ -748,6 +776,48 @@ export default function ProfessorEvents() {
     }
     setShowPaymentModal(false);
     setPaymentData(null);
+  };
+
+  // Handle canceling a registration
+  const handleCancelRegistration = async (eventId) => {
+    if (!window.confirm('Are you sure you want to cancel your registration for this event?')) {
+      return;
+    }
+
+    try {
+      // Find the registration ID - we need to fetch from the database
+      const user = getUser();
+      if (!user) return;
+
+      // Try to get the registration ID by fetching registrations
+      const response = await registrationAPI.getMyRegistrations(user._id);
+      const registration = response.upcoming?.find(reg => 
+        (reg.event_id._id || reg.event_id) === eventId
+      );
+
+      if (!registration) {
+        alert('Registration not found');
+        return;
+      }
+
+      await registrationAPI.cancel(registration._id);
+      
+      // Update local state
+      const updatedEventIds = new Set(registeredEventIds);
+      updatedEventIds.delete(eventId);
+      setRegisteredEventIds(updatedEventIds);
+      
+      // Refresh registered events list
+      fetchRegisteredEvents(updatedEventIds);
+      
+      // Close modal
+      setShowDetailsModal(false);
+      
+      alert('Registration cancelled successfully');
+    } catch (error) {
+      console.error('Error canceling registration:', error);
+      alert('Failed to cancel registration. Please try again.');
+    }
   };
 
   // Update filtered events when any search/filter criteria changes
@@ -1824,15 +1894,17 @@ export default function ProfessorEvents() {
                     <div style={{
                       marginTop: '24px',
                       padding: '20px',
-                      background: 'linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%)',
+                      background: canCancelRegistration(selectedEvent) 
+                        ? 'linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%)'
+                        : 'linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%)',
                       borderRadius: '8px',
-                      border: '2px solid #28a745',
+                      border: `2px solid ${canCancelRegistration(selectedEvent) ? '#28a745' : '#f5c6cb'}`,
                       textAlign: 'center'
                     }}>
                       <h3 style={{ 
                         margin: '0 0 12px 0',
                         fontSize: '18px',
-                        color: '#155724',
+                        color: canCancelRegistration(selectedEvent) ? '#155724' : '#721c24',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
@@ -1840,9 +1912,46 @@ export default function ProfessorEvents() {
                       }}>
                         ✓ Already Registered
                       </h3>
-                      <p style={{ margin: '0', color: '#155724', fontWeight: '500' }}>
+                      <p style={{ margin: '0 0 16px 0', color: canCancelRegistration(selectedEvent) ? '#155724' : '#721c24', fontWeight: '500' }}>
                         You have successfully registered for this {selectedEvent.type?.toLowerCase()}!
                       </p>
+                      {canCancelRegistration(selectedEvent) ? (
+                        <>
+                          <p style={{ margin: '0 0 12px 0', fontSize: '13px', color: canCancelRegistration(selectedEvent) ? '#155724' : '#721c24' }}>
+                            ⏰ You can cancel up to 2 weeks before the event starts
+                          </p>
+                          <button
+                            onClick={() => handleCancelRegistration(selectedEvent._id || selectedEvent.id)}
+                            style={{
+                              padding: '10px 24px',
+                              fontSize: '14px',
+                              fontWeight: '600',
+                              border: 'none',
+                              borderRadius: '6px',
+                              cursor: 'pointer',
+                              background: '#dc3545',
+                              color: 'white',
+                              transition: 'all 0.3s',
+                              marginTop: '10px'
+                            }}
+                            onMouseOver={(e) => e.target.style.background = '#c82333'}
+                            onMouseOut={(e) => e.target.style.background = '#dc3545'}
+                          >
+                            ✕ Cancel Registration
+                          </button>
+                        </>
+                      ) : (
+                        <div style={{
+                          padding: '12px 16px',
+                          background: 'rgba(0,0,0,0.1)',
+                          borderRadius: '6px',
+                          marginTop: '12px',
+                          fontSize: '13px',
+                          color: '#721c24'
+                        }}>
+                          ⚠️ Cancellation deadline has passed (less than 2 weeks before event)
+                        </div>
+                      )}
                     </div>
                   )}
 
