@@ -22,6 +22,7 @@ import eventRoutes from "./routes/eventRoutes.js";
 import favoriteRoutes from "./routes/favoriteRoutes.js";
 import paymentRoutes from "./routes/paymentRoutes.js";
 import certificateRoutes from "./routes/certificateRoutes.js";
+import { startReminderScheduler } from "./services/eventReminderService.js";
 import pollRoutes from "./routes/pollRoutes.js";
 import notificationRoutes from "./routes/notificationRoutes.js";
 import salesReportRoutes from "./routes/salesReportRoutes.js";
@@ -50,6 +51,9 @@ const startServer = async () => {
 
     app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
+      
+      // ✅ ADD THIS: Start reminder scheduler after server starts
+      startReminderScheduler();
     });
   } catch (err) {
     console.error('Failed to start server due to DB connection error:', err.message);

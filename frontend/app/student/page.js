@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { eventAPI, registrationAPI, getUser } from '@/utils/api';
 import '@/app/dashboard.css';
+import NotificationBell from '../components/NotificationBell';
 
 export default function StudentDashboard() {
   const [events, setEvents] = useState([]);
@@ -29,7 +30,7 @@ export default function StudentDashboard() {
       const eventsResponse = await eventAPI.getUpcoming();
       console.log('Dashboard events response:', eventsResponse);
       const eventsData = Array.isArray(eventsResponse) ? eventsResponse : [];
-      setEvents(eventsData.slice(0, 3)); // Show only first 3 events
+      setEvents(eventsData.slice(0, 3));
 
       // Fetch user registrations if user is logged in
       const user = getUser();
@@ -45,7 +46,7 @@ export default function StudentDashboard() {
             registrationData = registrationsResponse;
           }
           
-          setRegistrations(registrationData.slice(0, 3)); // Show only first 3 registrations
+          setRegistrations(registrationData.slice(0, 3));
           
           // Calculate stats
           const now = new Date();
@@ -68,7 +69,6 @@ export default function StudentDashboard() {
 
         } catch (regError) {
           console.error('Error fetching registrations:', regError);
-          // Set stats with just events data
           setStats({
             upcomingEvents: eventsData.length,
             myRegistrations: 0,
@@ -99,6 +99,7 @@ export default function StudentDashboard() {
         <div className="nav-container">
           <h1 className="nav-brand">Al-Ahly Events</h1>
           <div className="nav-links">
+            <NotificationBell />
             <span className="nav-user">👨‍🎓 Student Dashboard</span>
             <Link href="/">Logout</Link>
           </div>
@@ -112,6 +113,7 @@ export default function StudentDashboard() {
           <ul className="sidebar-menu">
             <li><Link href="/student">🏠 Dashboard</Link></li>
             <li><Link href="/student/events">📅 Browse Events</Link></li>
+            <li><Link href="/student/favorites">⭐ My Favorites</Link></li>
             <li><Link href="/student/my-registrations">🎫 My Registrations</Link></li>
             <li><Link href="/student/payment-history">💰 Payment History</Link></li>
             <li><Link href="/polls-voting">📊 Vote for Vendors</Link></li>

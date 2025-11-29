@@ -162,6 +162,7 @@ export default function GymSchedulePage() {
           <ul className="sidebar-menu">
             <li><Link href="/student">🏠 Dashboard</Link></li>
             <li><Link href="/student/events">📅 Browse Events</Link></li>
+            <li><Link href="/student/favorites">⭐ My Favorites</Link></li>
             <li><Link href="/student/my-registrations">🎫 My Registrations</Link></li>
             <li><Link href="/student/facilities">🏢 Facilities</Link></li>
             <li><Link href="/student/gym/schedule" className="active">💪 Gym Schedule</Link></li>

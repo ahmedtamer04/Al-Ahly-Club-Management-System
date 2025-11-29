@@ -1,4 +1,5 @@
 import Event from "../models/Events.js";
+import { notifyUsersNewEvent } from "../services/notificationService.js";
 
 export const createBazaar = async (req, res) => {
   try {
@@ -48,6 +49,11 @@ export const createBazaar = async (req, res) => {
         vendors_participating: []
       }
     });
+
+    // Notify all users about the new bazaar
+    notifyUsersNewEvent(bazaar).catch(err => 
+      console.error('Failed to send bazaar notifications:', err)
+    );
 
     res.status(201).json({ 
       message: "Bazaar created successfully", 

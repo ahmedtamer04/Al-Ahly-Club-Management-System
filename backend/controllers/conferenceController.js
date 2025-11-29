@@ -1,4 +1,5 @@
 import Event from "../models/Events.js";
+import { notifyUsersNewEvent } from "../services/notificationService.js";
 
 export const createConference = async (req, res) => {
   try {
@@ -27,9 +28,27 @@ export const createConference = async (req, res) => {
       });
     }
 
-    // Convert dates
+    // ✅ FIX: Combine date and time properly
     const startDate = new Date(start_date);
     const endDate = new Date(end_date);
+    
+    // Parse time (format: "HH:MM" or "HH:MM AM/PM")
+    const timeParts = time.match(/(\d{1,2}):(\d{2})\s*(AM|PM)?/i);
+    if (timeParts) {
+      let hours = parseInt(timeParts[1]);
+      const minutes = parseInt(timeParts[2]);
+      const meridiem = timeParts[3];
+      
+      // Convert to 24-hour format if PM
+      if (meridiem && meridiem.toUpperCase() === 'PM' && hours !== 12) {
+        hours += 12;
+      } else if (meridiem && meridiem.toUpperCase() === 'AM' && hours === 12) {
+        hours = 0;
+      }
+      
+      startDate.setHours(hours, minutes, 0, 0);
+      endDate.setHours(hours, minutes, 0, 0);
+    }
 
     if (startDate < new Date()) {
       return res.status(400).json({ message: "Start date must be in the future" });
@@ -38,7 +57,7 @@ export const createConference = async (req, res) => {
     const { allowed_roles } = req.body;
     
     const conference = await Event.create({
-      type: "Conference", // ← REQUIRED: Specify event type
+      type: "Conference",
       name,
       location,
       short_description,
@@ -60,6 +79,11 @@ export const createConference = async (req, res) => {
         extra_required_sources
       }
     });
+
+    // 🔔 Notify all users about the new conference
+    notifyUsersNewEvent(conference).catch(err => 
+      console.error('Failed to send conference notifications:', err)
+    );
 
     res.status(201).json({ 
       message: "Conference created successfully", 

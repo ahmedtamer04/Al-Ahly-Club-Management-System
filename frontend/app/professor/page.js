@@ -34,6 +34,7 @@ export default function ProfessorDashboard() {
           <ul className="sidebar-menu">
             <li><Link href="/professor">🏠 Dashboard</Link></li>
             <li><Link href="/professor/events">📅 Events</Link></li>
+            <li><Link href="/professor/favorites">⭐ My Favorites</Link></li>
             <li><Link href="/professor/workshops">🎨 My Workshops</Link></li>
             <li><Link href="/professor/payment-history">💰 Payment History</Link></li>
             <li><Link href="/polls-voting">📊 Vote for Vendors</Link></li>
@@ -88,6 +89,15 @@ export default function ProfessorDashboard() {
               </div>
 
               <div className="feature-card">
+                <div className="feature-icon">⭐</div>
+                <div className="feature-info">
+                  <h3>My Favorites</h3>
+                  <p>View and manage your favorite events. Quick access to events you're interested in.</p>
+                  <Link href="/professor/favorites" className="btn-primary">View Favorites</Link>
+                </div>
+              </div>
+
+              <div className="feature-card">
                 <div className="feature-icon">🎨</div>
                 <div className="feature-info">
                   <h3>Manage Workshops</h3>
@@ -97,7 +107,7 @@ export default function ProfessorDashboard() {
               </div>
 
               <div className="feature-card">
-                <div className="feature-icon">�</div>
+                <div className="feature-icon">💪</div>
                 <div className="feature-info">
                   <h3>Gym Schedule</h3>
                   <p>View monthly gym sessions including Yoga, Pilates, Zumba, Cardio, and more.</p>
@@ -106,7 +116,7 @@ export default function ProfessorDashboard() {
               </div>
 
               <div className="feature-card">
-                <div className="feature-icon">�👤</div>
+                <div className="feature-icon">👤</div>
                 <div className="feature-info">
                   <h3>Profile Settings</h3>
                   <p>Update your profile information and preferences.</p>

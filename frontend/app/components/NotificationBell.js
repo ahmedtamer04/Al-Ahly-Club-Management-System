@@ -12,14 +12,23 @@ export default function NotificationBell() {
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  // Fetch unread count on mount and periodically
+  // ✅ MODIFY THIS useEffect - Fetch unread count on mount and periodically
   useEffect(() => {
     fetchUnreadCount();
     
     // Poll for new notifications every 30 seconds
     const interval = setInterval(fetchUnreadCount, 30000);
     
-    return () => clearInterval(interval);
+    // ✅ ADD THIS: Fetch again after 2 seconds to catch manual trigger notifications
+    const delayedFetch = setTimeout(() => {
+      fetchUnreadCount();
+    }, 2000);
+    
+    // ✅ UPDATE CLEANUP to include delayedFetch
+    return () => {
+      clearInterval(interval);
+      clearTimeout(delayedFetch);
+    };
   }, []);
 
   // Fetch notifications when dropdown opens
@@ -88,17 +97,15 @@ export default function NotificationBell() {
   };
 
   const getNotificationIcon = (type) => {
-    switch (type) {
-      case 'workshop_submitted':
-        return '📝';
-      case 'workshop_accepted':
-        return '✅';
-      case 'workshop_rejected':
-        return '❌';
-      case 'workshop_revision_requested':
-        return '✏️';
-      default:
-        return '📬';
+    switch(type) {
+      case 'workshop_submitted': return '📝';
+      case 'workshop_accepted': return '✅';
+      case 'workshop_rejected': return '❌';
+      case 'workshop_revision_requested': return '✏️';
+      case 'event_added': return '🎉';
+      case 'event_reminder_1day': return '⏰';
+      case 'event_reminder_1hour': return '🚨';
+      default: return '🔔';
     }
   };
 

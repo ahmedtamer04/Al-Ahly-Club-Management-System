@@ -209,6 +209,7 @@ export default function ProfessorGym() {
           <ul className="sidebar-menu">
             <li><Link href="/professor">🏠 Dashboard</Link></li>
             <li><Link href="/professor/events">📅 Events</Link></li>
+            <li><Link href="/professor/favorites">⭐ My Favorites</Link></li>
             <li><Link href="/professor/workshops">🎨 My Workshops</Link></li>
             <li><Link href="/professor/gym">💪 Gym Schedule</Link></li>
             <li><Link href="/professor/profile">👤 Profile</Link></li>

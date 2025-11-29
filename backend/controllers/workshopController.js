@@ -7,7 +7,8 @@ import {
   notifyEventsOfficeWorkshopSubmitted,
   notifyProfessorWorkshopAccepted,
   notifyProfessorWorkshopRejected,
-  notifyProfessorEditsRequested
+  notifyProfessorEditsRequested,
+  notifyUsersNewEvent
 } from "../services/notificationService.js";
 
 export const createWorkshop = async (req, res) => {
@@ -38,15 +39,38 @@ export const createWorkshop = async (req, res) => {
       });
     }
 
+    // ✅ FIX: Combine date and time properly
+    const startDate = new Date(start_date);
+    const endDate = new Date(end_date);
+    const regDeadline = new Date(registration_deadline);
+    
+    // Parse time (format: "HH:MM" or "HH:MM AM/PM")
+    const timeParts = time.match(/(\d{1,2}):(\d{2})\s*(AM|PM)?/i);
+    if (timeParts) {
+      let hours = parseInt(timeParts[1]);
+      const minutes = parseInt(timeParts[2]);
+      const meridiem = timeParts[3];
+      
+      // Convert to 24-hour format if PM
+      if (meridiem && meridiem.toUpperCase() === 'PM' && hours !== 12) {
+        hours += 12;
+      } else if (meridiem && meridiem.toUpperCase() === 'AM' && hours === 12) {
+        hours = 0;
+      }
+      
+      startDate.setHours(hours, minutes, 0, 0);
+      endDate.setHours(hours, minutes, 0, 0);
+    }
+
     const { allowed_roles } = req.body;
     
     const workshop = await Event.create({
-      type: "Workshop", // ← REQUIRED: Specify event type
+      type: "Workshop",
       name,
       location,
       short_description,
-      start_date: new Date(start_date),
-      end_date: new Date(end_date),
+      start_date: startDate,
+      end_date: endDate,
       time,
       created_by: req.user._id,
       status: "upcoming",
@@ -61,8 +85,8 @@ export const createWorkshop = async (req, res) => {
         funding_source,
         extra_resources,
         capacity: Number(capacity),
-        registration_deadline: new Date(registration_deadline),
-        approval_status: "pending" // New workshops need approval
+        registration_deadline: regDeadline,
+        approval_status: "pending"
       }
     });
 
@@ -71,7 +95,6 @@ export const createWorkshop = async (req, res) => {
       await notifyEventsOfficeWorkshopSubmitted(workshop, req.user);
     } catch (notifError) {
       console.error('Failed to send notification:', notifError);
-      // Don't fail the request if notification fails
     }
 
     res.status(201).json({
@@ -248,6 +271,14 @@ export const reviewWorkshop = async (req, res) => {
         await notifyProfessorWorkshopAccepted(workshop, req.user);
       } catch (notifError) {
         console.error('Failed to send acceptance notification:', notifError);
+      }
+
+      // ✅ ADD THIS: Notify all users about the new workshop event
+      try {
+        await notifyUsersNewEvent(workshop, ['Student', 'Staff', 'TA', 'Professor', 'EventsOffice']);
+        console.log('✅ All users notified about new workshop:', workshop.name);
+      } catch (notifError) {
+        console.error('Failed to send new workshop notifications:', notifError);
       }
 
       res.json({
@@ -496,5 +527,59 @@ export const completeWorkshop = async (req, res) => {
   } catch (err) {
     console.error('Error completing workshop:', err);
     res.status(500).json({ message: err.message });
+  }
+};
+
+/**
+ * Accept a workshop (set approval status to accepted)
+ * PATCH /api/workshop/:id/accept
+ */
+export const acceptWorkshop = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const workshop = await Workshop.findById(id);
+    if (!workshop) {
+      return res.status(404).json({ message: "Workshop not found" });
+    }
+
+    if (workshop.approval_status !== "pending") {
+      return res.status(400).json({ 
+        message: `Workshop is already ${workshop.approval_status}` 
+      });
+    }
+
+    workshop.approval_status = "accepted";
+    workshop.reviewed_by = req.user.userId;
+    workshop.reviewed_at = new Date();
+    await workshop.save();
+
+    const event = await Event.findOne({ workshop: workshop._id })
+      .populate('workshop')
+      .populate('created_by', 'first_name last_name email');
+
+    if (event) {
+      event.status = "upcoming";
+      await event.save();
+      
+      // Notify all users about the newly approved workshop
+      const populatedEvent = await Event.findById(event._id)
+        .populate('workshop')
+        .populate('created_by', 'first_name last_name email');
+      
+      notifyUsersNewEvent(populatedEvent).catch(err => 
+        console.error('Failed to send workshop approval notifications:', err)
+      );
+    }
+
+    await notifyProfessorWorkshopAccepted(workshop);
+
+    res.status(200).json({
+      message: "Workshop accepted successfully",
+      workshop
+    });
+  } catch (error) {
+    console.error("Error accepting workshop:", error);
+    res.status(500).json({ message: "Server error", error: error.message });
   }
 };

@@ -23,9 +23,13 @@ export default function StaffEventsPage() {
   const [filterLocation, setFilterLocation] = useState('');
   const [filterDate, setFilterDate] = useState('');
 
+  // NEW: Favorites state
+  const [favorites, setFavorites] = useState(new Set());
+
   useEffect(() => {
     fetchEvents();
     fetchRegisteredEvents();
+    loadFavorites(); // NEW: Load favorites on mount
   }, []);
 
   const fetchEvents = async () => {
@@ -78,6 +82,96 @@ export default function StaffEventsPage() {
     } finally {
       setRegisteredEventsLoading(false);
     }
+  };
+
+  // NEW: Load user's favorites
+  const loadFavorites = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+
+      const response = await fetch('http://localhost:5001/api/favorites', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const favoriteEvents = await response.json();
+        const favoriteIds = new Set(favoriteEvents.map(event => event._id));
+        setFavorites(favoriteIds);
+      }
+    } catch (err) {
+      console.error('Error loading favorites:', err);
+    }
+  };
+
+  // NEW: Toggle favorite status
+  const toggleFavorite = async (event, e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    try {
+      const token = localStorage.getItem('token');
+      const isFav = favorites.has(event._id);
+
+      if (isFav) {
+        // Remove from favorites
+        const response = await fetch(`http://localhost:5001/api/favorites/${event._id}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (response.ok) {
+          const newFavorites = new Set(favorites);
+          newFavorites.delete(event._id);
+          setFavorites(newFavorites);
+          
+          // Show notification
+          const notification = document.createElement('div');
+          notification.textContent = '⭐ Removed from favorites!';
+          notification.style.cssText = 'position: fixed; top: 20px; right: 20px; background: #dc3545; color: white; padding: 1rem 2rem; border-radius: 8px; z-index: 10000; box-shadow: 0 4px 6px rgba(0,0,0,0.1);';
+          document.body.appendChild(notification);
+          setTimeout(() => notification.remove(), 3000);
+        }
+      } else {
+        // Add to favorites
+        const response = await fetch('http://localhost:5001/api/favorites', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ event_id: event._id })
+        });
+
+        if (response.ok) {
+          const newFavorites = new Set(favorites);
+          newFavorites.add(event._id);
+          setFavorites(newFavorites);
+          
+          // Show notification
+          const notification = document.createElement('div');
+          notification.textContent = '⭐ Added to favorites!';
+          notification.style.cssText = 'position: fixed; top: 20px; right: 20px; background: #28a745; color: white; padding: 1rem 2rem; border-radius: 8px; z-index: 10000; box-shadow: 0 4px 6px rgba(0,0,0,0.1);';
+          document.body.appendChild(notification);
+          setTimeout(() => notification.remove(), 3000);
+        }
+      }
+    } catch (err) {
+      console.error('Error toggling favorite:', err);
+      alert('Failed to update favorites. Please try again.');
+    }
+  };
+
+  // NEW: Check if event is in favorites
+  const isFavorite = (eventId) => {
+    return favorites.has(eventId);
   };
 
   // Cancel registration
@@ -232,6 +326,9 @@ export default function StaffEventsPage() {
             </li>
             <li>
               <Link href="/staff/events">📅 Browse Events</Link>
+            </li>
+            <li>
+              <Link href="/staff/favorites">⭐ My Favorites</Link>
             </li>
             <li>
               <Link href="/staff/gym/schedule">💪 Gym Schedule</Link>
@@ -753,10 +850,28 @@ export default function StaffEventsPage() {
                     <p className="event-date">
                       {new Date(event.start_date).toLocaleDateString()} at {event.time}
                     </p>
-                    <div className="event-actions">
-                      <Link href={`/staff/events/${event._id}`}>
+                    <div className="event-actions" style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                      <Link href={`/staff/events/${event._id}`} style={{ flex: 1 }}>
                         View Details
                       </Link>
+                      {/* NEW: Favorite button */}
+                      <button 
+                        onClick={(e) => toggleFavorite(event, e)}
+                        style={{
+                          padding: '0.5rem 1rem',
+                          backgroundColor: isFavorite(event._id) ? '#ffd700' : '#fff',
+                          color: isFavorite(event._id) ? '#000' : '#666',
+                          border: '2px solid #ffd700',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          fontSize: '1.2rem',
+                          transition: 'all 0.3s ease',
+                          minWidth: '50px'
+                        }}
+                        title={isFavorite(event._id) ? 'Remove from favorites' : 'Add to favorites'}
+                      >
+                        {isFavorite(event._id) ? '⭐' : '☆'}
+                      </button>
                     </div>
                   </article>
                 ))

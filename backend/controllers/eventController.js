@@ -2,6 +2,7 @@ import Event from "../models/Events.js";
 import Registration from "../models/Registration.js";
 import VendorApplication from "../models/VendorApplication.js";
 import Comment from "../models/Comment.js";
+import { notifyUsersNewEvent } from "../services/notificationService.js";
 import Rating from "../models/Rating.js";
 
 // Helper function to check if user role is allowed for an event
@@ -279,6 +280,264 @@ export const getEventComments = async (req, res) => {
   }
 };
 
+/* -------------------------- POST /events/create -------------------------- */
+export const createEvent = async (req, res) => {
+  try {
+    // Extract event data from the request body
+    const {
+      name,
+      type,
+      location,
+      start_date,
+      end_date,
+      description,
+      status,
+      created_by,
+      workshop, // Assuming workshop data is nested under this field
+      bazaar, // Assuming bazaar data is nested under this field
+      booth // Assuming booth data is nested under this field
+    } = req.body;
+
+    // Create the event
+    const newEvent = await Event.create({
+      name,
+      type,
+      location,
+      start_date,
+      end_date,
+      description,
+      status,
+      created_by,
+      workshop,
+      bazaar,
+      booth
+    });
+
+    // Notify all users about the new event (async, non-blocking)
+    notifyUsersNewEvent(newEvent).catch(err => 
+      console.error('Failed to send event notifications:', err)
+    );
+
+    res.status(201).json({
+      message: "Event created successfully",
+      event: newEvent
+    });
+  } catch (error) {
+    console.error('Error creating event:', error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+/* -------------------------- PUT /events/update/:id -------------------------- */
+export const updateEvent = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updateData = req.body;
+
+    // Find the event by ID and update it
+    const updatedEvent = await Event.findByIdAndUpdate(id, updateData, { new: true });
+    
+    if (!updatedEvent) {
+      return res.status(404).json({ message: "Event not found" });
+    }
+
+    res.status(200).json({
+      message: "Event updated successfully",
+      event: updatedEvent
+    });
+  } catch (error) {
+    console.error('Error updating event:', error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+/* -------------------------- PATCH /events/toggle-status/:id -------------------------- */
+export const toggleEventStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Find the event by ID
+    const event = await Event.findById(id);
+    
+    if (!event) {
+      return res.status(404).json({ message: "Event not found" });
+    }
+
+    // Toggle the status
+    event.status = event.status === "active" ? "inactive" : "active";
+
+    // Save the updated event
+    await event.save();
+
+    res.status(200).json({
+      message: "Event status updated successfully",
+      event
+    });
+  } catch (error) {
+    console.error('Error toggling event status:', error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+/* -------------------------- GET /events/stats -------------------------- */
+export const getEventStats = async (req, res) => {
+  try {
+    // Total number of events
+    const totalEvents = await Event.countDocuments();
+
+    // Upcoming events
+    const upcomingEvents = await Event.countDocuments({ 
+      start_date: { $gt: new Date() } 
+    });
+
+    // Past events
+    const pastEvents = await Event.countDocuments({ 
+      end_date: { $lt: new Date() } 
+    });
+
+    // Events by status
+    const eventsByStatus = await Event.aggregate([
+      {
+        $group: {
+          _id: "$status",
+          count: { $sum: 1 }
+        }
+      }
+    ]);
+
+    res.status(200).json({
+      totalEvents,
+      upcomingEvents,
+      pastEvents,
+      eventsByStatus
+    });
+  } catch (error) {
+    console.error('Error fetching event stats:', error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+/* -------------------------- GET /events/calendar-data -------------------------- */
+export const getEventsForCalendar = async (req, res) => {
+  try {
+    const events = await Event.find({
+      status: "upcoming",
+      start_date: { $gt: new Date() }
+    });
+
+    // Format events for calendar
+    const calendarEvents = events.map(event => ({
+      id: event._id,
+      title: event.name,
+      start: event.start_date,
+      end: event.end_date,
+      allDay: true,
+      description: event.description,
+      location: event.location,
+      type: event.type
+    }));
+
+    res.status(200).json(calendarEvents);
+  } catch (error) {
+    console.error('Error fetching events for calendar:', error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+/* -------------------------- GET /events/export/csv -------------------------- */
+export const exportEventsToCSV = async (req, res) => {
+  try {
+    const events = await Event.find({}).lean();
+
+    // Convert JSON to CSV
+    const csv = json2csv(events);
+
+    // Send CSV file
+    res.header("Content-Type", "text/csv");
+    res.attachment("events.csv");
+    res.send(csv);
+  } catch (error) {
+    console.error('Error exporting events to CSV:', error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+/* -------------------------- GET /events/import/template -------------------------- */
+export const getEventImportTemplate = (req, res) => {
+  try {
+    // Send the Excel template file for event import
+    res.download("path/to/your/event_import_template.xlsx");
+  } catch (error) {
+    console.error('Error sending event import template:', error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+/* -------------------------- POST /events/import -------------------------- */
+export const importEventsFromExcel = async (req, res) => {
+  try {
+    const file = req.file;
+
+    if (!file) {
+      return res.status(400).json({ message: "No file uploaded" });
+    }
+
+    // Read and parse the Excel file
+    const events = await readXlsxFile(file.path);
+
+    // Skip the header row and process each event row
+    for (let i = 1; i < events.length; i++) {
+      const row = events[i];
+
+      // Map Excel columns to event fields
+      const newEvent = {
+        name: row[0],
+        type: row[1],
+        location: row[2],
+        start_date: row[3],
+        end_date: row[4],
+        description: row[5],
+        status: row[6],
+        created_by: row[7],
+        // Add other fields as necessary
+      };
+
+      // Create the event
+      await Event.create(newEvent);
+    }
+
+    res.status(201).json({ message: "Events imported successfully" });
+  } catch (error) {
+    console.error('Error importing events from Excel:', error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+/* -------------------------- GET /events/user/:userId -------------------------- */
+export const getUserEvents = async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    // Find events created by the user
+    const createdEvents = await Event.find({ created_by: userId })
+      .populate('bazaar.vendors_participating.vendor_id', 'company_name email')
+      .populate('booth.vendors.vendor_id', 'company_name email')
+      .sort({ start_date: -1 });
+
+    // Find events registered by the user
+    const registeredEvents = await Registration.find({ user_id: userId, status: "registered" })
+      .populate('event_id')
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({
+      createdEvents,
+      registeredEvents
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Server error" });
+  }
+};
 /* -------------------------- PATCH /events/archive/:eventId -------------------------- */
 export const archiveEvent = async (req, res) => {
   try {
