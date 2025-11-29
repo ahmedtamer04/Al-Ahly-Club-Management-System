@@ -481,6 +481,41 @@ export const eventAPI = {
   // Auth: requireStudentOrAbove
   // Returns all comments for a specific event
   getComments: (eventId) => api.get(`/events/${eventId}/comments`),
+  
+  // POST /api/events/:eventId/comments
+  // Auth: requireStudentOrAbove (must have attended)
+  // Body: { body: string }
+  createComment: (eventId, commentData) => api.post(`/events/${eventId}/comments`, commentData),
+  
+  // GET /api/events/:eventId/my-comment
+  // Auth: requireStudentOrAbove
+  getMyComment: (eventId) => api.get(`/events/${eventId}/my-comment`),
+  
+  // PUT /api/events/:eventId/comments/:commentId
+  // Auth: requireStudentOrAbove (must be author)
+  // Body: { body: string }
+  updateComment: (eventId, commentId, commentData) => api.put(`/events/${eventId}/comments/${commentId}`, commentData),
+  
+  // DELETE /api/events/:eventId/comments/:commentId
+  // Auth: requireStudentOrAbove (must be author)
+  deleteComment: (eventId, commentId) => api.delete(`/events/${eventId}/comments/${commentId}`),
+  
+  // POST /api/events/:eventId/rate
+  // Auth: requireStudentOrAbove (must have attended)
+  // Body: { rating: number (1-5), review?: string }
+  rateEvent: (eventId, ratingData) => api.post(`/events/${eventId}/rate`, ratingData),
+  
+  // GET /api/events/:eventId/ratings
+  // Auth: requireStudentOrAbove
+  getRatings: (eventId) => api.get(`/events/${eventId}/ratings`),
+  
+  // GET /api/events/:eventId/my-rating
+  // Auth: requireStudentOrAbove
+  getMyRating: (eventId) => api.get(`/events/${eventId}/my-rating`),
+  
+  // DELETE /api/events/:eventId/rate
+  // Auth: requireStudentOrAbove (must be author)
+  deleteRating: (eventId) => api.delete(`/events/${eventId}/rate`),
 };
 
 // ================================

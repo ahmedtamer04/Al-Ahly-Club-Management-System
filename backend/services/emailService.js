@@ -1031,3 +1031,131 @@ export const sendVendorRejectionEmail = async (email, rejectionDetails) => {
     return false;
   }
 };
+
+// Send comment deletion warning email
+export const sendCommentDeletionWarning = async (email, warningDetails) => {
+  const {
+    userName,
+    eventName,
+    commentBody,
+    deletedBy,
+    deletionDate,
+    reason
+  } = warningDetails;
+
+  const formattedDate = new Date(deletionDate).toLocaleString('en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+
+  const mailOptions = {
+    from: process.env.EMAIL_USER,
+    to: email,
+    subject: '⚠️ Warning: Your Comment Has Been Removed',
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8f9fa;">
+        <div style="background-color: white; border-radius: 10px; padding: 30px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+          <div style="text-align: center; margin-bottom: 30px;">
+            <h1 style="color: #d32f2f; margin: 0;">⚠️ Comment Removal Notice</h1>
+            <p style="color: #7f8c8d; margin-top: 10px;">GUC Al-Ahly Club</p>
+          </div>
+          
+          <div style="background-color: #ffebee; padding: 20px; border-left: 4px solid #d32f2f; border-radius: 8px; margin-bottom: 30px;">
+            <h2 style="color: #c62828; margin: 0 0 10px 0; font-size: 18px;">Warning: Inappropriate Content</h2>
+            <p style="color: #b71c1c; margin: 0; font-size: 14px;">Your comment has been removed by our moderation team.</p>
+          </div>
+          
+          <div style="margin-bottom: 30px;">
+            <p style="color: #2c3e50; line-height: 1.6;">Dear ${userName},</p>
+            <p style="color: #2c3e50; line-height: 1.6;">
+              We are writing to inform you that one of your comments on an event has been removed for violating our community guidelines.
+            </p>
+          </div>
+
+          <div style="margin-bottom: 30px;">
+            <h3 style="color: #2c3e50; border-bottom: 2px solid #d32f2f; padding-bottom: 10px; margin-bottom: 20px;">Removal Details</h3>
+            
+            <table style="width: 100%; border-collapse: collapse;">
+              <tr style="background-color: #f8f9fa;">
+                <td style="padding: 12px 10px; color: #7f8c8d; font-weight: 600; width: 30%;">Event:</td>
+                <td style="padding: 12px 10px; color: #2c3e50;">${eventName}</td>
+              </tr>
+              <tr>
+                <td style="padding: 12px 0; color: #7f8c8d; font-weight: 600;">Removed By:</td>
+                <td style="padding: 12px 0; color: #2c3e50;">${deletedBy}</td>
+              </tr>
+              <tr style="background-color: #f8f9fa;">
+                <td style="padding: 12px 10px; color: #7f8c8d; font-weight: 600;">Removal Date:</td>
+                <td style="padding: 12px 10px; color: #2c3e50;">${formattedDate}</td>
+              </tr>
+              ${reason ? `
+              <tr>
+                <td style="padding: 12px 0; color: #7f8c8d; font-weight: 600; vertical-align: top;">Reason:</td>
+                <td style="padding: 12px 0; color: #2c3e50;">${reason}</td>
+              </tr>
+              ` : ''}
+            </table>
+          </div>
+
+          <div style="background-color: #fff3e0; padding: 20px; border-radius: 8px; margin-bottom: 30px;">
+            <h4 style="color: #e65100; margin: 0 0 10px 0; font-size: 16px;">Your Removed Comment:</h4>
+            <div style="background-color: white; padding: 15px; border-radius: 5px; margin-top: 10px;">
+              <p style="color: #5d4037; margin: 0; font-style: italic; line-height: 1.6;">
+                "${commentBody.length > 200 ? commentBody.substring(0, 200) + '...' : commentBody}"
+              </p>
+            </div>
+          </div>
+          
+          <div style="background-color: #e3f2fd; padding: 20px; border-radius: 8px; margin-bottom: 30px;">
+            <h4 style="color: #1565c0; margin: 0 0 15px 0; font-size: 16px;">📌 Community Guidelines Reminder:</h4>
+            <ul style="color: #0d47a1; margin: 0; padding-left: 20px; line-height: 1.8;">
+              <li>Be respectful and courteous to all members</li>
+              <li>Avoid offensive, discriminatory, or inappropriate language</li>
+              <li>Keep comments relevant and constructive</li>
+              <li>Do not spam or post misleading information</li>
+              <li>Respect privacy and confidentiality</li>
+            </ul>
+          </div>
+
+          <div style="background-color: #ffcdd2; padding: 15px; border-radius: 8px; margin-bottom: 30px;">
+            <p style="color: #c62828; margin: 0; font-size: 14px;">
+              <strong>⚠️ Important:</strong> Repeated violations of our community guidelines may result in account suspension or termination. Please ensure all future comments comply with our standards.
+            </p>
+          </div>
+          
+          <div style="text-align: center; margin-top: 30px;">
+            <a href="${process.env.FRONTEND_URL || 'http://localhost:3000'}" 
+               style="background-color: #3498db; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">
+              Return to Dashboard
+            </a>
+          </div>
+          
+          <hr style="margin: 30px 0; border: none; border-top: 1px solid #ecf0f1;">
+          
+          <p style="color: #95a5a6; font-size: 12px; text-align: center; margin: 0;">
+            This is an automated notification from GUC Al-Ahly Club.<br>
+            If you believe this removal was made in error, please contact our support team.<br>
+            <br>
+            © ${new Date().getFullYear()} GUC Al-Ahly Club. All rights reserved.
+          </p>
+        </div>
+      </div>
+    `
+  };
+
+  try {
+    const emailTransporter = getTransporter();
+    const info = await emailTransporter.sendMail(mailOptions);
+    console.log(`✅ Comment deletion warning sent to ${email}`);
+    console.log(`Message ID: ${info.messageId}`);
+    return true;
+  } catch (error) {
+    console.error('❌ Error sending comment deletion warning:', error);
+    // Don't throw error - deletion was successful, just log email failure
+    return false;
+  }
+};
