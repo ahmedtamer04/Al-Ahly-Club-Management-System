@@ -273,6 +273,14 @@ export const reviewWorkshop = async (req, res) => {
         console.error('Failed to send acceptance notification:', notifError);
       }
 
+      // ✅ ADD THIS: Notify all users about the new workshop event
+      try {
+        await notifyUsersNewEvent(workshop, ['Student', 'Staff', 'TA', 'Professor', 'EventsOffice']);
+        console.log('✅ All users notified about new workshop:', workshop.name);
+      } catch (notifError) {
+        console.error('Failed to send new workshop notifications:', notifError);
+      }
+
       res.json({
         message: "Workshop accepted and published successfully",
         workshop

@@ -90,7 +90,7 @@ export default function StaffEventsPage() {
       const token = localStorage.getItem('token');
       if (!token) return;
 
-      const response = await fetch('http://localhost:5000/api/favorites', {
+      const response = await fetch('http://localhost:5001/api/favorites', {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -119,7 +119,7 @@ export default function StaffEventsPage() {
 
       if (isFav) {
         // Remove from favorites
-        const response = await fetch(`http://localhost:5000/api/favorites/${event._id}`, {
+        const response = await fetch(`http://localhost:5001/api/favorites/${event._id}`, {
           method: 'DELETE',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -141,7 +141,7 @@ export default function StaffEventsPage() {
         }
       } else {
         // Add to favorites
-        const response = await fetch('http://localhost:5000/api/favorites', {
+        const response = await fetch('http://localhost:5001/api/favorites', {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`,
