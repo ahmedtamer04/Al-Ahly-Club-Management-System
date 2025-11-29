@@ -780,6 +780,13 @@ export default function ProfessorEvents() {
 
   // Handle canceling a registration
   const handleCancelRegistration = async (eventId) => {
+    // Check if cancellation deadline has passed
+    const event = events.find(e => (e._id || e.id) === eventId);
+    if (event && !canCancelRegistration(event)) {
+      alert(`Cannot cancel registration within 2 weeks of event start. Event starts in ${getDaysUntilEvent(event)} days.`);
+      return;
+    }
+
     if (!window.confirm('Are you sure you want to cancel your registration for this event?')) {
       return;
     }
@@ -845,6 +852,8 @@ export default function ProfessorEvents() {
             <li><Link href="/professor/favorites">⭐ My Favorites</Link></li>
             <li><Link href="/professor/workshops">🎨 My Workshops</Link></li>
             <li><Link href="/professor/payment-history">💰 Payment History</Link></li>
+            <li><Link href="/polls-voting">📊 Vote for Vendors</Link></li>
+            <li><Link href="/loyalty-program">🎁 Loyalty Program</Link></li>
             <li><Link href="/professor/gym">💪 Gym Schedule</Link></li>
             <li><Link href="/professor/profile">👤 Profile</Link></li>
           </ul>

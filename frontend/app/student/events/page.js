@@ -16,6 +16,8 @@ export default function BrowseEventsPage() {
   const [sortOrder, setSortOrder] = useState('desc');
   const [registering, setRegistering] = useState(null);
   const [favorites, setFavorites] = useState(new Set()); // NEW: Track favorites
+  const [registeredEventIds, setRegisteredEventIds] = useState(new Set()); // Track registered events
+  const [selectedEvent, setSelectedEvent] = useState(null); // Track selected event
   
   // Payment modal states
   const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -32,6 +34,7 @@ export default function BrowseEventsPage() {
   useEffect(() => {
     fetchEvents();
     loadFavorites(); // NEW: Load favorites on mount
+    loadRegistrationsFromDB(); // Load registered events from database
   }, []);
 
   const fetchEvents = async () => {
@@ -50,6 +53,25 @@ export default function BrowseEventsPage() {
       setEvents([]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Load registered events from database
+  const loadRegistrationsFromDB = async () => {
+    try {
+      const user = getUser();
+      if (!user) return;
+
+      const response = await registrationAPI.getMyRegistrations(user._id);
+      const registeredIds = new Set();
+      if (response.upcoming) {
+        response.upcoming.forEach(reg => {
+          registeredIds.add(reg.event_id._id || reg.event_id);
+        });
+      }
+      setRegisteredEventIds(registeredIds);
+    } catch (err) {
+      console.error('Error loading registrations:', err);
     }
   };
 
@@ -373,6 +395,75 @@ export default function BrowseEventsPage() {
     setShowPaymentModal(false);
     setPaymentData(null);
     await fetchEvents();
+  };
+
+  // Helper function to check if event is already registered
+  const isAlreadyRegistered = (event) => {
+    return registeredEventIds.has(event._id || event.id);
+  };
+
+  // Helper function to check if registration can be canceled (at least 2 weeks before)
+  const canCancelRegistration = (event) => {
+    if (!event || !event.start_date) return false;
+    const eventStart = new Date(event.start_date);
+    const now = new Date();
+    const daysUntilEvent = (eventStart - now) / (1000 * 60 * 60 * 24);
+    return daysUntilEvent >= 14; // 14 days = 2 weeks
+  };
+
+  // Helper function to get days until event
+  const getDaysUntilEvent = (event) => {
+    if (!event || !event.start_date) return 0;
+    const eventStart = new Date(event.start_date);
+    const now = new Date();
+    const daysUntilEvent = Math.ceil((eventStart - now) / (1000 * 60 * 60 * 24));
+    return Math.max(0, daysUntilEvent);
+  };
+
+  // Handle cancel registration
+  const handleCancelRegistration = async (eventId) => {
+    // Check if cancellation deadline has passed
+    const event = events.find(e => (e._id || e.id) === eventId);
+    if (event && !canCancelRegistration(event)) {
+      alert(`Cannot cancel registration within 2 weeks of event start. Event starts in ${getDaysUntilEvent(event)} days.`);
+      return;
+    }
+
+    if (!window.confirm('Are you sure you want to cancel your registration for this event?')) {
+      return;
+    }
+
+    try {
+      // Find the registration ID
+      const user = getUser();
+      if (!user) return;
+
+      const response = await registrationAPI.getMyRegistrations(user._id);
+      const registration = response.upcoming?.find(reg => 
+        (reg.event_id._id || reg.event_id) === eventId
+      );
+
+      if (!registration) {
+        alert('Registration not found');
+        return;
+      }
+
+      await registrationAPI.cancel(registration._id);
+      
+      // Update local state
+      const updatedEventIds = new Set(registeredEventIds);
+      updatedEventIds.delete(eventId);
+      setRegisteredEventIds(updatedEventIds);
+      
+      // Refresh events
+      await loadRegistrationsFromDB();
+      await fetchEvents();
+      
+      alert('Registration canceled successfully!');
+    } catch (err) {
+      console.error('Error canceling registration:', err);
+      alert('Failed to cancel registration. Please try again.');
+    }
   };
 
   return (
@@ -819,6 +910,72 @@ export default function BrowseEventsPage() {
                           {isFavorite(event._id) ? '⭐' : '☆'}
                         </button>
                       </div>
+
+                      {/* Already Registered Message */}
+                      {isAlreadyRegistered(event) && (
+                        <div style={{
+                          marginTop: '24px',
+                          padding: '20px',
+                          background: canCancelRegistration(event) 
+                            ? 'linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%)'
+                            : 'linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%)',
+                          borderRadius: '8px',
+                          border: `2px solid ${canCancelRegistration(event) ? '#28a745' : '#f5c6cb'}`,
+                          textAlign: 'center'
+                        }}>
+                          <h3 style={{ 
+                            margin: '0 0 12px 0',
+                            fontSize: '18px',
+                            color: canCancelRegistration(event) ? '#155724' : '#721c24',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '10px'
+                          }}>
+                            ✓ Already Registered
+                          </h3>
+                          <p style={{ margin: '0 0 16px 0', color: canCancelRegistration(event) ? '#155724' : '#721c24', fontWeight: '500' }}>
+                            You have successfully registered for this {event.type?.toLowerCase()}!
+                          </p>
+                          {canCancelRegistration(event) ? (
+                            <>
+                              <p style={{ margin: '0 0 12px 0', fontSize: '13px', color: canCancelRegistration(event) ? '#155724' : '#721c24' }}>
+                                ⏰ You can cancel up to 2 weeks before the event starts
+                              </p>
+                              <button
+                                onClick={() => handleCancelRegistration(event._id || event.id)}
+                                style={{
+                                  padding: '10px 24px',
+                                  fontSize: '14px',
+                                  fontWeight: '600',
+                                  border: 'none',
+                                  borderRadius: '6px',
+                                  cursor: 'pointer',
+                                  background: '#dc3545',
+                                  color: 'white',
+                                  transition: 'all 0.3s',
+                                  marginTop: '10px'
+                                }}
+                                onMouseOver={(e) => e.target.style.background = '#c82333'}
+                                onMouseOut={(e) => e.target.style.background = '#dc3545'}
+                              >
+                                ✕ Cancel Registration
+                              </button>
+                            </>
+                          ) : (
+                            <div style={{
+                              padding: '12px 16px',
+                              background: 'rgba(0,0,0,0.1)',
+                              borderRadius: '6px',
+                              marginTop: '12px',
+                              fontSize: '13px',
+                              color: '#721c24'
+                            }}>
+                              ⚠️ Cancellation deadline has passed (less than 2 weeks before event)
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))
