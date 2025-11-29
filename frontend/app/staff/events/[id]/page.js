@@ -1,8 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { eventAPI } from '@/utils/api';
+import { eventAPI, getUser, registrationAPI } from '@/utils/api';
+import PaymentModal from '@/app/components/PaymentModal';
 import RatingStars from '@/app/components/RatingStars';
 import RatingForm from '@/app/components/RatingForm';
 import RatingsList from '@/app/components/RatingsList';
@@ -19,6 +21,11 @@ export default function StaffEventDetails({ params }) {
   const [activeTab, setActiveTab] = useState('details');
   const [showRatingForm, setShowRatingForm] = useState(false);
   const [showCommentForm, setShowCommentForm] = useState(false);
+  const [showRegistrationModal, setShowRegistrationModal] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [registrationForm, setRegistrationForm] = useState({ name: '', email: '', personalId: '' });
+  const [registering, setRegistering] = useState(false);
+  const [paymentData, setPaymentData] = useState(null);
 
   useEffect(() => {
     const loadEvent = async () => {
