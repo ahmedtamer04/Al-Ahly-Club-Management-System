@@ -94,7 +94,12 @@ export default function MyRegistrationsPage() {
       const response = await registrationAPI.cancel(registrationId);
       console.log('Cancel response:', response);
       
-      alert('Registration cancelled successfully!');
+      // Show refund information if available
+      let alertMessage = response.data?.message || 'Registration cancelled successfully!';
+      if (response.data?.refund) {
+        alertMessage = `Registration cancelled successfully!\n\nRefund: $${response.data.refund.amount} has been added to your wallet.`;
+      }
+      alert(alertMessage);
       
       // Refresh the registrations list
       fetchRegistrations();
