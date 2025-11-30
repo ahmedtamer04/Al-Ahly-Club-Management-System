@@ -342,47 +342,6 @@ export default function StaffEventsPage() {
     return Math.max(0, daysUntilEvent);
   };
 
-  // Handle cancel registration
-  const handleCancelRegistration = async (eventId) => {
-    // Check if cancellation deadline has passed
-    const event = events.find(e => (e._id || e.id) === eventId);
-    if (event && !canCancelRegistration(event)) {
-      alert(`Cannot cancel registration within 2 weeks of event start. Event starts in ${getDaysUntilEvent(event)} days.`);
-      return;
-    }
-
-    if (!window.confirm('Are you sure you want to cancel your registration for this event?')) {
-      return;
-    }
-
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:5001/api/registration/${eventId}/cancel`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (response.ok) {
-        // Update local state
-        const updatedEventIds = new Set(registeredEventIds);
-        updatedEventIds.delete(eventId);
-        setRegisteredEventIds(updatedEventIds);
-        
-        // Refresh events
-        await fetchRegisteredEvents();
-        alert('Registration canceled successfully!');
-      } else {
-        alert('Failed to cancel registration');
-      }
-    } catch (err) {
-      console.error('Error canceling registration:', err);
-      alert('Failed to cancel registration. Please try again.');
-    }
-  };
-
   return (
     <div className="dashboard">
       <nav className="dashboard-nav">
