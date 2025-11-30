@@ -193,7 +193,7 @@ export default function ProfessorEvents() {
   };
 
   // Function to fetch full details of registered events
-  const fetchRegisteredEvents = async (eventIds) => {
+  const fetchRegisteredEvents = async (eventIds, allRegistrations = []) => {
     if (!eventIds || eventIds.size === 0) {
       setRegisteredEvents([]);
       return;
@@ -201,9 +201,22 @@ export default function ProfessorEvents() {
     
     setRegisteredEventsLoading(true);
     try {
-      // Fetch all events and filter to registered ones
-      const allEvents = await eventAPI.getUpcoming();
-      const registered = allEvents.filter(event => 
+      // If we have registration data with populated events, use it directly
+      if (allRegistrations.length > 0) {
+        const eventsFromRegs = allRegistrations
+          .filter(reg => reg.event_id && (typeof reg.event_id === 'object'))
+          .map(reg => reg.event_id);
+        
+        if (eventsFromRegs.length > 0) {
+          setRegisteredEvents(eventsFromRegs);
+          setRegisteredEventsLoading(false);
+          return;
+        }
+      }
+      
+      // Fetch all events (both upcoming and past) and filter to registered ones
+      const upcomingEvents = await eventAPI.getUpcoming();
+      const registered = upcomingEvents.filter(event => 
         eventIds.has(event._id || event.id)
       );
       
@@ -354,21 +367,37 @@ export default function ProfessorEvents() {
       const loadRegistrationsFromDB = async () => {
         try {
           const response = await registrationAPI.getMyRegistrations(user._id);
-          if (response && response.upcoming) {
-            // Extract event IDs from registrations and create mapping
+          if (response) {
+            // Extract event IDs from both upcoming and past registrations and create mapping
             const eventIds = new Set();
             const regMap = {};
-            response.upcoming.forEach(reg => {
-              const eventId = reg.event_id._id || reg.event_id;
-              eventIds.add(eventId);
-              regMap[eventId] = reg._id; // Store registration ID for cancellation
-            });
+            const allRegs = [];
+            
+            // Process upcoming registrations
+            if (response.upcoming) {
+              response.upcoming.forEach(reg => {
+                const eventId = reg.event_id._id || reg.event_id;
+                eventIds.add(eventId);
+                regMap[eventId] = reg._id; // Store registration ID for cancellation
+                allRegs.push(reg);
+              });
+            }
+            
+            // Process past registrations
+            if (response.past) {
+              response.past.forEach(reg => {
+                const eventId = reg.event_id._id || reg.event_id;
+                eventIds.add(eventId);
+                regMap[eventId] = reg._id; // Store registration ID for cancellation
+                allRegs.push(reg);
+              });
+            }
             
             setRegisteredEventIds(eventIds);
             setRegistrationMap(regMap);
             
-            // Fetch full details of registered events
-            fetchRegisteredEvents(eventIds);
+            // Fetch full details of registered events, passing registration data
+            fetchRegisteredEvents(eventIds, allRegs);
           }
         } catch (error) {
           console.error('Error loading registrations from database:', error);
@@ -702,6 +731,12 @@ export default function ProfessorEvents() {
       const updatedRegistrations = new Set([...registeredEventIds, eventId]);
       setRegisteredEventIds(updatedRegistrations);
       
+      // Update registration map with the new registration ID
+      setRegistrationMap({
+        ...registrationMap,
+        [eventId]: response.registration._id
+      });
+      
       // Check if event requires payment
       const eventPrice = selectedEvent.workshop?.price || selectedEvent.trip?.price || 0;
       
@@ -744,16 +779,23 @@ export default function ProfessorEvents() {
   const handlePaymentSuccess = async (payment) => {
     console.log('Payment successful:', payment);
     setShowPaymentModal(false);
-    setPaymentData(null);
     
-    // Add event to registered set
-    const eventId = selectedEvent._id || selectedEvent.id;
+    // Add event to registered set and update registration map
+    const eventId = paymentData.eventId;
+    const registrationId = paymentData.registrationId;
     const updatedRegistrations = new Set([...registeredEventIds, eventId]);
     setRegisteredEventIds(updatedRegistrations);
+    
+    // Update registration map
+    setRegistrationMap({
+      ...registrationMap,
+      [eventId]: registrationId
+    });
     
     // Refresh registered events list from database
     fetchRegisteredEvents(updatedRegistrations);
     
+    setPaymentData(null);
     alert('Payment completed! Registration confirmed.');
   };
 
@@ -781,7 +823,9 @@ export default function ProfessorEvents() {
   // Handle canceling a registration
   const handleCancelRegistration = async (eventId) => {
     // Check if cancellation deadline has passed
-    const event = events.find(e => (e._id || e.id) === eventId);
+    const event = events.find(e => (e._id || e.id) === eventId) || 
+                  registeredEvents.find(e => (e._id || e.id) === eventId);
+    
     if (event && !canCancelRegistration(event)) {
       alert(`Cannot cancel registration within 2 weeks of event start. Event starts in ${getDaysUntilEvent(event)} days.`);
       return;
@@ -792,27 +836,27 @@ export default function ProfessorEvents() {
     }
 
     try {
-      // Find the registration ID - we need to fetch from the database
-      const user = getUser();
-      if (!user) return;
-
-      // Try to get the registration ID by fetching registrations
-      const response = await registrationAPI.getMyRegistrations(user._id);
-      const registration = response.upcoming?.find(reg => 
-        (reg.event_id._id || reg.event_id) === eventId
-      );
-
-      if (!registration) {
-        alert('Registration not found');
+      // Get the registration ID from the registration map
+      const registrationId = registrationMap[eventId];
+      
+      if (!registrationId) {
+        console.error('Registration ID not found in map for event:', eventId);
+        alert('Registration not found. Please refresh the page and try again.');
         return;
       }
 
-      await registrationAPI.cancel(registration._id);
+      console.log('Cancelling registration:', registrationId, 'for event:', eventId);
+      await registrationAPI.cancel(registrationId);
       
       // Update local state
       const updatedEventIds = new Set(registeredEventIds);
       updatedEventIds.delete(eventId);
       setRegisteredEventIds(updatedEventIds);
+      
+      // Update registration map
+      const updatedRegMap = { ...registrationMap };
+      delete updatedRegMap[eventId];
+      setRegistrationMap(updatedRegMap);
       
       // Refresh registered events list
       fetchRegisteredEvents(updatedEventIds);

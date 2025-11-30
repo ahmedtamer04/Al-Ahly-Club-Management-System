@@ -95,9 +95,9 @@ export const registerForEvent = async (req, res) => {
     });
 
     if (existingRegistration) {
-      // If existing registration is pending (unpaid), delete it and allow re-registration
-      if (existingRegistration.payment_status === 'pending') {
-        console.log('Found pending registration, deleting it to allow re-registration');
+      // If existing registration is pending (unpaid) or canceled, delete it and allow re-registration
+      if (existingRegistration.payment_status === 'pending' || existingRegistration.status === 'canceled') {
+        console.log(`Found ${existingRegistration.status || existingRegistration.payment_status} registration, deleting it to allow re-registration`);
         await Registration.findByIdAndDelete(existingRegistration._id);
       } else {
         // If already paid or free, they're truly registered
