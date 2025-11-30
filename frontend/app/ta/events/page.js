@@ -25,6 +25,7 @@ export default function TAEventsPage() {
   });
   const [registering, setRegistering] = useState(false);
   const [registeredEventIds, setRegisteredEventIds] = useState(new Set()); // Track registered event IDs
+  const [registrationMap, setRegistrationMap] = useState({}); // Map of eventId -> registrationId
 
   // Payment modal states
   const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -87,6 +88,7 @@ export default function TAEventsPage() {
       
       if (!token || !user._id) {
         setRegisteredEventIds(new Set());
+        setRegistrationMap({});
         return;
       }
 
@@ -101,16 +103,23 @@ export default function TAEventsPage() {
       if (response.ok) {
         const data = await response.json();
         const registeredIds = new Set();
+        const regMap = {};
+        
         if (data.upcoming) {
-          data.upcoming.forEach(event => {
-            registeredIds.add(event._id || event.id);
+          data.upcoming.forEach(reg => {
+            const eventId = reg.event_id?._id || reg.event_id;
+            registeredIds.add(eventId);
+            regMap[eventId] = reg._id; // Store registration ID for cancellation
           });
         }
+        
         setRegisteredEventIds(registeredIds);
+        setRegistrationMap(regMap);
       }
     } catch (err) {
       console.error('Error loading registrations:', err);
       setRegisteredEventIds(new Set());
+      setRegistrationMap({});
     }
   };
 
@@ -484,9 +493,18 @@ export default function TAEventsPage() {
     }
 
     try {
+      // Get the registration ID from the registration map
+      const registrationId = registrationMap[eventId];
+      
+      if (!registrationId) {
+        console.error('Registration ID not found in map for event:', eventId);
+        alert('Registration not found. Please refresh the page and try again.');
+        return;
+      }
+
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:5001/api/registration/${eventId}/cancel`, {
-        method: 'POST',
+      const response = await fetch(`http://localhost:5001/api/registration/cancel/${registrationId}`, {
+        method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -494,16 +512,30 @@ export default function TAEventsPage() {
       });
 
       if (response.ok) {
+        const data = await response.json();
+        
         // Update local state
         const updatedEventIds = new Set(registeredEventIds);
         updatedEventIds.delete(eventId);
         setRegisteredEventIds(updatedEventIds);
         
+        // Update registration map
+        const updatedRegMap = { ...registrationMap };
+        delete updatedRegMap[eventId];
+        setRegistrationMap(updatedRegMap);
+        
         // Refresh registrations
         await loadRegistrationsFromDB();
-        alert('Registration canceled successfully!');
+        
+        // Show success message with refund info if applicable
+        let alertMessage = data.message || 'Registration cancelled successfully!';
+        if (data.refund) {
+          alertMessage = `Registration cancelled successfully!\n\nRefund: $${data.refund.amount} has been added to your wallet.`;
+        }
+        alert(alertMessage);
       } else {
-        alert('Failed to cancel registration');
+        const data = await response.json();
+        alert(data.message || 'Failed to cancel registration');
       }
     } catch (err) {
       console.error('Error canceling registration:', err);
@@ -530,6 +562,9 @@ export default function TAEventsPage() {
             <li><Link href="/ta/events">📅 Browse Events</Link></li>
             <li><Link href="/ta/favorites">⭐ My Favorites</Link></li>
             <li><Link href="/ta/my-events">✏️ My Events</Link></li>
+            <li><Link href="/ta/payment-history">💰 Payment History</Link></li>
+            <li><Link href="/polls-voting">📊 Vote for Vendors</Link></li>
+            <li><Link href="/loyalty-program">🎁 Loyalty Program</Link></li>
             <li><Link href="/ta/gym">💪 Gym Schedule</Link></li>
             <li><Link href="/ta/profile">👤 Profile</Link></li>
           </ul>
@@ -1107,6 +1142,72 @@ export default function TAEventsPage() {
                 </>
               )}
             </div>
+            
+            {/* Already Registered - Cancel Registration Section */}
+            {isAlreadyRegistered(selectedEvent) && (selectedEvent.type === 'Workshop' || selectedEvent.type === 'Trip') && (
+              <div style={{
+                marginTop: '24px',
+                padding: '20px',
+                background: canCancelRegistration(selectedEvent) 
+                  ? 'linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%)'
+                  : 'linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%)',
+                borderRadius: '8px',
+                border: `2px solid ${canCancelRegistration(selectedEvent) ? '#28a745' : '#f5c6cb'}`,
+                textAlign: 'center'
+              }}>
+                <h3 style={{ 
+                  margin: '0 0 12px 0',
+                  fontSize: '18px',
+                  color: canCancelRegistration(selectedEvent) ? '#155724' : '#721c24',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '10px'
+                }}>
+                  ✓ Already Registered
+                </h3>
+                <p style={{ margin: '0 0 16px 0', color: canCancelRegistration(selectedEvent) ? '#155724' : '#721c24', fontWeight: '500' }}>
+                  You have successfully registered for this {selectedEvent.type?.toLowerCase()}!
+                </p>
+                {canCancelRegistration(selectedEvent) ? (
+                  <>
+                    <p style={{ margin: '0 0 12px 0', fontSize: '13px', color: canCancelRegistration(selectedEvent) ? '#155724' : '#721c24' }}>
+                      ⏰ You can cancel up to 2 weeks before the event starts
+                    </p>
+                    <button
+                      onClick={() => handleCancelRegistration(selectedEvent._id || selectedEvent.id)}
+                      style={{
+                        padding: '10px 24px',
+                        fontSize: '14px',
+                        fontWeight: '600',
+                        border: 'none',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        background: '#dc3545',
+                        color: 'white',
+                        transition: 'all 0.3s',
+                        marginTop: '10px'
+                      }}
+                      onMouseOver={(e) => e.target.style.background = '#c82333'}
+                      onMouseOut={(e) => e.target.style.background = '#dc3545'}
+                    >
+                      ✕ Cancel Registration
+                    </button>
+                  </>
+                ) : (
+                  <div style={{
+                    padding: '12px 16px',
+                    background: 'rgba(0,0,0,0.1)',
+                    borderRadius: '6px',
+                    marginTop: '12px',
+                    fontSize: '13px',
+                    color: '#721c24'
+                  }}>
+                    ⚠️ Cancellation deadline has passed (less than 2 weeks before event)
+                  </div>
+                )}
+              </div>
+            )}
             
             <button 
               className="btn-primary" 

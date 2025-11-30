@@ -10,6 +10,7 @@ export default function TAMyEventsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedEvent, setSelectedEvent] = useState(null);
+  const [selectedRegistration, setSelectedRegistration] = useState(null);
 
   useEffect(() => {
     loadRegistrations();
@@ -65,19 +66,89 @@ export default function TAMyEventsPage() {
     return isNaN(date.getTime()) ? 'Invalid Date' : date.toLocaleDateString();
   };
 
+  // Helper function to check if registration can be canceled (at least 2 weeks before)
+  const canCancelRegistration = (event) => {
+    if (!event || !event.start_date) return false;
+    const eventStart = new Date(event.start_date);
+    const now = new Date();
+    const daysUntilEvent = (eventStart - now) / (1000 * 60 * 60 * 24);
+    return daysUntilEvent >= 14; // 14 days = 2 weeks
+  };
+
+  // Helper function to get days until event
+  const getDaysUntilEvent = (event) => {
+    if (!event || !event.start_date) return 0;
+    const eventStart = new Date(event.start_date);
+    const now = new Date();
+    const daysUntilEvent = Math.ceil((eventStart - now) / (1000 * 60 * 60 * 24));
+    return Math.max(0, daysUntilEvent);
+  };
+
+  // Handle cancel registration
+  const handleCancelRegistration = async (registrationId, eventName) => {
+    if (!window.confirm(`Are you sure you want to cancel your registration for "${eventName}"?`)) {
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`http://localhost:5001/api/registration/cancel/${registrationId}`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        
+        // Show success message with refund info if applicable
+        let alertMessage = data.message || 'Registration cancelled successfully!';
+        if (data.refund) {
+          alertMessage = `Registration cancelled successfully!\n\nRefund: $${data.refund.amount} has been added to your wallet.`;
+        }
+        alert(alertMessage);
+        
+        // Reload registrations
+        await loadRegistrations();
+        
+        // Close modal if open
+        setSelectedEvent(null);
+        setSelectedRegistration(null);
+      } else {
+        const data = await response.json();
+        alert(data.message || 'Failed to cancel registration');
+      }
+    } catch (err) {
+      console.error('Error canceling registration:', err);
+      alert('Failed to cancel registration. Please try again.');
+    }
+  };
+
   const renderRegistrationCard = (registration) => {
-    // Change from registration.event_id to registration.event
-    if (!registration.event) {
+    // Check both registration.event and registration.event_id for backward compatibility
+    const event = registration.event || registration.event_id;
+    
+    if (!event) {
       console.warn('Registration missing event:', registration);
       return null;
     }
 
+    console.log('Rendering card for event:', { 
+      eventName: event.name, 
+      eventType: event.type,
+      registrationId: registration._id,
+      fullRegistration: registration,
+      fullEvent: event
+    });
+
     return (
       <div key={registration._id} className="event-card">
-        <h3>{registration.event.name}</h3>
-        <p><strong>Type:</strong> {registration.event.type}</p>
-        <p><strong>Location:</strong> {registration.event.location}</p>
-        <p><strong>Event Date:</strong> {formatDate(registration.event.start_date)}</p>
+        <h3>{event.name}</h3>
+        <p><strong>Type:</strong> {event.type}</p>
+        <p><strong>Location:</strong> {event.location}</p>
+        <p><strong>Event Date:</strong> {formatDate(event.start_date)}</p>
         <p><strong>Registered On:</strong> {formatDate(registration.registration_date)}</p>
         
         <div style={{ 
@@ -93,7 +164,11 @@ export default function TAMyEventsPage() {
 
         <button 
           className="btn-primary" 
-          onClick={() => setSelectedEvent(registration.event)}
+          onClick={() => {
+            console.log('Button clicked - Setting state:', { event, registration });
+            setSelectedEvent(event);
+            setSelectedRegistration(registration);
+          }}
           style={{ marginTop: '1rem', width: '100%' }}
         >
           View Details
@@ -121,6 +196,9 @@ export default function TAMyEventsPage() {
             <li><Link href="/ta/events">📅 Browse Events</Link></li>
             <li><Link href="/ta/favorites">⭐ My Favorites</Link></li>
             <li><Link href="/ta/my-events">✏️ My Events</Link></li>
+            <li><Link href="/ta/payment-history">💰 Payment History</Link></li>
+            <li><Link href="/polls-voting">📊 Vote for Vendors</Link></li>
+            <li><Link href="/loyalty-program">🎁 Loyalty Program</Link></li>
             <li><Link href="/ta/gym">💪 Gym Schedule</Link></li>
             <li><Link href="/ta/profile">👤 Profile</Link></li>
           </ul>
@@ -228,10 +306,90 @@ export default function TAMyEventsPage() {
             <p><strong>End:</strong> {formatDate(selectedEvent.end_date)}</p>
             <p><strong>Description:</strong> {selectedEvent.short_description}</p>
             
+            {/* Cancel Registration Section */}
+            {(() => {
+              console.log('Modal Debug:', {
+                hasSelectedRegistration: !!selectedRegistration,
+                hasSelectedEvent: !!selectedEvent,
+                eventType: selectedEvent?.type,
+                isWorkshop: selectedEvent?.type === 'Workshop',
+                isTrip: selectedEvent?.type === 'Trip',
+                shouldShowCancel: selectedRegistration && (selectedEvent?.type === 'Workshop' || selectedEvent?.type === 'Trip')
+              });
+              
+              return selectedRegistration && (selectedEvent.type === 'Workshop' || selectedEvent.type === 'Trip') && (
+                <div style={{
+                  marginTop: '24px',
+                  padding: '20px',
+                  background: canCancelRegistration(selectedEvent) 
+                    ? 'linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%)'
+                    : 'linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%)',
+                  borderRadius: '8px',
+                  border: `2px solid ${canCancelRegistration(selectedEvent) ? '#28a745' : '#f5c6cb'}`,
+                  textAlign: 'center'
+                }}>
+                  <h3 style={{ 
+                    margin: '0 0 12px 0',
+                    fontSize: '18px',
+                    color: canCancelRegistration(selectedEvent) ? '#155724' : '#721c24',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '10px'
+                  }}>
+                    ✓ You are Registered
+                  </h3>
+                  <p style={{ margin: '0 0 16px 0', color: canCancelRegistration(selectedEvent) ? '#155724' : '#721c24', fontWeight: '500' }}>
+                    Registration ID: {selectedRegistration._id}
+                  </p>
+                  {canCancelRegistration(selectedEvent) ? (
+                    <>
+                      <p style={{ margin: '0 0 12px 0', fontSize: '13px', color: '#155724' }}>
+                        ⏰ You can cancel up to 2 weeks before the event starts
+                      </p>
+                      <button
+                        onClick={() => handleCancelRegistration(selectedRegistration._id, selectedEvent.name)}
+                        style={{
+                          padding: '10px 24px',
+                          fontSize: '14px',
+                          fontWeight: '600',
+                          border: 'none',
+                          borderRadius: '6px',
+                          cursor: 'pointer',
+                          background: '#dc3545',
+                          color: 'white',
+                          transition: 'all 0.3s',
+                          marginTop: '10px'
+                        }}
+                        onMouseOver={(e) => e.target.style.background = '#c82333'}
+                        onMouseOut={(e) => e.target.style.background = '#dc3545'}
+                      >
+                        ✕ Cancel Registration
+                      </button>
+                    </>
+                  ) : (
+                    <div style={{
+                      padding: '12px 16px',
+                      background: 'rgba(0,0,0,0.1)',
+                      borderRadius: '6px',
+                      marginTop: '12px',
+                      fontSize: '13px',
+                      color: '#721c24'
+                    }}>
+                      ⚠️ Cancellation deadline has passed (less than 2 weeks before event)
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+            
             <button 
               className="btn-primary" 
               style={{marginTop: '1.5rem', width: '100%'}}
-              onClick={() => setSelectedEvent(null)}
+              onClick={() => {
+                setSelectedEvent(null);
+                setSelectedRegistration(null);
+              }}
             >
               Close
             </button>

@@ -39,6 +39,10 @@ export default function SettingsPage() {
             <li><Link href="/admin/events">📅 All Events</Link></li>
             <li><Link href="/admin/registrations">🎫 Registrations</Link></li>
             <li><Link href="/admin/vendors">🏪 Vendor Applications</Link></li>
+            <li><Link href="/admin/facilities">🏢 Facilities</Link></li>
+            <li><Link href="/loyalty-program">🎁 Loyalty Program</Link></li>
+            <li><Link href="/admin/reports">📊 Sales Report</Link></li>
+            <li><Link href="/admin/documents">📄 Documents</Link></li>
             <li><Link href="/admin/settings">⚙️ Settings</Link></li>
           </ul>
         </aside>

@@ -25,8 +25,12 @@ export default function TAEventsPage() {
           <ul className="sidebar-menu">
             <li><Link href="/ta">🏠 Dashboard</Link></li>
             <li><Link href="/ta/events">📅 Browse Events</Link></li>
-            <li><Link href="/ta/workshops">🎓 Workshops</Link></li>
-            <li><Link href="/ta/my-events">📋 My Events</Link></li>
+            <li><Link href="/ta/favorites">⭐ My Favorites</Link></li>
+            <li><Link href="/ta/my-events">✏️ My Events</Link></li>
+            <li><Link href="/ta/payment-history">💰 Payment History</Link></li>
+            <li><Link href="/polls-voting">📊 Vote for Vendors</Link></li>
+            <li><Link href="/loyalty-program">🎁 Loyalty Program</Link></li>
+            <li><Link href="/ta/gym">💪 Gym Schedule</Link></li>
             <li><Link href="/ta/profile">👤 Profile</Link></li>
           </ul>
         </aside>
