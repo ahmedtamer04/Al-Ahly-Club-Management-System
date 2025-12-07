@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { workshopAPI } from '@/utils/api';
 import NotificationBell from '@/app/components/NotificationBell';
+import MessageParticipantsModal from '@/app/components/MessageParticipantsModal';
 import '@/app/dashboard.css';
 
 export default function MyWorkshopsPage() {
@@ -13,6 +14,8 @@ export default function MyWorkshopsPage() {
   const [editingWorkshop, setEditingWorkshop] = useState(null);
   const [editFormData, setEditFormData] = useState({});
   const [message, setMessage] = useState({ text: '', type: '' });
+  const [showMessageModal, setShowMessageModal] = useState(false);
+  const [selectedWorkshop, setSelectedWorkshop] = useState(null);
 
   useEffect(() => {
     fetchWorkshops();
@@ -76,6 +79,17 @@ export default function MyWorkshopsPage() {
       month: 'short',
       day: 'numeric'
     });
+  };
+
+  const handleMessageClick = (workshop) => {
+    setSelectedWorkshop(workshop);
+    setShowMessageModal(true);
+  };
+
+  const handleMessageSuccess = (data) => {
+    const recipients = data?.recipients ?? data?.recipientsCount ?? 0;
+    setMessage({ text: `Message sent to ${recipients} participants`, type: 'success' });
+    setShowMessageModal(false);
   };
 
   return (
@@ -214,13 +228,22 @@ export default function MyWorkshopsPage() {
                           <td>
                             <div style={{ display: 'flex', gap: '8px' }}>
                               {approvalStatus === 'accepted' && (
-                                <Link
-                                  href={`/professor/workshops/${workshop._id}/participants`}
-                                  className="btn-icon"
-                                  title="View Participants"
-                                >
-                                  👥
-                                </Link>
+                                <>
+                                  <Link
+                                    href={`/professor/workshops/${workshop._id}/participants`}
+                                    className="btn-icon"
+                                    title="View Participants"
+                                  >
+                                    👥
+                                  </Link>
+                                  <button
+                                    onClick={() => handleMessageClick(workshop)}
+                                    className="btn-icon"
+                                    title="Message Participants"
+                                  >
+                                    📨
+                                  </button>
+                                </>
                               )}
                               {(approvalStatus === 'pending' || approvalStatus === 'revision_requested') && (
                                 <button
@@ -454,8 +477,21 @@ export default function MyWorkshopsPage() {
               </div>
             </div>
           )}
+
         </main>
       </div>
+
+      {/* Message Participants Modal */}
+      {showMessageModal && selectedWorkshop && (
+        <MessageParticipantsModal
+          event={selectedWorkshop}
+          onClose={() => {
+            setShowMessageModal(false);
+            setSelectedWorkshop(null);
+          }}
+          onSuccess={handleMessageSuccess}
+        />
+      )}
     </div>
   );
 }

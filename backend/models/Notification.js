@@ -22,7 +22,8 @@ const notificationSchema = new mongoose.Schema({
       "waitlist_promoted",        // User promoted from waitlist
       "waitlist_confirmed",       // User confirmed promotion
       "waitlist_expired",         // Promotion expired
-      "waitlist_moved_up"         // Position moved up in waitlist
+      "waitlist_moved_up",        // Position moved up in waitlist
+      "event_message"             // Organizer message to registered participants
     ],
     required: true
   },

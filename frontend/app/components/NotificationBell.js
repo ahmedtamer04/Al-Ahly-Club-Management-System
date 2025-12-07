@@ -105,6 +105,12 @@ export default function NotificationBell() {
       case 'event_added': return '🎉';
       case 'event_reminder_1day': return '⏰';
       case 'event_reminder_1hour': return '🚨';
+      case 'event_message': return '📨';
+      case 'waitlist_joined': return '⏳';
+      case 'waitlist_promoted': return '⬆️';
+      case 'waitlist_confirmed': return '✅';
+      case 'waitlist_expired': return '❌';
+      case 'waitlist_moved_up': return '👆';
       default: return '🔔';
     }
   };
@@ -181,6 +187,17 @@ export default function NotificationBell() {
                       {notification.metadata?.rejection_reason && (
                         <p className="notification-detail">
                           <strong>Reason:</strong> {notification.metadata.rejection_reason}
+                        </p>
+                      )}
+                      {notification.metadata?.organizer_message && (
+                        <p className="notification-detail" style={{ 
+                          background: 'rgba(102, 126, 234, 0.1)', 
+                          padding: '8px', 
+                          borderRadius: '6px',
+                          marginTop: '8px',
+                          fontStyle: 'italic'
+                        }}>
+                          "{notification.metadata.organizer_message}"
                         </p>
                       )}
                       <span className="notification-time">{formatTime(notification.createdAt)}</span>

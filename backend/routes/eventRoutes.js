@@ -19,6 +19,8 @@ import {
   getMyComment
 } from "../controllers/eventController.js";
 
+import { messageParticipants } from "../controllers/eventMessageController.js";
+
 import {auth, requireStudentOrAbove, requireAdminOrEventsOffice} from "../middleware/auth.js";
 
 const router = express.Router();
@@ -74,5 +76,8 @@ router.put("/:eventId/comments/:commentId", auth, requireStudentOrAbove, updateC
 
 // DELETE my comment
 router.delete("/:eventId/comments/:commentId", auth, requireStudentOrAbove, deleteUserComment);
+
+// POST message all registered participants (event creator, Admin, or EventsOffice only)
+router.post("/:eventId/message-participants", auth, messageParticipants);
 
 export default router;

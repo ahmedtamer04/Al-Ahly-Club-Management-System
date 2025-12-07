@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { eventAPI, salesReportAPI, registrationAPI } from '@/utils/api';
+import MessageParticipantsModal from '@/app/components/MessageParticipantsModal';
 import '@/app/dashboard.css';
 
 export default function ViewAllEvents() {
@@ -31,6 +32,9 @@ export default function ViewAllEvents() {
   const [salesStartDateFilter, setSalesStartDateFilter] = useState('');
   const [salesEndDateFilter, setSalesEndDateFilter] = useState('');
   const [selectedEvent, setSelectedEvent] = useState(null);
+  const [showMessageModal, setShowMessageModal] = useState(false);
+  const [messageEvent, setMessageEvent] = useState(null);
+  const [successMessage, setSuccessMessage] = useState('');
 
   useEffect(() => {
     fetchAllEvents();
@@ -176,6 +180,19 @@ export default function ViewAllEvents() {
       return event.booth.vendors;
     }
     return [];
+  };
+
+  const handleMessageClick = (event, e) => {
+    e.stopPropagation();
+    setMessageEvent(event);
+    setShowMessageModal(true);
+  };
+
+  const handleMessageSuccess = (data) => {
+    const recipients = data?.recipients ?? data?.recipientsCount ?? 0;
+    setSuccessMessage(`Message sent to ${recipients} participants`);
+    setShowMessageModal(false);
+    setTimeout(() => setSuccessMessage(''), 5000);
   };
 
   const EventDetailsModal = ({ event, onClose }) => {
@@ -375,6 +392,12 @@ export default function ViewAllEvents() {
             <h1>📅 All Events</h1>
             <Link href="/eventsoffice" className="btn-secondary">← Back to Dashboard</Link>
           </div>
+
+          {successMessage && (
+            <div className="alert alert-success" style={{ marginBottom: '20px' }}>
+              {successMessage}
+            </div>
+          )}
 
           {/* Search and Filter Section */}
           <div className="filters-section" style={{ 
@@ -608,6 +631,15 @@ export default function ViewAllEvents() {
                         View Details
                       </button>
 
+                      <button
+                        className="btn-icon"
+                        title="Message Participants"
+                        onClick={(e) => handleMessageClick(event, e)}
+                        style={{ padding: '8px 12px', fontSize: '18px' }}
+                      >
+                        📨
+                      </button>
+
                       {/* Per-card export button (non-conference only). Uses global exporting flag so only one export runs at a time. */}
                       {event.type !== 'Conference' && (
                         <button
@@ -812,6 +844,18 @@ export default function ViewAllEvents() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Message Participants Modal */}
+      {showMessageModal && messageEvent && (
+        <MessageParticipantsModal
+          event={messageEvent}
+          onClose={() => {
+            setShowMessageModal(false);
+            setMessageEvent(null);
+          }}
+          onSuccess={handleMessageSuccess}
+        />
       )}
 
       <style jsx>{`

@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { eventAPI } from '@/utils/api';
+import { eventAPI, getUser } from '@/utils/api';
+import MessageParticipantsModal from '@/app/components/MessageParticipantsModal';
 import RatingStars from '@/app/components/RatingStars';
 import RatingForm from '@/app/components/RatingForm';
 import RatingsList from '@/app/components/RatingsList';
@@ -20,6 +21,7 @@ export default function ProfessorEventDetails() {
   const [activeTab, setActiveTab] = useState('details');
   const [showRatingForm, setShowRatingForm] = useState(false);
   const [showCommentForm, setShowCommentForm] = useState(false);
+  const [showMessageModal, setShowMessageModal] = useState(false);
 
   useEffect(() => {
     fetchEventDetails();
@@ -44,6 +46,16 @@ export default function ProfessorEventDetails() {
 
   const handleCommentSuccess = () => {
     setShowCommentForm(false);
+  };
+
+  const user = getUser();
+  const creatorId = event?.created_by?._id || event?.created_by || event?.creator || event?.createdBy;
+  const userId = user?._id || user?.id;
+  const canMessage = user && (user.role === 'Admin' || user.role === 'EventsOffice' || (creatorId && userId && String(creatorId) === String(userId)));
+
+  const handleMessageSuccess = (data) => {
+    const recipients = data?.recipients ?? data?.recipientsCount ?? 0;
+    alert(`Message sent to ${recipients} participants`);
   };
 
   if (loading) {
@@ -93,6 +105,13 @@ export default function ProfessorEventDetails() {
             {event.total_ratings > 0 && ` (${event.total_ratings} ${event.total_ratings === 1 ? 'rating' : 'ratings'})`}
           </span>
         </div>
+        {canMessage && (
+          <div style={{ marginTop: 12 }}>
+            <button onClick={() => setShowMessageModal(true)} style={{ padding: '8px 12px', borderRadius: 6, background: '#0066cc', color: '#fff', border: 'none', cursor: 'pointer' }}>
+              📨 Message Participants
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Tabs */}
@@ -241,6 +260,13 @@ export default function ProfessorEventDetails() {
         )}
       </div>
     </div>
+      {showMessageModal && (
+        <MessageParticipantsModal
+          event={event}
+          onClose={() => setShowMessageModal(false)}
+          onSuccess={handleMessageSuccess}
+        />
+      )}
   );
 }
 

@@ -2,9 +2,10 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import StudentLayout from '@/app/components/StudentLayout';
 import '@/app/dashboard.css';
-import { eventAPI, registrationAPI, getUser } from '@/utils/api';
+import { eventAPI, registrationAPI, getUser, notificationAPI } from '@/utils/api';
 import PaymentModal from '@/app/components/PaymentModal';
 import RatingsList from '@/app/components/RatingsList';
 import RatingForm from '@/app/components/RatingForm';
@@ -12,10 +13,14 @@ import CommentsList from '@/app/components/CommentsList';
 import CommentForm from '@/app/components/CommentForm';
 
 export default function EventDetailsPage({ params }) {
+  const searchParams = useSearchParams();
+  const notificationId = searchParams?.get('notification');
+  
   const [event, setEvent] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('details'); // details, ratings, comments
+  const [organizerMessages, setOrganizerMessages] = useState([]);
   
   // Registration modal states
   const [showRegistrationModal, setShowRegistrationModal] = useState(false);
@@ -50,8 +55,21 @@ export default function EventDetailsPage({ params }) {
       }
     };
 
+    const loadOrganizerMessages = async () => {
+      try {
+        const response = await notificationAPI.getNotifications(false);
+        const messages = response.notifications
+          .filter(n => n.type === 'event_message' && n.event_id === params.id)
+          .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        setOrganizerMessages(messages);
+      } catch (err) {
+        console.error('Failed to load organizer messages:', err);
+      }
+    };
+
     if (params.id) {
       loadEvent();
+      loadOrganizerMessages();
     }
     
     // Pre-fill form with user data
@@ -217,6 +235,52 @@ export default function EventDetailsPage({ params }) {
               <h1>{event.name}</h1>
               <Link href="/student/events" className="btn-back">← Back to Events</Link>
             </div>
+
+            {/* Organizer Messages */}
+            {organizerMessages.length > 0 && (
+              <div style={{ marginBottom: '20px' }}>
+                {organizerMessages.map((msg) => (
+                  <div 
+                    key={msg._id}
+                    style={{
+                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                      color: 'white',
+                      padding: '20px',
+                      borderRadius: '12px',
+                      marginBottom: '12px',
+                      boxShadow: '0 4px 12px rgba(102, 126, 234, 0.3)'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
+                      <span style={{ fontSize: '24px' }}>📨</span>
+                      <div>
+                        <strong style={{ fontSize: '16px', display: 'block' }}>Message from Organizer</strong>
+                        {msg.metadata?.sender_name && (
+                          <span style={{ fontSize: '14px', opacity: 0.9 }}>{msg.metadata.sender_name}</span>
+                        )}
+                      </div>
+                      <span style={{ marginLeft: 'auto', fontSize: '13px', opacity: 0.8 }}>
+                        {new Date(msg.createdAt).toLocaleString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </span>
+                    </div>
+                    <div style={{
+                      background: 'rgba(255, 255, 255, 0.15)',
+                      padding: '16px',
+                      borderRadius: '8px',
+                      fontSize: '15px',
+                      lineHeight: '1.6'
+                    }}>
+                      {msg.metadata?.organizer_message}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
 
             {/* Tab Navigation */}
             <div className="tabs-container">

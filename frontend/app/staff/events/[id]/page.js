@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { eventAPI, getUser, registrationAPI } from '@/utils/api';
 import PaymentModal from '@/app/components/PaymentModal';
+import MessageParticipantsModal from '@/app/components/MessageParticipantsModal';
 import RatingStars from '@/app/components/RatingStars';
 import RatingForm from '@/app/components/RatingForm';
 import RatingsList from '@/app/components/RatingsList';
@@ -26,6 +27,7 @@ export default function StaffEventDetails({ params }) {
   const [registrationForm, setRegistrationForm] = useState({ name: '', email: '', personalId: '' });
   const [registering, setRegistering] = useState(false);
   const [paymentData, setPaymentData] = useState(null);
+  const [showMessageModal, setShowMessageModal] = useState(false);
 
   useEffect(() => {
     const loadEvent = async () => {
@@ -156,6 +158,16 @@ export default function StaffEventDetails({ params }) {
     }
     setShowPaymentModal(false);
     setPaymentData(null);
+  };
+
+  const user = getUser();
+  const creatorId = event?.created_by?._id || event?.created_by || event?.creator || event?.createdBy;
+  const userId = user?._id || user?.id;
+  const canMessage = user && (user.role === 'Admin' || user.role === 'EventsOffice' || (creatorId && userId && String(creatorId) === String(userId)));
+
+  const handleMessageSuccess = (data) => {
+    const recipients = data?.recipients ?? data?.recipientsCount ?? 0;
+    alert(`Message sent to ${recipients} participants`);
   };
 
   if (loading) return <div className="loading">Loading...</div>;
@@ -290,6 +302,17 @@ export default function StaffEventDetails({ params }) {
                       ❌ Event is Full - Registration Closed
                     </div>
                   ) : null
+                )}
+                {canMessage && (
+                  <div style={{ marginTop: '1rem' }}>
+                    <button
+                      className="btn-secondary"
+                      onClick={() => setShowMessageModal(true)}
+                      style={{ padding: '0.6rem 1rem', borderRadius: 8 }}
+                    >
+                      📨 Message Participants
+                    </button>
+                  </div>
                 )}
               </div>
             </div>
@@ -442,6 +465,13 @@ export default function StaffEventDetails({ params }) {
           eventName={paymentData.eventName}
           eventType={paymentData.eventType}
           onPaymentSuccess={handlePaymentSuccess}
+        />
+      )}
+      {showMessageModal && event && (
+        <MessageParticipantsModal
+          event={event}
+          onClose={() => setShowMessageModal(false)}
+          onSuccess={handleMessageSuccess}
         />
       )}
     </div>
