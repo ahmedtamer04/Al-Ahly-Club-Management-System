@@ -29,4 +29,5 @@ const gymSessionSchema = new mongoose.Schema({
   },
 }, { timestamps: true });
 
-export default mongoose.model("GymSession", gymSessionSchema);
+const GymSession = mongoose.models.GymSession || mongoose.model("GymSession", gymSessionSchema);
+export default GymSession;

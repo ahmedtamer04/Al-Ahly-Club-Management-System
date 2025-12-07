@@ -35,5 +35,6 @@ gymSessionRegistrationSchema.index({ gym_session_id: 1, user_id: 1 }, { unique: 
 gymSessionRegistrationSchema.index({ gym_session_id: 1 });
 gymSessionRegistrationSchema.index({ user_id: 1 });
 
-export default mongoose.model("GymSessionRegistration", gymSessionRegistrationSchema);
+const GymSessionRegistration = mongoose.models.GymSessionRegistration || mongoose.model("GymSessionRegistration", gymSessionRegistrationSchema);
+export default GymSessionRegistration;
 

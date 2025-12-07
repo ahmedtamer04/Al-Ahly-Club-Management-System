@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { eventAPI, registrationAPI, getUser } from '@/utils/api';
 import StudentLayout from '@/app/components/StudentLayout';
+import RecommendedEvents from '@/app/components/RecommendedEvents';
 import '@/app/dashboard.css';
 
 export default function StudentDashboard() {
@@ -126,6 +127,9 @@ export default function StudentDashboard() {
               </div>
             </div>
           </div>
+
+          {/* Recommended for You */}
+          <RecommendedEvents />
 
           {/* Available Events */}
           <section className="section">

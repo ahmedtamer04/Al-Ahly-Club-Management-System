@@ -1048,4 +1048,14 @@ export const documentAPI = {
   delete: (documentId) => api.delete(`/documents/${documentId}`),
 };
 
+// ================================
+// RECOMMENDATION API
+// ================================
+export const recommendationAPI = {
+  // GET /api/recommendations
+  // Auth: requireStudentOrAbove
+  // Get personalized event recommendations
+  getRecommendations: () => api.get('/recommendations'),
+};
+
 export default api;
