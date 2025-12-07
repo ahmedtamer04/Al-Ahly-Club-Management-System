@@ -6,6 +6,8 @@ import { eventAPI, registrationAPI, getUser } from '@/utils/api';
 import PaymentModal from '@/app/components/PaymentModal';
 import Breadcrumb from '@/app/components/Breadcrumb';
 import { ToastProvider, useToast } from '@/app/components/ToastContainer';
+import StudentLayout from '@/app/components/StudentLayout';
+import WaitlistButton from '@/app/components/WaitlistButton';
 import '@/app/dashboard.css';
 import '@/app/utilities.css';
 
@@ -324,6 +326,9 @@ export default function BrowseEventsPage() {
         role: userRole
       });
 
+      // Refresh events to show updated capacity
+      await fetchEvents();
+      
       // Check if event requires payment
       const eventPrice = event.workshop?.price || event.trip?.price || 0;
       
@@ -339,7 +344,6 @@ export default function BrowseEventsPage() {
         setShowPaymentModal(true);
       } else {
         // Free event - registration complete
-        await fetchEvents();
         alert('Successfully registered for the event!');
       }
       
@@ -470,35 +474,8 @@ export default function BrowseEventsPage() {
   };
 
   return (
-    <div className="dashboard">
-      <nav className="dashboard-nav">
-        <div className="nav-container">
-          <h1 className="nav-brand">Al-Ahly Events</h1>
-          <div className="nav-links">
-            <span className="nav-user">👨‍🎓 Student Dashboard</span>
-            <Link href="/">Logout</Link>
-          </div>
-        </div>
-      </nav>
-
-      <div className="dashboard-content">
-        <aside className="sidebar">
-          <ul className="sidebar-menu">
-            <li><Link href="/student">🏠 Dashboard</Link></li>
-            <li><Link href="/student/events">📅 Browse Events</Link></li>
-            <li><Link href="/student/favorites">⭐ My Favorites</Link></li>
-            <li><Link href="/student/my-registrations">🎫 My Registrations</Link></li>
-            <li><Link href="/student/payment-history">💰 Payment History</Link></li>
-            <li><Link href="/polls-voting">📊 Vote for Vendors</Link></li>
-            <li><Link href="/loyalty-program">🎁 Loyalty Program</Link></li>
-            <li><Link href="/student/facilities">🏢 Facilities</Link></li>
-            <li><Link href="/student/gym/schedule">💪 Gym Schedule</Link></li>
-            <li><Link href="/student/profile">👤 Profile</Link></li>
-          </ul>
-        </aside>
-
-        <main className="main-content">
-          <h1>Browse Events 📅</h1>
+    <StudentLayout>
+      <h1>Browse Events 📅</h1>
 
           {/* Search and Action Buttons Bar */}
           <div style={{
@@ -873,9 +850,28 @@ export default function BrowseEventsPage() {
                     </div>
                     
                     <div className="event-actions">
-                      {/* NEW: Favorite button and Register button side by side */}
+                      {/* Capacity display for events with capacity */}
+                      {(event.type === 'Workshop' || event.type === 'Trip') && event.available_spots !== undefined && (
+                        <div style={{
+                          padding: '0.5rem',
+                          background: event.available_spots === 0 ? '#fff3cd' : '#d4edda',
+                          borderRadius: '6px',
+                          marginBottom: '0.5rem',
+                          fontSize: '0.9rem',
+                          fontWeight: 600,
+                          color: event.available_spots === 0 ? '#856404' : '#155724',
+                          textAlign: 'center'
+                        }}>
+                          {event.available_spots === 0 
+                            ? '🔴 Event Full' 
+                            : `✅ ${event.available_spots} spots available`
+                          }
+                        </div>
+                      )}
+
+                      {/* NEW: Favorite button and Register/Waitlist button side by side */}
                       <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                        {event.registration_open && !event.is_full ? (
+                        {event.registration_open && !event.is_full && event.available_spots > 0 ? (
                           <button 
                             className="register-btn"
                             onClick={() => handleRegister(event)}
@@ -884,7 +880,11 @@ export default function BrowseEventsPage() {
                           >
                             {registering === event._id ? 'Registering...' : 'Register Now'}
                           </button>
-                        ) : event.is_full ? (
+                        ) : (event.is_full || event.available_spots === 0) && event.registration_open && !isAlreadyRegistered(event) ? (
+                          <div style={{ flex: 1 }}>
+                            <WaitlistButton event={event} onUpdate={fetchEvents} />
+                          </div>
+                        ) : event.is_full || event.available_spots === 0 ? (
                           <div className="event-full-notice" style={{ flex: 1, textAlign: 'center' }}>
                             This event is full
                           </div>
@@ -985,8 +985,6 @@ export default function BrowseEventsPage() {
               )}
             </div>
           </section>
-        </main>
-      </div>
 
       {/* Payment Modal */}
       {showPaymentModal && paymentData && (
@@ -1001,6 +999,6 @@ export default function BrowseEventsPage() {
           onPaymentSuccess={handlePaymentSuccess}
         />
       )}
-    </div>
+    </StudentLayout>
   );
 }

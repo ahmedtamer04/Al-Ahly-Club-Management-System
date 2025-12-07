@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
+import StaffLayout from '@/app/components/StaffLayout';
 import '@/app/dashboard.css';
 import { eventAPI } from '@/utils/api';
 
@@ -12,10 +13,8 @@ export default function StaffEventsPage() {
   const [filteredEvents, setFilteredEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   
-  // Registered events states
-  const [registeredEvents, setRegisteredEvents] = useState([]);
-  const [registeredEventsLoading, setRegisteredEventsLoading] = useState(true);
-  const [registeredEventIds, setRegisteredEventIds] = useState(new Set()); // Track registered event IDs
+  // Track registered event IDs for display purposes
+  const [registeredEventIds, setRegisteredEventIds] = useState(new Set());
   
   // Advanced filter states
   const [showFilters, setShowFilters] = useState(false);
@@ -29,8 +28,8 @@ export default function StaffEventsPage() {
 
   useEffect(() => {
     fetchEvents();
-    fetchRegisteredEvents();
-    loadFavorites(); // NEW: Load favorites on mount
+    loadRegisteredEventIds();
+    loadFavorites();
   }, []);
 
   const fetchEvents = async () => {
@@ -48,16 +47,13 @@ export default function StaffEventsPage() {
     }
   };
 
-  // Fetch registered events
-  const fetchRegisteredEvents = async () => {
+  // Load registered event IDs to show "Already Registered" badge
+  const loadRegisteredEventIds = async () => {
     try {
-      setRegisteredEventsLoading(true);
       const token = localStorage.getItem('token');
       const user = JSON.parse(localStorage.getItem('user') || '{}');
       
       if (!token || !user._id) {
-        console.log('No token or user found');
-        setRegisteredEvents([]);
         setRegisteredEventIds(new Set());
         return;
       }
@@ -72,11 +68,6 @@ export default function StaffEventsPage() {
 
       if (response.ok) {
         const data = await response.json();
-        console.log('Registered events response:', data);
-        // The response contains { upcoming, past, registrations }
-        setRegisteredEvents(data.upcoming || []);
-        
-        // Build set of registered event IDs
         const registeredIds = new Set();
         if (data.upcoming) {
           data.upcoming.forEach(event => {
@@ -84,16 +75,9 @@ export default function StaffEventsPage() {
           });
         }
         setRegisteredEventIds(registeredIds);
-      } else {
-        setRegisteredEvents([]);
-        setRegisteredEventIds(new Set());
       }
     } catch (error) {
-      console.error('Error fetching registered events:', error);
-      setRegisteredEvents([]);
-      setRegisteredEventIds(new Set());
-    } finally {
-      setRegisteredEventsLoading(false);
+      console.error('Error loading registered event IDs:', error);
     }
   };
 
@@ -213,8 +197,8 @@ export default function StaffEventsPage() {
         }
         alert(alertMessage);
         
-        // Refresh both registered and available events
-        await fetchRegisteredEvents();
+        // Refresh registered event IDs and available events
+        await loadRegisteredEventIds();
         await fetchEvents();
       } else {
         const data = await response.json();
@@ -343,218 +327,20 @@ export default function StaffEventsPage() {
   };
 
   return (
-    <div className="dashboard">
-      <nav className="dashboard-nav">
-        <div className="nav-container">
-          <h1 className="nav-brand">Al-Ahly Events</h1>
-          <div className="nav-links">
-            <span className="nav-user">👨‍💼 Staff Dashboard</span>
-            <Link href="/">Logout</Link>
-          </div>
-        </div>
-      </nav>
+    <StaffLayout>
+      <h1>Browse Events 📅</h1>
 
-      <div className="dashboard-content">
-        <aside className="sidebar">
-          <ul className="sidebar-menu">
-            <li><Link href="/staff">🏠 Dashboard</Link></li>
-            <li><Link href="/staff/events">📅 Browse Events</Link></li>
-            <li><Link href="/staff/favorites">⭐ My Favorites</Link></li>
-            <li><Link href="/staff/payment-history">💰 Payment History</Link></li>
-            <li><Link href="/polls-voting">📊 Vote for Vendors</Link></li>
-            <li><Link href="/loyalty-program">🎁 Loyalty Program</Link></li>
-            <li><Link href="/staff/gym/schedule">💪 Gym Schedule</Link></li>
-            <li><Link href="/staff/profile">👤 Profile</Link></li>
-          </ul>
-        </aside>
+      <h2 style={{ fontSize: '24px', color: '#333', marginBottom: '20px' }}>🔍 Browse Available Events</h2>
 
-        <main className="main-content">
-          <h1>Browse Events 📅</h1>
-
-          {/* My Registered Events Section */}
-          <div style={{ marginBottom: '40px' }}>
-            <div style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              marginBottom: '20px',
-              borderBottom: '2px solid #e0e0e0',
-              paddingBottom: '10px'
-            }}>
-              <h2 style={{ 
-                fontSize: '24px', 
-                color: '#0066cc',
-                margin: 0,
-                display: 'flex',
-                alignItems: 'center',
-                gap: '10px'
-              }}>
-                📝 My Registered Events
-                {registeredEvents && registeredEvents.length > 0 && (
-                  <span style={{
-                    background: '#0066cc',
-                    color: 'white',
-                    padding: '4px 12px',
-                    borderRadius: '20px',
-                    fontSize: '14px',
-                    fontWeight: '600'
-                  }}>
-                    {registeredEvents.length}
-                  </span>
-                )}
-              </h2>
-            </div>
-
-            {registeredEventsLoading ? (
-              <div style={{
-                textAlign: 'center',
-                padding: '40px',
-                color: '#666'
-              }}>
-                Loading your registered events...
-              </div>
-            ) : !registeredEvents || registeredEvents.length === 0 ? (
-              <div style={{
-                textAlign: 'center',
-                padding: '40px',
-                background: '#f8f9fa',
-                borderRadius: '8px',
-                color: '#666'
-              }}>
-                <p style={{ fontSize: '18px', margin: '0 0 10px 0' }}>📭 No registered events</p>
-                <p style={{ fontSize: '14px', margin: 0 }}>Browse events below to register!</p>
-              </div>
-            ) : (
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
-                gap: '20px'
-              }}>
-                {(registeredEvents || []).map((registration) => {
-                  const event = registration.event;
-                  if (!event) return null;
-                  
-                  return (
-                    <div
-                      key={registration._id}
-                      style={{
-                        background: 'white',
-                        borderRadius: '8px',
-                        padding: '20px',
-                        boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                        border: '2px solid #0066cc',
-                        position: 'relative'
-                      }}
-                    >
-                      <div style={{
-                        position: 'absolute',
-                        top: '10px',
-                        right: '10px',
-                        background: registration.status === 'registered' ? '#28a745' : '#ffc107',
-                        color: 'white',
-                        padding: '4px 8px',
-                        borderRadius: '4px',
-                        fontSize: '12px',
-                        fontWeight: '600'
-                      }}>
-                        {registration.status?.toUpperCase()}
-                      </div>
-                      
-                      <h3 style={{ 
-                        fontSize: '18px', 
-                        marginBottom: '10px',
-                        color: '#333',
-                        paddingRight: '80px'
-                      }}>
-                        {event.name || 'Event'}
-                      </h3>
-                      
-                      <div style={{ 
-                        fontSize: '14px', 
-                        color: '#666', 
-                        marginBottom: '15px' 
-                      }}>
-                        <p style={{ margin: '5px 0' }}>
-                          <strong>Type:</strong> {event.type || 'N/A'}
-                        </p>
-                        <p style={{ margin: '5px 0' }}>
-                          <strong>Date:</strong> {event.start_date ? new Date(event.start_date).toLocaleDateString() : 'N/A'}
-                        </p>
-                        <p style={{ margin: '5px 0' }}>
-                          <strong>Location:</strong> {event.location || 'N/A'}
-                        </p>
-                        <p style={{ margin: '5px 0' }}>
-                          <strong>Registered:</strong> {registration.registration_date ? new Date(registration.registration_date).toLocaleDateString() : 'N/A'}
-                        </p>
-                      </div>
-
-                      <div style={{
-                        display: 'flex',
-                        gap: '10px'
-                      }}>
-                        <Link
-                          href={`/staff/events/${event._id}`}
-                          style={{
-                            flex: 1,
-                            textAlign: 'center',
-                            padding: '10px',
-                            background: '#0066cc',
-                            color: 'white',
-                            textDecoration: 'none',
-                            borderRadius: '5px',
-                            fontSize: '14px',
-                            fontWeight: '600',
-                            transition: 'background 0.3s'
-                          }}
-                          onMouseEnter={(e) => e.target.style.background = '#0052a3'}
-                          onMouseLeave={(e) => e.target.style.background = '#0066cc'}
-                        >
-                          View Details
-                        </Link>
-                        <button
-                          onClick={() => handleCancelRegistration(registration._id)}
-                          style={{
-                            flex: 1,
-                            padding: '10px',
-                            background: '#dc3545',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '5px',
-                            fontSize: '14px',
-                            fontWeight: '600',
-                            cursor: 'pointer',
-                            transition: 'background 0.3s'
-                          }}
-                          onMouseEnter={(e) => e.target.style.background = '#c82333'}
-                          onMouseLeave={(e) => e.target.style.background = '#dc3545'}
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          {/* Divider */}
-          <div style={{
-            borderTop: '3px solid #0066cc',
-            marginBottom: '30px'
-          }}></div>
-
-          <h2 style={{ fontSize: '24px', color: '#333', marginBottom: '20px' }}>🔍 Browse Available Events</h2>
-
-          {/* Search and Action Buttons Bar */}
-          <div style={{
-            display: 'flex',
-            gap: '10px',
-            alignItems: 'stretch',
-            marginBottom: '20px',
-            flexWrap: 'wrap',
-            width: '100%'
-          }}>
+      {/* Search and Action Buttons Bar */}
+      <div style={{
+        display: 'flex',
+        gap: '10px',
+        alignItems: 'stretch',
+        marginBottom: '20px',
+        flexWrap: 'wrap',
+        width: '100%'
+      }}>
             <div style={{ 
               flex: '1 1 300px',
               minWidth: '250px'
@@ -618,9 +404,9 @@ export default function StaffEventsPage() {
             >
               📅 {sortOrder === 'desc' ? 'Newest First' : 'Oldest First'}
             </button>
-          </div>
+      </div>
 
-          <section className="section">
+      <section className="section">
             {/* Advanced Filters Panel */}
             {showFilters && (
               <div style={{
@@ -970,11 +756,9 @@ export default function StaffEventsPage() {
                     )}
                   </article>
                 ))
-              )}
-            </div>
-          </section>
-        </main>
-      </div>
-    </div>
+          )}
+        </div>
+      </section>
+    </StaffLayout>
   );
 }

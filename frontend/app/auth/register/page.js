@@ -19,6 +19,27 @@ export default function RegisterPage() {
 
   const [message, setMessage] = useState({ text: '', type: '' }); // success or error
   const [loading, setLoading] = useState(false);
+  const [passwordStrength, setPasswordStrength] = useState(0);
+
+  const calculatePasswordStrength = (password) => {
+    let strength = 0;
+    if (password.length >= 6) strength++;
+    if (password.length >= 10) strength++;
+    if (/[a-z]/.test(password) && /[A-Z]/.test(password)) strength++;
+    if (/[0-9]/.test(password)) strength++;
+    if (/[^a-zA-Z0-9]/.test(password)) strength++;
+    return Math.min(strength, 4);
+  };
+
+  const getPasswordStrengthLabel = (strength) => {
+    const labels = ['', 'Weak', 'Fair', 'Good', 'Strong'];
+    return labels[strength];
+  };
+
+  const getPasswordStrengthColor = (strength) => {
+    const colors = ['#E5E5E5', '#DD0000', '#FF9500', '#52C41A', '#00B050'];
+    return colors[strength];
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -231,10 +252,39 @@ export default function RegisterPage() {
               type="password"
               placeholder="Create a strong password"
               value={formData.password}
-              onChange={(e) => setFormData({...formData, password: e.target.value})}
+              onChange={(e) => {
+                const newPassword = e.target.value;
+                setFormData({...formData, password: newPassword});
+                setPasswordStrength(calculatePasswordStrength(newPassword));
+              }}
               required
               minLength="6"
             />
+            {formData.password && (
+              <div style={{marginTop: '0.5rem'}}>
+                <div style={{
+                  height: '4px',
+                  background: '#E5E5E5',
+                  borderRadius: '2px',
+                  overflow: 'hidden'
+                }}>
+                  <div style={{
+                    height: '100%',
+                    width: `${(passwordStrength / 4) * 100}%`,
+                    background: getPasswordStrengthColor(passwordStrength),
+                    transition: 'all 0.3s ease'
+                  }} />
+                </div>
+                <small style={{
+                  color: getPasswordStrengthColor(passwordStrength),
+                  fontSize: '0.85rem',
+                  marginTop: '0.25rem',
+                  display: 'block'
+                }}>
+                  Password strength: {getPasswordStrengthLabel(passwordStrength)}
+                </small>
+              </div>
+            )}
           </div>
 
           <div className="form-group">

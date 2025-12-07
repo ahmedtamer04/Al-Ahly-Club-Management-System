@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { courtReservationAPI, getUser } from '@/utils/api';
+import StudentLayout from '@/app/components/StudentLayout';
 import '@/app/dashboard.css';
 
 export default function ReserveCourtPage() {
@@ -95,36 +96,8 @@ export default function ReserveCourtPage() {
   }
 
   return (
-    <div className="dashboard">
-      <nav className="dashboard-nav">
-        <div className="nav-container">
-          <h1 className="nav-brand">Al-Ahly Events</h1>
-          <div className="nav-links">
-            <span className="nav-user">🎓 Student Dashboard</span>
-            <Link href="/">Logout</Link>
-          </div>
-        </div>
-      </nav>
-
-      <div className="dashboard-content">
-        <aside className="sidebar">
-          <ul className="sidebar-menu">
-            <li><Link href="/student">🏠 Dashboard</Link></li>
-            <li><Link href="/student/events">📅 Browse Events</Link></li>
-            <li><Link href="/student/my-registrations">🎫 My Registrations</Link></li>
-            <li><Link href="/student/payment-history">💰 Payment History</Link></li>
-            <li><Link href="/student/courts/reserve" className="active">🏀 Reserve Court</Link></li>
-            <li><Link href="/student/courts/my-reservations">📋 My Reservations</Link></li>
-            <li><Link href="/polls-voting">📊 Vote for Vendors</Link></li>
-            <li><Link href="/loyalty-program">🎁 Loyalty Program</Link></li>
-            <li><Link href="/student/facilities">🏢 Facilities</Link></li>
-            <li><Link href="/student/gym/schedule">💪 Gym Schedule</Link></li>
-            <li><Link href="/student/profile">👤 Profile</Link></li>
-          </ul>
-        </aside>
-
-        <main className="main-content">
-          <h1>Reserve a Court 🏀</h1>
+    <StudentLayout>
+      <h1>Reserve a Court 🏀</h1>
           <p style={{ color: '#666', marginBottom: '2rem' }}>
             Reserve a basketball, tennis, or football court by selecting an available date and time slot.
             Your name and GUC ID will be automatically included in the reservation.
@@ -319,9 +292,7 @@ export default function ReserveCourtPage() {
               </div>
             </section>
           )}
-        </main>
-      </div>
-    </div>
+    </StudentLayout>
   );
 }
 

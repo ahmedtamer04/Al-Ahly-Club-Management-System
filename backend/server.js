@@ -16,6 +16,7 @@ import gymSessionsRoutes from "./routes/gymSessionsRoutes.js";
 import conferenceRoutes from "./routes/conferenceRoutes.js";
 import bazaarRoutes from "./routes/bazaarRoutes.js";
 import registrationRoutes from "./routes/registrationRoutes.js";
+import waitlistRoutes from "./routes/waitlistRoutes.js";
 import workshopRoutes from "./routes/workshopRoutes.js";
 import vendorRoutes from "./routes/vendorRoutes.js";
 import eventRoutes from "./routes/eventRoutes.js";
@@ -23,6 +24,8 @@ import favoriteRoutes from "./routes/favoriteRoutes.js";
 import paymentRoutes from "./routes/paymentRoutes.js";
 import certificateRoutes from "./routes/certificateRoutes.js";
 import { startReminderScheduler } from "./services/eventReminderService.js";
+import { checkExpiredPromotions } from "./jobs/checkExpiredPromotions.js";
+import cron from "node-cron";
 import pollRoutes from "./routes/pollRoutes.js";
 import notificationRoutes from "./routes/notificationRoutes.js";
 import salesReportRoutes from "./routes/salesReportRoutes.js";
@@ -52,8 +55,15 @@ const startServer = async () => {
     app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
       
-      // ✅ ADD THIS: Start reminder scheduler after server starts
+      // ✅ Start reminder scheduler after server starts
       startReminderScheduler();
+      
+      // ✅ Start waitlist expired promotions checker (runs every 15 minutes)
+      cron.schedule('*/15 * * * *', async () => {
+        console.log('Running scheduled expired promotions check...');
+        await checkExpiredPromotions();
+      });
+      console.log('✅ Waitlist expired promotions cron job scheduled (every 15 minutes)');
     });
   } catch (err) {
     console.error('Failed to start server due to DB connection error:', err.message);
@@ -83,6 +93,7 @@ app.use("/api/conference", conferenceRoutes);
 app.use("/api/bazaar", bazaarRoutes);
 app.use("/api/trips", tripRoutes);
 app.use("/api/registration", registrationRoutes);
+app.use("/api/waitlist", waitlistRoutes);
 app.use("/api/vendor", vendorRoutes);
 app.use("/api/workshop", workshopRoutes);
 app.use("/api/events", eventRoutes);

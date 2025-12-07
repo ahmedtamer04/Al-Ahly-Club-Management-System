@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { registrationAPI, getUser } from '@/utils/api';
+import StudentLayout from '@/app/components/StudentLayout';
 import '@/app/dashboard.css';
 
 export default function MyRegistrationsPage() {
@@ -134,63 +135,17 @@ export default function MyRegistrationsPage() {
   const filteredRegistrations = getFilteredRegistrations();
 
   return (
-    <div className="dashboard">
-      <nav className="dashboard-nav">
-        <div className="nav-container">
-          <h1 className="nav-brand">Al-Ahly Events</h1>
-          <div className="nav-links">
-            <span className="nav-user">👨‍🎓 Student Dashboard</span>
-            <Link href="/">Logout</Link>
-          </div>
-        </div>
-      </nav>
+    <StudentLayout>
+      <h1>My Registrations 🎫</h1>
 
-      <div className="dashboard-content">
-        <aside className="sidebar">
-          <ul className="sidebar-menu">
-            <li><Link href="/student">🏠 Dashboard</Link></li>
-            <li><Link href="/student/events">📅 Browse Events</Link></li>
-            <li><Link href="/student/favorites">⭐ My Favorites</Link></li>
-            <li><Link href="/student/my-registrations">🎫 My Registrations</Link></li>
-            <li><Link href="/student/payment-history">💰 Payment History</Link></li>
-            <li><Link href="/polls-voting">📊 Vote for Vendors</Link></li>
-            <li><Link href="/loyalty-program">🎁 Loyalty Program</Link></li>
-            <li><Link href="/student/facilities">🏢 Facilities</Link></li>
-            <li><Link href="/student/gym/schedule">💪 Gym Schedule</Link></li>
-            <li><Link href="/student/profile">👤 Profile</Link></li>
-          </ul>
-        </aside>
-
-        <main className="main-content">
-          <h1>My Registrations 🎫</h1>
-
-          {/* Debug section - temporary */}
-          <div style={{background: '#f0f0f0', padding: '1rem', marginBottom: '1rem', borderRadius: '5px'}}>
-            <h3>Debug Info:</h3>
-            <button onClick={() => {
-              const user = getUser();
-              const token = localStorage.getItem('token');
-              console.log('Current user:', user);
-              console.log('Current token:', token);
-              alert(`User: ${user ? JSON.stringify(user) : 'None'}\nToken: ${token ? 'Present' : 'None'}`);
-            }}>
-              Check Auth Status
-            </button>
-            <button onClick={() => {
-              fetchRegistrations();
-            }} style={{marginLeft: '10px'}}>
-              Retry Fetch
-            </button>
-          </div>
-
-          {error && (
+      {error && (
             <div className="alert alert-error" style={{marginBottom: '2rem'}}>
               {error}
             </div>
-          )}
+      )}
 
-          {/* Stats */}
-          <div className="stats-grid">
+      {/* Stats */}
+      <div className="stats-grid">
             <div className="stat-card">
               <div className="stat-icon">🎫</div>
               <div className="stat-info">
@@ -218,9 +173,9 @@ export default function MyRegistrationsPage() {
                 <p>Attended</p>
               </div>
             </div>
-          </div>
+      </div>
 
-          <section className="section">
+      <section className="section">
             <div className="filter-buttons">
               <button 
                 className={filter === 'all' ? 'filter-btn active' : 'filter-btn'}
@@ -305,22 +260,14 @@ export default function MyRegistrationsPage() {
                             {registration.status === 'registered' && (
                               <button 
                                 className="btn-secondary btn-sm"
-                                onClick={() => {
-                                  console.log('Cancel button clicked for registration:', registration);
-                                  console.log('Registration ID:', registration._id);
-                                  handleCancelRegistration(
-                                    registration._id, 
-                                    registration.event?.name || 'Unknown Event'
-                                  );
-                                }}
+                                onClick={() => handleCancelRegistration(
+                                  registration._id, 
+                                  registration.event?.name || 'Unknown Event'
+                                )}
                               >
                                 Cancel
                               </button>
                             )}
-                            {/* Debug info - temporary */}
-                            <div style={{fontSize: '10px', color: '#666', marginTop: '5px'}}>
-                              ID: {registration._id}
-                            </div>
                           </td>
                         </tr>
                       ))
@@ -330,8 +277,6 @@ export default function MyRegistrationsPage() {
               )}
             </div>
           </section>
-        </main>
-      </div>
-    </div>
+    </StudentLayout>
   );
 }

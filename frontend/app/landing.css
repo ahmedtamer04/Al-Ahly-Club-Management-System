@@ -107,7 +107,7 @@ body {
   content: '';
   position: absolute;
   top: 0;
-  left: -50%;
+  left: 0;
   width: 200%;
   height: 100%;
   background: repeating-linear-gradient(
@@ -117,12 +117,13 @@ body {
     rgba(255, 206, 0, 0.05) 10px,
     rgba(255, 206, 0, 0.05) 20px
   );
-  animation: slide 20s linear infinite;
+  animation: slide 15s linear infinite;
+  will-change: transform;
 }
 
 @keyframes slide {
   0% { transform: translateX(0); }
-  100% { transform: translateX(50%); }
+  100% { transform: translateX(-28.28px); } /* Match the diagonal pattern repeat distance */
 }
 
 .hero-content {

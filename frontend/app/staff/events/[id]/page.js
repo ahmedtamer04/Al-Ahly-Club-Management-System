@@ -250,13 +250,46 @@ export default function StaffEventDetails({ params }) {
               )}
 
               <div className="event-actions">
+                {/* Capacity display for events with capacity */}
+                {(event.type === 'Workshop' || event.type === 'Trip') && event.available_spots !== undefined && (
+                  <div style={{
+                    padding: '0.75rem',
+                    background: event.available_spots === 0 ? '#fff3cd' : '#d4edda',
+                    borderRadius: '8px',
+                    marginBottom: '1rem',
+                    fontSize: '1rem',
+                    fontWeight: 600,
+                    color: event.available_spots === 0 ? '#856404' : '#155724',
+                    textAlign: 'center'
+                  }}>
+                    {event.available_spots === 0 
+                      ? '🔴 Event Full' 
+                      : `✅ ${event.available_spots} spots available`
+                    }
+                  </div>
+                )}
+
                 {(event.type === 'Workshop' || event.type === 'Trip') && (
-                  <button
-                    className="btn-primary"
-                    onClick={handleRegisterClick}
-                  >
-                    📝 Register for {event.type}
-                  </button>
+                  event.available_spots > 0 ? (
+                    <button
+                      className="btn-primary"
+                      onClick={handleRegisterClick}
+                    >
+                      📝 Register for {event.type}
+                    </button>
+                  ) : event.available_spots === 0 ? (
+                    <div style={{
+                      padding: '1rem',
+                      background: 'linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%)',
+                      borderRadius: '8px',
+                      border: '2px solid #dc3545',
+                      textAlign: 'center',
+                      color: '#721c24',
+                      fontWeight: 600
+                    }}>
+                      ❌ Event is Full - Registration Closed
+                    </div>
+                  ) : null
                 )}
               </div>
             </div>

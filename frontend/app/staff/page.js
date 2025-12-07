@@ -4,7 +4,7 @@ import Link from 'next/link';
 import '@/app/dashboard.css';
 import { useEffect, useState } from 'react';
 import { eventAPI } from '@/utils/api';
-import NotificationBell from '../components/NotificationBell';
+import StaffLayout from '@/app/components/StaffLayout';
 
 export default function StaffDashboard() {
   const [events, setEvents] = useState([]);
@@ -22,34 +22,8 @@ export default function StaffDashboard() {
   }, []);
 
   return (
-    <div className="dashboard">
-      <nav className="dashboard-nav">
-        <div className="nav-container">
-          <h1 className="nav-brand">Al-Ahly Events</h1>
-          <div className="nav-links">
-            <NotificationBell />
-            <span className="nav-user">👨‍💼 Staff Dashboard</span>
-            <Link href="/">Logout</Link>
-          </div>
-        </div>
-      </nav>
-
-      <div className="dashboard-content">
-        <aside className="sidebar">
-          <ul className="sidebar-menu">
-            <li><Link href="/staff">🏠 Dashboard</Link></li>
-            <li><Link href="/staff/events">📅 Browse Events</Link></li>
-            <li><Link href="/staff/favorites">⭐ My Favorites</Link></li>
-            <li><Link href="/staff/payment-history">💰 Payment History</Link></li>
-            <li><Link href="/polls-voting">📊 Vote for Vendors</Link></li>
-            <li><Link href="/loyalty-program">🎁 Loyalty Program</Link></li>
-            <li><Link href="/staff/gym/schedule">💪 Gym Schedule</Link></li>
-            <li><Link href="/staff/profile">👤 Profile</Link></li>
-          </ul>
-        </aside>
-
-        <main className="main-content">
-          <h1>Welcome, Staff Member! 👋</h1>
+    <StaffLayout>
+      <h1>Welcome, Staff Member! 👋</h1>
           
           <div className="stats-grid">
             <div className="stat-card">
@@ -107,9 +81,7 @@ export default function StaffDashboard() {
                 ))}
               </div>
             )}
-          </section>
-        </main>
-      </div>
-    </div>
+      </section>
+    </StaffLayout>
   );
 }

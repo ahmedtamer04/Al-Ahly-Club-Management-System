@@ -954,6 +954,37 @@ export const salesReportAPI = {
 };
 
 // ================================
+// WAITLIST API
+// ================================
+export const waitlistAPI = {
+  // POST /api/waitlist/join
+  // Auth: requireRegistering
+  // Join waitlist for a full event
+  // Required: { event_id }
+  join: (eventId) => api.post('/waitlist/join', { event_id: eventId }),
+
+  // GET /api/waitlist/my-waitlist
+  // Auth: requireRegistering
+  // Get user's waitlist entries
+  getMyWaitlist: () => api.get('/waitlist/my-waitlist'),
+
+  // GET /api/waitlist/:eventId
+  // Auth: requireRegistering
+  // Get waitlist info for a specific event (position, status, size)
+  getEventWaitlist: (eventId) => api.get(`/waitlist/${eventId}`),
+
+  // DELETE /api/waitlist/:eventId
+  // Auth: requireRegistering
+  // Leave waitlist for an event
+  leave: (eventId) => api.delete(`/waitlist/${eventId}`),
+
+  // POST /api/waitlist/confirm/:id
+  // Auth: requireRegistering
+  // Confirm promotion and create registration
+  confirmPromotion: (waitlistId) => api.post(`/waitlist/confirm/${waitlistId}`, {}),
+};
+
+// ================================
 // DOCUMENT API
 // ================================
 export const documentAPI = {

@@ -101,61 +101,53 @@ export default function LandingPage() {
       <section id="events" className="events-showcase">
         <div className="container">
           <h2 className="section-title">Upcoming Events</h2>
-          <div className="events-grid">
-            <div className="event-card">
-              <div className="event-badge">Workshop</div>
-              <h3>React Development Masterclass</h3>
-              <p className="event-date">📅 December 20, 2025</p>
-              <p className="event-location">📍 Computer Lab 2</p>
-              <p className="event-description">
-                Learn advanced React patterns, hooks, and state management
-              </p>
-              <div className="event-footer">
-                <span className="event-price">Free</span>
-                <Link href="/auth/register" className="btn-link">Register →</Link>
-              </div>
-            </div>
-
-            <div className="event-card">
-              <div className="event-badge">Trip</div>
-              <h3>Luxor Historical Adventure</h3>
-              <p className="event-date">📅 December 25-27, 2025</p>
-              <p className="event-location">📍 Luxor, Egypt</p>
-              <p className="event-description">
-                3-day trip to explore temples and Valley of the Kings
-              </p>
-              <div className="event-footer">
-                <span className="event-price">750 EGP</span>
-                <Link href="/auth/register" className="btn-link">Register →</Link>
-              </div>
-            </div>
-
-            <div className="event-card">
-              <div className="event-badge">Conference</div>
-              <h3>AI & Blockchain Summit</h3>
-              <p className="event-date">📅 January 5-7, 2026</p>
-              <p className="event-location">📍 Conference Center</p>
-              <p className="event-description">
-                International summit on emerging technologies
-              </p>
-              <div className="event-footer">
-                <span className="event-price">200 EGP</span>
-                <Link href="/auth/register" className="btn-link">Register →</Link>
-              </div>
-            </div>
-
-            <div className="event-card">
-              <div className="event-badge">Bazaar</div>
-              <h3>Spring Artisan Bazaar</h3>
-              <p className="event-date">📅 December 28-29, 2025</p>
-              <p className="event-location">📍 GUC Plaza</p>
-              <p className="event-description">
-                Local vendors, food, crafts, and student businesses
-              </p>
-              <div className="event-footer">
-                <span className="event-price">Free Entry</span>
-                <Link href="/auth/register" className="btn-link">Visit →</Link>
-              </div>
+          <div style={{
+            textAlign: 'center',
+            padding: '4rem 2rem',
+            background: 'white',
+            borderRadius: '12px',
+            boxShadow: '0 5px 20px rgba(0, 0, 0, 0.1)',
+            maxWidth: '600px',
+            margin: '0 auto'
+          }}>
+            <div style={{
+              fontSize: '4rem',
+              marginBottom: '1.5rem'
+            }}>🎉</div>
+            <h3 style={{
+              fontSize: '1.8rem',
+              marginBottom: '1rem',
+              color: '#333'
+            }}>Discover Amazing Events</h3>
+            <p style={{
+              fontSize: '1.1rem',
+              color: '#666',
+              marginBottom: '2rem',
+              lineHeight: '1.6'
+            }}>
+              Sign in or create an account to browse and register for upcoming workshops, 
+              trips, conferences, and bazaars organized by GUC.
+            </p>
+            <div style={{
+              display: 'flex',
+              gap: '1rem',
+              justifyContent: 'center',
+              flexWrap: 'wrap'
+            }}>
+              <Link href="/auth/login" className="btn btn-primary">
+                Sign In to View Events
+              </Link>
+              <Link 
+                href="/auth/register" 
+                className="btn"
+                style={{
+                  background: 'var(--color-red, #DD0000)',
+                  color: 'white',
+                  border: '2px solid var(--color-red, #DD0000)'
+                }}
+              >
+                Create Account
+              </Link>
             </div>
           </div>
         </div>

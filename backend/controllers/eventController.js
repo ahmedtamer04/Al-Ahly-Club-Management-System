@@ -42,7 +42,16 @@ export const getUpcomingEvents = async (req, res) => {
       events = filterEventsByRole(events, userRole);
     }
     
-    res.status(200).send(JSON.stringify(events, null, 2));
+    // Calculate real available spots for each event
+    const eventsWithSpots = await Promise.all(events.map(async (event) => {
+      const eventObj = event.toObject();
+      if (event.type === 'Workshop' || event.type === 'Trip') {
+        eventObj.available_spots = await event.calculateAvailableSpots();
+      }
+      return eventObj;
+    }));
+    
+    res.status(200).send(JSON.stringify(eventsWithSpots, null, 2));
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Server error" });
@@ -238,7 +247,13 @@ export const getEventById = async (req, res) => {
       }
     }
     
-    res.json(event);
+    // Include real available_spots
+    const eventObj = event.toObject();
+    if (event.type === 'Workshop' || event.type === 'Trip') {
+      eventObj.available_spots = await event.calculateAvailableSpots();
+    }
+    
+    res.json(eventObj);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Server error" });

@@ -2,7 +2,8 @@
 
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
-import { getUser } from '@/utils/api';
+import { authAPI, getUser } from '@/utils/api';
+import StudentLayout from '@/app/components/StudentLayout';
 import '@/app/dashboard.css';
 
 export default function StudentProfilePage() {
@@ -56,53 +57,26 @@ export default function StudentProfilePage() {
   };
 
   return (
-    <div className="dashboard">
-      <nav className="dashboard-nav">
-        <div className="nav-container">
-          <h1 className="nav-brand">Al-Ahly Events</h1>
-          <div className="nav-links">
-            <span className="nav-user">👨‍🎓 Student Dashboard</span>
-            <Link href="/">Logout</Link>
-          </div>
+    <StudentLayout>
+      {loading ? (
+        <div className="loading-state">
+          <p>🔄 Loading profile...</p>
         </div>
-      </nav>
-
-      <div className="dashboard-content">
-        <aside className="sidebar">
-          <ul className="sidebar-menu">
-            <li><Link href="/student">🏠 Dashboard</Link></li>
-            <li><Link href="/student/events">📅 Browse Events</Link></li>
-            <li><Link href="/student/favorites">⭐ My Favorites</Link></li>
-            <li><Link href="/student/my-registrations">🎫 My Registrations</Link></li>
-            <li><Link href="/student/payment-history">💰 Payment History</Link></li>
-            <li><Link href="/polls-voting">📊 Vote for Vendors</Link></li>
-            <li><Link href="/loyalty-program">🎁 Loyalty Program</Link></li>
-            <li><Link href="/student/facilities">🏢 Facilities</Link></li>
-            <li><Link href="/student/gym/schedule">💪 Gym Schedule</Link></li>
-            <li><Link href="/student/profile">👤 Profile</Link></li>
-          </ul>
-        </aside>
-
-        <main className="main-content">
-          {loading ? (
-            <div className="loading-state">
-              <p>🔄 Loading profile...</p>
-            </div>
-          ) : (
-            <>
-              <div className="page-header">
-                <h1>My Profile 👤</h1>
-                {!isEditing ? (
-                  <button className="btn-primary" onClick={() => setIsEditing(true)}>
-                    ✏️ Edit Profile
-                  </button>
-                ) : (
-                  <div style={{display: 'flex', gap: '1rem'}}>
-                    <button className="btn-primary" onClick={handleSave}>💾 Save</button>
-                    <button className="btn-secondary" onClick={() => setIsEditing(false)}>❌ Cancel</button>
-                  </div>
-                )}
+      ) : (
+        <>
+          <div className="page-header" style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem'}}>
+            <h1>My Profile 👤</h1>
+            {!isEditing ? (
+              <button className="btn-primary" onClick={() => setIsEditing(true)}>
+                ✏️ Edit Profile
+              </button>
+            ) : (
+              <div style={{display: 'flex', gap: '1rem'}}>
+                <button className="btn-primary" onClick={handleSave}>💾 Save</button>
+                <button className="btn-secondary" onClick={() => setIsEditing(false)}>❌ Cancel</button>
               </div>
+            )}
+          </div>
 
           <section className="section">
             <h2>Personal Information</h2>
@@ -149,7 +123,9 @@ export default function StudentProfilePage() {
                     style={{padding: '0.75rem', borderRadius: '8px', border: '2px solid #E5E5E5', width: '100%', background: '#F5F5F5', color: '#666'}}
                   />
                   <small style={{color: '#666', fontSize: '0.8rem'}}>Student ID cannot be changed</small>
-                </div>              <div className="form-group">
+                </div>
+
+              <div className="form-group">
                 <label>Major</label>
                 <input
                   type="text"
@@ -207,10 +183,8 @@ export default function StudentProfilePage() {
               <button className="btn-primary">🔒 Update Password</button>
             </div>
           </section>
-            </>
-          )}
-        </main>
-      </div>
-    </div>
+        </>
+      )}
+    </StudentLayout>
   );
 }

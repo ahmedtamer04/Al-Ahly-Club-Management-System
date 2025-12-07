@@ -3,6 +3,7 @@ import ExcelJS from 'exceljs';
 import Event from "../models/Events.js";
 import User from "../models/User.js";
 import mongoose from "mongoose";
+import { promoteNextInWaitlist } from "./waitlistController.js";
 
 // Register for a workshop or trip
 export const registerForEvent = async (req, res) => {
@@ -84,8 +85,21 @@ export const registerForEvent = async (req, res) => {
       return res.status(400).json({ message: "Registration is closed for this event." });
     }
 
-    if ((event.type === 'Workshop' || event.type === 'Trip') && event.available_spots <= 0) {
-      return res.status(400).json({ message: "Event is full." });
+    // Calculate real available spots
+    if (event.type === 'Workshop' || event.type === 'Trip') {
+      const availableSpots = await event.calculateAvailableSpots();
+      
+      if (availableSpots <= 0) {
+        // Only students can join waitlist - others get rejected immediately
+        const userRole = req.user?.role?.toLowerCase();
+        if (userRole !== 'student') {
+          return res.status(400).json({ 
+            message: "Event is full. Registration is not available for non-students when capacity is reached." 
+          });
+        }
+        // For students, still reject direct registration (they should use waitlist endpoint)
+        return res.status(400).json({ message: "Event is full. Please join the waitlist." });
+      }
     }
 
     // Check if user already has a registration for this event
@@ -141,6 +155,9 @@ export const registerForEvent = async (req, res) => {
     });
     
     await registration.save();
+    
+    // No need to manually update available_spots - it's calculated dynamically
+    // from the Registration database count
     
     const populatedRegistration = await Registration.findById(registration._id).populate('event_id');
     
@@ -230,6 +247,9 @@ export const viewRegisteredEvents = async (req, res) => {
 };
 
 export const cancelRegistration = async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+  
   try {
     const { registrationId } = req.params;
     const user_id = req.user._id;
@@ -239,28 +259,32 @@ export const cancelRegistration = async (req, res) => {
     const registration = await Registration.findOne({
       _id: registrationId,
       user_id
-    }).populate('event_id');
+    }).populate('event_id').session(session);
 
     console.log('Found registration:', registration);
 
     if (!registration) {
       console.log('Registration not found for cancellation');
+      await session.abortTransaction();
       return res.status(404).json({ message: "Registration not found." });
     }
 
     // Check if already canceled
     if (registration.status === 'canceled') {
+      await session.abortTransaction();
       return res.status(400).json({ message: "Registration is already canceled." });
     }
 
     const event = registration.event_id;
     if (!event) {
+      await session.abortTransaction();
       return res.status(404).json({ message: "Event not found." });
     }
 
     // Check if event has already started
     if (event.start_date <= new Date()) {
       console.log('Event has already started, cannot cancel');
+      await session.abortTransaction();
       return res.status(400).json({ 
         message: "Cannot cancel registration for events that have already started." 
       });
@@ -271,6 +295,7 @@ export const cancelRegistration = async (req, res) => {
     const timeUntilEvent = new Date(event.start_date) - new Date();
     
     if (timeUntilEvent < twoWeeksInMs) {
+      await session.abortTransaction();
       return res.status(400).json({ 
         message: "Cancellation is only allowed if there are at least 2 weeks before the event." 
       });
@@ -281,9 +306,10 @@ export const cancelRegistration = async (req, res) => {
     let refundAmount = 0;
 
     if (registration.payment_status === 'paid' && registration.payment_amount > 0) {
-      const user = await User.findById(user_id);
+      const user = await User.findById(user_id).session(session);
 
       if (!user) {
+        await session.abortTransaction();
         return res.status(404).json({ message: "User not found." });
       }
 
@@ -303,7 +329,7 @@ export const cancelRegistration = async (req, res) => {
         timestamp: new Date()
       });
 
-      await user.save();
+      await user.save({ session });
       refundProcessed = true;
 
       console.log(`Refunded ${refundAmount} to user's wallet. New balance: ${user.wallet.balance}`);
@@ -314,14 +340,21 @@ export const cancelRegistration = async (req, res) => {
     if (refundProcessed) {
       registration.payment_status = 'refunded';
     }
-    await registration.save();
+    await registration.save({ session });
 
-    // Increase available spots for the event (if applicable)
+    // No need to manually update available_spots - it's calculated dynamically
+    // Try to promote next person from waitlist
     if (event.type === 'Workshop' || event.type === 'Trip') {
-      event.available_spots = (event.available_spots || 0) + 1;
-      await event.save();
+      try {
+        await promoteNextInWaitlist(event._id, session);
+        console.log('Auto-promotion attempted for waitlist');
+      } catch (waitlistError) {
+        console.error('Error promoting from waitlist:', waitlistError);
+        // Don't fail the cancellation if waitlist promotion fails
+      }
     }
 
+    await session.commitTransaction();
     console.log('Registration canceled successfully');
     
     const responseMessage = refundProcessed 
@@ -337,8 +370,11 @@ export const cancelRegistration = async (req, res) => {
     });
 
   } catch (error) {
+    await session.abortTransaction();
     console.error('Error canceling registration:', error);
     res.status(500).json({ message: "Server error.", error: error.message });
+  } finally {
+    session.endSession();
   }
 };
 

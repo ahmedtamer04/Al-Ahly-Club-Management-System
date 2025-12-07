@@ -17,7 +17,12 @@ const notificationSchema = new mongoose.Schema({
       "workshop_revision_requested",  // For Professor when edits requested
       "event_added",                   // For all users when new event is added
       "event_reminder_1day",      // NEW: 1 day before event
-      "event_reminder_1hour"      // NEW: 1 hour before event
+      "event_reminder_1hour",      // NEW: 1 hour before event
+      "waitlist_joined",          // User joined waitlist
+      "waitlist_promoted",        // User promoted from waitlist
+      "waitlist_confirmed",       // User confirmed promotion
+      "waitlist_expired",         // Promotion expired
+      "waitlist_moved_up"         // Position moved up in waitlist
     ],
     required: true
   },

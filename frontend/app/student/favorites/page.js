@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
+import StudentLayout from '@/app/components/StudentLayout';
 import '@/app/dashboard.css';
 
 export default function StudentFavoritesPage() {
@@ -201,33 +202,8 @@ export default function StudentFavoritesPage() {
   };
 
   return (
-    <div className="dashboard">
-      <nav className="dashboard-nav">
-        <div className="nav-container">
-          <h1 className="nav-brand">Al-Ahly Events</h1>
-          <div className="nav-links">
-            <span className="nav-user">🎓 Student Dashboard</span>
-            <Link href="/">Logout</Link>
-          </div>
-        </div>
-      </nav>
-
-      <div className="dashboard-content">
-        <aside className="sidebar">
-          <ul className="sidebar-menu">
-            <li><Link href="/student">🏠 Dashboard</Link></li>
-            <li><Link href="/student/events">📅 Browse Events</Link></li>
-            <li><Link href="/student/favorites">⭐ My Favorites</Link></li>
-            <li><Link href="/student/my-registrations">🎫 My Registrations</Link></li>
-            <li><Link href="/student/payment-history">💰 Payment History</Link></li>
-            <li><Link href="/student/facilities">🏢 Facilities</Link></li>
-            <li><Link href="/student/gym/schedule">💪 Gym Schedule</Link></li>
-            <li><Link href="/student/profile">👤 Profile</Link></li>
-          </ul>
-        </aside>
-
-        <main className="main-content">
-          <h1>My Favorites ⭐</h1>
+    <StudentLayout>
+      <h1>My Favorites ⭐</h1>
 
           <section className="section">
             {loading && <p>Loading favorites...</p>}
@@ -312,8 +288,6 @@ export default function StudentFavoritesPage() {
               </>
             )}
           </section>
-        </main>
-      </div>
 
       {/* Event Details Modal - Same as before */}
       {selectedEvent && (
@@ -772,6 +746,6 @@ export default function StudentFavoritesPage() {
           </div>
         </div>
       )}
-    </div>
+    </StudentLayout>
   );
 }

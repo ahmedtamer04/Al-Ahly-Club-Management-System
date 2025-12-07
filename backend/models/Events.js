@@ -413,6 +413,38 @@ eventSchema.statics.findUpcoming = function(type = null) {
 // ========================================
 // INSTANCE METHODS
 // ========================================
+
+// Calculate actual available spots by checking Registration database
+eventSchema.methods.calculateAvailableSpots = async function() {
+  // Conference events have unlimited capacity
+  if (this.type === 'Conference') {
+    return Infinity;
+  }
+  
+  // Get total capacity for this event type
+  let capacity = 0;
+  switch(this.type) {
+    case 'Workshop':
+      capacity = this.workshop?.capacity || 0;
+      break;
+    case 'Trip':
+      capacity = this.trip?.capacity || 0;
+      break;
+    default:
+      return 0;
+  }
+  
+  // Count active registrations (registered status with paid or free payment status)
+  const Registration = mongoose.model('Registration');
+  const activeRegistrations = await Registration.countDocuments({
+    event_id: this._id,
+    status: 'registered',
+    payment_status: { $in: ['paid', 'free'] }
+  });
+  
+  // Calculate remaining spots
+  return Math.max(0, capacity - activeRegistrations);
+};
 eventSchema.methods.canEdit = function() {
   return this.start_date > new Date() && this.status !== 'cancelled';
 };
