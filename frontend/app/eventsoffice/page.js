@@ -3,8 +3,7 @@
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { conferenceAPI, tripAPI, bazaarAPI, registrationAPI } from '@/utils/api';
-import NotificationBell from '@/app/components/NotificationBell';
-import '@/app/dashboard.css';
+import EventsOfficeLayout from '@/app/components/EventsOfficeLayout';
 
 export default function EventsOfficeDashboard() {
   const [stats, setStats] = useState({
@@ -80,43 +79,10 @@ export default function EventsOfficeDashboard() {
       setLoading(false);
     }
   };
+
   return (
-    <div className="dashboard">
-      <nav className="dashboard-nav">
-        <div className="nav-container">
-          <h1 className="nav-brand">Al-Ahly Events</h1>
-          <div className="nav-links">
-            <NotificationBell />
-            <span className="nav-user">🎯 Events Office Dashboard</span>
-            <Link href="/">Logout</Link>
-          </div>
-        </div>
-      </nav>
-
-      <div className="dashboard-content">
-        <aside className="sidebar">
-          <ul className="sidebar-menu">
-            <li><Link href="/eventsoffice">🏠 Dashboard</Link></li>
-            <li><Link href="/eventsoffice/events">📅 View All Events</Link></li>
-            <li><Link href="/eventsoffice/workshops/pending">🎨 Pending Workshops</Link></li>
-            <li><Link href="/eventsoffice/conferences">🎓 Conferences</Link></li>
-            <li><Link href="/eventsoffice/conferences/create">➕ Create Conference</Link></li>
-            <li><Link href="/eventsoffice/trips">✈️ Trips</Link></li>
-            <li><Link href="/eventsoffice/bazaars">🛍️ Bazaars</Link></li>
-            <li><Link href="/eventsoffice/polls">📊 Polls</Link></li>
-            <li><Link href="/eventsoffice/gym">💪 Gym Sessions</Link></li>
-            <li><Link href="/eventsoffice/facilities">🏢 Facilities</Link></li>
-            <li><Link href="/eventsoffice/vendors">👥 Vendor Requests</Link></li>
-            <li><Link href="/eventsoffice/registrations">📋 Registrations</Link></li>
-            <li><Link href="/loyalty-program">🎁 Loyalty Program</Link></li>
-            <li><Link href="/eventsoffice/sales-report">💰 Sales Report</Link></li>
-            <li><Link href="/eventsoffice/documents">📄 Documents</Link></li>
-            <li><Link href="/eventsoffice/profile">👤 Profile</Link></li>
-          </ul>
-        </aside>
-
-        <main className="main-content">
-          <h1>Events Office Dashboard 🎯</h1>
+    <EventsOfficeLayout>
+      <h1>Events Office Dashboard 🎯</h1>
           
           <div className="stats-grid">
             <div className="stat-card">
@@ -177,8 +143,6 @@ export default function EventsOfficeDashboard() {
               </Link>
             </div>
           </section>
-        </main>
-      </div>
-    </div>
+    </EventsOfficeLayout>
   );
 }

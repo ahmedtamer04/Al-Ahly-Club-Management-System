@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
+import EventsOfficeLayout from '@/app/components/EventsOfficeLayout';
 import '@/app/dashboard.css';
 
 export default function FacilitiesPage() {
@@ -29,34 +30,7 @@ export default function FacilitiesPage() {
   };
 
   return (
-    <div className="dashboard">
-      <nav className="dashboard-nav">
-        <div className="nav-container">
-          <h1 className="nav-brand">Al-Ahly Events</h1>
-          <div className="nav-links">
-            <span className="nav-user">🎯 Events Office Dashboard</span>
-            <Link href="/">Logout</Link>
-          </div>
-        </div>
-      </nav>
-
-      <div className="dashboard-content">
-        <aside className="sidebar">
-          <ul className="sidebar-menu">
-            <li><Link href="/eventsoffice">🏠 Dashboard</Link></li>
-            <li><Link href="/eventsoffice/create">➕ Create Event</Link></li>
-            <li><Link href="/eventsoffice/workshops">🎨 Workshops</Link></li>
-            <li><Link href="/eventsoffice/trips">🚌 Trips</Link></li>
-            <li><Link href="/eventsoffice/bazaars">🎪 Bazaars</Link></li>
-            <li><Link href="/eventsoffice/gym">🏋️ Gym Sessions</Link></li>
-            <li><Link href="/eventsoffice/vendors">🏪 Vendor Requests</Link></li>
-            <li><Link href="/eventsoffice/facilities">🏟️ Facilities</Link></li>
-            <li><Link href="/eventsoffice/registrations">🎫 Registrations</Link></li>
-            <li><Link href="/eventsoffice/profile">👤 Profile</Link></li>
-          </ul>
-        </aside>
-
-        <main className="main-content">
+    <EventsOfficeLayout>
           <div className="page-header">
             <h1>Facilities Management 🏟️</h1>
             <button 
@@ -223,8 +197,6 @@ export default function FacilitiesPage() {
               </table>
             </div>
           </section>
-        </main>
-      </div>
-    </div>
+    </EventsOfficeLayout>
   );
 }

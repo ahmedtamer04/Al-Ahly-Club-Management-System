@@ -92,12 +92,24 @@ export const registerForGymSession = async (req, res) => {
     });
   } catch (error) {
     console.error('Error registering for gym session:', error);
+    console.error('Error details:', {
+      name: error.name,
+      message: error.message,
+      code: error.code,
+      stack: error.stack
+    });
+    
     if (error.code === 11000) {
       return res.status(409).json({ 
         message: "You are already registered for this gym session" 
       });
     }
-    res.status(500).json({ message: error.message });
+    
+    res.status(500).json({ 
+      message: "Failed to register for session",
+      error: error.message,
+      details: error.name
+    });
   }
 };
 

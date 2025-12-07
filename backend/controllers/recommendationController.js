@@ -224,7 +224,7 @@ export const getRecommendations = async (req, res) => {
     });
 
     // Combine and sort by score
-    const allRecommendations = [...scoredEvents, ...scoredGymSessions]
+    let allRecommendations = [...scoredEvents, ...scoredGymSessions]
       .filter(item => item.score > 0)
       .sort((a, b) => b.score - a.score)
       .slice(0, 6)
@@ -234,6 +234,29 @@ export const getRecommendations = async (req, res) => {
         recommendation_score: item.score,
         recommendation_reasons: item.reasons
       }));
+
+    // If no personalized recommendations (no history), show random events
+    if (allRecommendations.length === 0) {
+      const hasHistory = userRegistrations.length > 0 || userGymRegistrations.length > 0 || userFavorites.length > 0;
+      
+      if (!hasHistory) {
+        // User has no history - show random popular events
+        const randomEvents = [...upcomingEvents, ...upcomingGymSessions]
+          .sort(() => Math.random() - 0.5) // Random shuffle
+          .slice(0, 6)
+          .map(item => {
+            const isGym = item.date !== undefined; // Gym sessions have 'date', events have 'start_date'
+            return {
+              ...(isGym ? item.toObject() : item.toObject()),
+              item_type: isGym ? 'gym' : 'event',
+              recommendation_score: 0,
+              recommendation_reasons: ['New events for you to explore']
+            };
+          });
+        
+        allRecommendations = randomEvents;
+      }
+    }
 
     res.json({
       recommendations: allRecommendations,

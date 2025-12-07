@@ -4,13 +4,34 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { recommendationAPI } from '@/utils/api';
 
-export default function RecommendedEvents() {
+export default function RecommendedEvents({ refreshTrigger }) {
   const [recommendations, setRecommendations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   useEffect(() => {
     fetchRecommendations();
+  }, [refreshTrigger]); // Re-fetch when refreshTrigger changes
+
+  // Auto-refresh when window gains focus (user comes back to tab)
+  useEffect(() => {
+    const handleFocus = () => {
+      console.log('Window focused - refreshing recommendations');
+      fetchRecommendations();
+    };
+
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, []);
+
+  // Auto-refresh every 30 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      console.log('Auto-refreshing recommendations');
+      fetchRecommendations();
+    }, 30 * 1000); // 30 seconds
+
+    return () => clearInterval(interval);
   }, []);
 
   const fetchRecommendations = async () => {
@@ -133,12 +154,22 @@ export default function RecommendedEvents() {
     );
   }
 
+  // Check if these are personalized or random recommendations
+  const hasPersonalization = recommendations.some(r => 
+    r.recommendation_reasons && 
+    r.recommendation_reasons.length > 0 && 
+    !r.recommendation_reasons.includes('New events for you to explore')
+  );
+
   return (
     <div style={styles.container}>
       <div style={styles.header}>
         <h2 style={styles.title}>✨ Recommended for You</h2>
         <p style={styles.subtitle}>
-          Events picked just for you based on your interests and activity
+          {hasPersonalization 
+            ? 'Events picked just for you based on your interests and activity'
+            : 'Explore these events and gym sessions to get started'
+          }
         </p>
       </div>
 

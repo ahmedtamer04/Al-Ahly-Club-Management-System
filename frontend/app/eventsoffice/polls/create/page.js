@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { pollAPI } from '@/utils/api';
+import EventsOfficeLayout from '@/app/components/EventsOfficeLayout';
 import '@/app/dashboard.css';
 
 export default function CreatePollPage() {
@@ -91,36 +92,7 @@ export default function CreatePollPage() {
   };
 
   return (
-    <div className="dashboard">
-      <nav className="dashboard-nav">
-        <div className="nav-container">
-          <h1 className="nav-brand">Al-Ahly Events</h1>
-          <div className="nav-links">
-            <span className="nav-user">📋 Events Office</span>
-            <Link href="/">Logout</Link>
-          </div>
-        </div>
-      </nav>
-
-      <div className="dashboard-content">
-        <aside className="sidebar">
-          <ul className="sidebar-menu">
-            <li><Link href="/eventsoffice">🏠 Dashboard</Link></li>
-            <li><Link href="/eventsoffice/events">📅 View All Events</Link></li>
-            <li><Link href="/eventsoffice/conferences">🎓 Conferences</Link></li>
-            <li><Link href="/eventsoffice/trips">✈️ Trips</Link></li>
-            <li><Link href="/eventsoffice/bazaars">🛍️ Bazaars</Link></li>
-            <li><Link href="/eventsoffice/polls" className="active">📊 Polls</Link></li>
-            <li><Link href="/eventsoffice/gym">💪 Gym Sessions</Link></li>
-            <li><Link href="/eventsoffice/facilities">🏢 Facilities</Link></li>
-            <li><Link href="/eventsoffice/vendors">👥 Vendor Requests</Link></li>
-            <li><Link href="/eventsoffice/registrations">📋 Registrations</Link></li>
-            <li><Link href="/loyalty-program">🎁 Loyalty Program</Link></li>
-            <li><Link href="/eventsoffice/profile">👤 Profile</Link></li>
-          </ul>
-        </aside>
-
-        <main className="main-content">
+    <EventsOfficeLayout>
           <div style={{ marginBottom: '2rem' }}>
             <Link href="/eventsoffice/polls" className="back-button">← Back to Polls</Link>
           </div>
@@ -330,9 +302,7 @@ export default function CreatePollPage() {
               </button>
             </div>
           </form>
-        </main>
-      </div>
-    </div>
+    </EventsOfficeLayout>
   );
 }
 

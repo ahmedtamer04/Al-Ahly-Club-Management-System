@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { tripAPI } from '@/utils/api';
+import EventsOfficeLayout from '@/app/components/EventsOfficeLayout';
 import '@/app/dashboard.css';
 
 export default function CreateTripPage() {
@@ -58,34 +59,7 @@ export default function CreateTripPage() {
   };
 
   return (
-    <div className="dashboard">
-      <nav className="dashboard-nav">
-        <div className="nav-container">
-          <h1 className="nav-brand">Al-Ahly Events</h1>
-          <div className="nav-links">
-            <span className="nav-user">🎯 Events Office Dashboard</span>
-            <Link href="/">Logout</Link>
-          </div>
-        </div>
-      </nav>
-
-      <div className="dashboard-content">
-        <aside className="sidebar">
-          <ul className="sidebar-menu">
-            <li><Link href="/eventsoffice">🏠 Dashboard</Link></li>
-            <li><Link href="/eventsoffice/conferences">🎓 Conferences</Link></li>
-            <li><Link href="/eventsoffice/trips">🚌 Trips</Link></li>
-            <li><Link href="/eventsoffice/trips/create" className="active">➕ Create Trip</Link></li>
-            <li><Link href="/eventsoffice/bazaars">🛍️ Bazaars</Link></li>
-            <li><Link href="/eventsoffice/gym">💪 Gym Sessions</Link></li>
-            <li><Link href="/eventsoffice/facilities">🏛️ Facilities</Link></li>
-            <li><Link href="/eventsoffice/vendors">👥 Vendor Requests</Link></li>
-            <li><Link href="/eventsoffice/registrations">📋 Registrations</Link></li>
-            <li><Link href="/eventsoffice/profile">👤 Profile</Link></li>
-          </ul>
-        </aside>
-
-        <main className="main-content">
+    <EventsOfficeLayout>
           <h1>Create New Trip 🚌</h1>
 
           {message.text && (
@@ -240,8 +214,6 @@ export default function CreateTripPage() {
               </button>
             </div>
           </form>
-        </main>
-      </div>
-    </div>
+    </EventsOfficeLayout>
   );
 }
