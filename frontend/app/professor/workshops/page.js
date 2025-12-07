@@ -230,19 +230,19 @@ export default function MyWorkshopsPage() {
                               {approvalStatus === 'accepted' && (
                                 <>
                                   <Link
+                                    href={`/professor/workshops/${workshop._id}`}
+                                    className="btn-icon"
+                                    title="View Workshop Details"
+                                  >
+                                    📝
+                                  </Link>
+                                  <Link
                                     href={`/professor/workshops/${workshop._id}/participants`}
                                     className="btn-icon"
                                     title="View Participants"
                                   >
                                     👥
                                   </Link>
-                                  <button
-                                    onClick={() => handleMessageClick(workshop)}
-                                    className="btn-icon"
-                                    title="Message Participants"
-                                  >
-                                    📨
-                                  </button>
                                 </>
                               )}
                               {(approvalStatus === 'pending' || approvalStatus === 'revision_requested') && (

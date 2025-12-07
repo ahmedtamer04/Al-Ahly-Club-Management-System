@@ -11,6 +11,7 @@ import RatingsList from '@/app/components/RatingsList';
 import RatingForm from '@/app/components/RatingForm';
 import CommentsList from '@/app/components/CommentsList';
 import CommentForm from '@/app/components/CommentForm';
+import EventResourcesTab from '@/app/components/EventResourcesTab';
 
 export default function EventDetailsPage({ params }) {
   const searchParams = useSearchParams();
@@ -228,16 +229,14 @@ export default function EventDetailsPage({ params }) {
 
   return (
     <StudentLayout>
-      <div className="breadcrumb">
-        <main className="main-content">
-          <div className="dashboard-container">
-            <div className="dashboard-header">
-              <h1>{event.name}</h1>
-              <Link href="/student/events" className="btn-back">← Back to Events</Link>
-            </div>
+      <div className="dashboard-container">
+        <div className="dashboard-header">
+          <h1>{event.name}</h1>
+          <Link href="/student/events" className="btn-back">← Back to Events</Link>
+        </div>
 
-            {/* Organizer Messages */}
-            {organizerMessages.length > 0 && (
+        {/* Organizer Messages */}
+        {organizerMessages.length > 0 && (
               <div style={{ marginBottom: '20px' }}>
                 {organizerMessages.map((msg) => (
                   <div 
@@ -282,30 +281,36 @@ export default function EventDetailsPage({ params }) {
               </div>
             )}
 
-            {/* Tab Navigation */}
-            <div className="tabs-container">
-        <button 
-          className={`tab ${activeTab === 'details' ? 'active' : ''}`}
-          onClick={() => setActiveTab('details')}
-        >
-          Event Details
-        </button>
-        <button 
-          className={`tab ${activeTab === 'ratings' ? 'active' : ''}`}
-          onClick={() => setActiveTab('ratings')}
-        >
-          Ratings
-        </button>
-        <button 
-          className={`tab ${activeTab === 'comments' ? 'active' : ''}`}
-          onClick={() => setActiveTab('comments')}
-        >
-          Comments
-        </button>
-      </div>
+        {/* Tab Navigation */}
+        <div className="tabs-container">
+          <button 
+            className={`tab ${activeTab === 'details' ? 'active' : ''}`}
+            onClick={() => setActiveTab('details')}
+          >
+            Event Details
+          </button>
+          <button 
+            className={`tab ${activeTab === 'ratings' ? 'active' : ''}`}
+            onClick={() => setActiveTab('ratings')}
+          >
+            Ratings
+          </button>
+          <button 
+            className={`tab ${activeTab === 'comments' ? 'active' : ''}`}
+            onClick={() => setActiveTab('comments')}
+          >
+            Comments
+          </button>
+          <button 
+            className={`tab ${activeTab === 'resources' ? 'active' : ''}`}
+            onClick={() => setActiveTab('resources')}
+          >
+            Resources
+          </button>
+        </div>
 
-      {/* Event Details Tab */}
-      {activeTab === 'details' && (
+        {/* Event Details Tab */}
+        {activeTab === 'details' && (
         <div className="event-details-card">
           <div className="event-header">
             <span className={`event-badge ${event.type.toLowerCase()}`}>
@@ -398,46 +403,56 @@ export default function EventDetailsPage({ params }) {
             </button>
           </div>
         </div>
-      )}
+        )}
 
-      {/* Ratings Tab */}
-      {activeTab === 'ratings' && (
-        <div className="ratings-tab">
-          {showRatingForm ? (
-            <RatingForm 
-              eventId={event._id}
-              onSuccess={handleRatingSuccess}
-              onCancel={() => setShowRatingForm(false)}
-            />
-          ) : (
-            <RatingsList 
-              eventId={event._id}
-              onRateClick={() => setShowRatingForm(true)}
-            />
-          )}
-        </div>
-      )}
+        {/* Ratings Tab */}
+        {activeTab === 'ratings' && (
+          <div className="ratings-tab">
+            {showRatingForm ? (
+              <RatingForm 
+                eventId={event._id}
+                onSuccess={handleRatingSuccess}
+                onCancel={() => setShowRatingForm(false)}
+              />
+            ) : (
+              <RatingsList 
+                eventId={event._id}
+                onRateClick={() => setShowRatingForm(true)}
+              />
+            )}
+          </div>
+        )}
 
-      {/* Comments Tab */}
-      {activeTab === 'comments' && (
-        <div className="comments-tab">
-          {showCommentForm ? (
-            <CommentForm 
-              eventId={event._id}
-              onSuccess={handleCommentSuccess}
-              onCancel={() => setShowCommentForm(false)}
-            />
-          ) : (
-            <CommentsList 
-              eventId={event._id}
-              onCommentClick={() => setShowCommentForm(true)}
-            />
-          )}
-        </div>
-      )}
+        {/* Comments Tab */}
+        {activeTab === 'comments' && (
+          <div className="comments-tab">
+            {showCommentForm ? (
+              <CommentForm 
+                eventId={event._id}
+                onSuccess={handleCommentSuccess}
+                onCancel={() => setShowCommentForm(false)}
+              />
+            ) : (
+              <CommentsList 
+                eventId={event._id}
+                onCommentClick={() => setShowCommentForm(true)}
+              />
+            )}
+          </div>
+        )}
 
-      {/* Registration Modal */}
-      {showRegistrationModal && (
+        {/* Resources Tab */}
+        {activeTab === 'resources' && (
+          <div className="resources-tab">
+            <EventResourcesTab 
+              eventId={event._id}
+              canUpload={false}
+            />
+          </div>
+        )}
+
+        {/* Registration Modal */}
+        {showRegistrationModal && (
         <div className="modal-overlay" onClick={() => setShowRegistrationModal(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <h2>Register for {event.name}</h2>
@@ -480,10 +495,10 @@ export default function EventDetailsPage({ params }) {
             </form>
           </div>
         </div>
-      )}
+        )}
 
-      {/* Payment Modal */}
-      {showPaymentModal && paymentData && (
+        {/* Payment Modal */}
+        {showPaymentModal && paymentData && (
         <PaymentModal
           eventId={paymentData.eventId}
           registrationId={paymentData.registrationId}
@@ -493,9 +508,9 @@ export default function EventDetailsPage({ params }) {
           onSuccess={handlePaymentSuccess}
           onClose={handlePaymentModalClose}
         />
-      )}
+        )}
 
-      <style jsx>{`
+        <style jsx>{`
         .tabs-container {
           display: flex;
           gap: 8px;
@@ -647,10 +662,11 @@ export default function EventDetailsPage({ params }) {
         }
 
         .ratings-tab,
-        .comments-tab {
+        .comments-tab,
+        .resources-tab {
           margin-top: 0;
         }
-      `}</style>
+        `}</style>
       </div>
     </StudentLayout>
   );

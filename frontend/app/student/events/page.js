@@ -850,6 +850,21 @@ export default function BrowseEventsPage() {
                     </div>
                     
                     <div className="event-actions">
+                      {/* View Details Button */}
+                      <Link 
+                        href={`/student/events/${event._id}`}
+                        className="btn-secondary"
+                        style={{ 
+                          textDecoration: 'none', 
+                          display: 'inline-block',
+                          marginBottom: '0.75rem',
+                          width: '100%',
+                          textAlign: 'center'
+                        }}
+                      >
+                        📋 View Event Details
+                      </Link>
+
                       {/* Capacity display for events with capacity */}
                       {(event.type === 'Workshop' || event.type === 'Trip') && event.available_spots !== undefined && (
                         <div style={{

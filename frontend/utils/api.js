@@ -191,6 +191,11 @@ export const workshopAPI = {
   // Returns workshops created by logged-in professor
   getMyWorkshops: () => api.get('/workshop/my'),
 
+  // GET /api/events/:id
+  // Auth: requireStudentOrAbove
+  // Returns single workshop/event by ID
+  getById: (id) => api.get(`/events/${id}`),
+
   // GET /api/workshop/:id/participants
   // Auth: requireProfessor
   // Get participants list for a workshop (professor's own workshops only)

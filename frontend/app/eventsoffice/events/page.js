@@ -687,6 +687,18 @@ export default function ViewAllEvents() {
         />
       )}
 
+      {/* Message Participants Modal */}
+      {showMessageModal && messageEvent && (
+        <MessageParticipantsModal
+          event={messageEvent}
+          onClose={() => {
+            setShowMessageModal(false);
+            setMessageEvent(null);
+          }}
+          onSuccess={handleMessageSuccess}
+        />
+      )}
+
       {/* Sales / Attendees Modal */}
       {salesModalOpen && (
         <div className="modal-overlay" onClick={() => setSalesModalOpen(false)}>
@@ -844,18 +856,6 @@ export default function ViewAllEvents() {
             </div>
           </div>
         </div>
-      )}
-
-      {/* Message Participants Modal */}
-      {showMessageModal && messageEvent && (
-        <MessageParticipantsModal
-          event={messageEvent}
-          onClose={() => {
-            setShowMessageModal(false);
-            setMessageEvent(null);
-          }}
-          onSuccess={handleMessageSuccess}
-        />
       )}
 
       <style jsx>{`

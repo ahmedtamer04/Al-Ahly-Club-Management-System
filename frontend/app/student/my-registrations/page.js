@@ -258,9 +258,16 @@ export default function MyRegistrationsPage() {
                             </span>
                           </td>
                           <td>
-                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
                               {registration.status === 'registered' && registration.event && (
                                 <>
+                                  <Link 
+                                    href={`/student/events/${registration.event._id}`}
+                                    className="btn-primary btn-sm"
+                                    style={{ textDecoration: 'none' }}
+                                  >
+                                    📚 View Event
+                                  </Link>
                                   <AddToCalendar event={registration.event} />
                                   <button 
                                     className="btn-secondary btn-sm"

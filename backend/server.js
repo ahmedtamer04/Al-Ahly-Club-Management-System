@@ -30,6 +30,7 @@ import pollRoutes from "./routes/pollRoutes.js";
 import notificationRoutes from "./routes/notificationRoutes.js";
 import salesReportRoutes from "./routes/salesReportRoutes.js";
 import documentRoutes from "./routes/documentRoutes.js";
+import eventResourceRoutes from "./routes/eventResourceRoutes.js";
 
 
 const app = express();
@@ -104,6 +105,7 @@ app.use("/api/polls", pollRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/sales-report", salesReportRoutes);
 app.use("/api/documents", documentRoutes);
+app.use("/api/event-resources", eventResourceRoutes);
 
 
 

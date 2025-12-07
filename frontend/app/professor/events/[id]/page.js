@@ -9,6 +9,7 @@ import RatingForm from '@/app/components/RatingForm';
 import RatingsList from '@/app/components/RatingsList';
 import CommentForm from '@/app/components/CommentForm';
 import CommentsList from '@/app/components/CommentsList';
+import EventResourcesTab from '@/app/components/EventResourcesTab';
 
 export default function ProfessorEventDetails() {
   const params = useParams();
@@ -134,6 +135,12 @@ export default function ProfessorEventDetails() {
         >
           Comments
         </button>
+        <button
+          style={{...styles.tab, ...(activeTab === 'resources' ? styles.activeTab : {})}}
+          onClick={() => setActiveTab('resources')}
+        >
+          Resources
+        </button>
       </div>
 
       {/* Tab Content */}
@@ -245,7 +252,7 @@ export default function ProfessorEventDetails() {
         {activeTab === 'comments' && (
           <div>
             {showCommentForm ? (
-              <CommentForm
+              <CommentForm 
                 eventId={eventId}
                 onSuccess={handleCommentSuccess}
                 onCancel={() => setShowCommentForm(false)}
@@ -256,6 +263,16 @@ export default function ProfessorEventDetails() {
                 onCommentClick={() => setShowCommentForm(true)}
               />
             )}
+          </div>
+        )}
+
+        {/* Resources Tab */}
+        {activeTab === 'resources' && (
+          <div>
+            <EventResourcesTab 
+              eventId={eventId}
+              canUpload={canMessage}
+            />
           </div>
         )}
       </div>
