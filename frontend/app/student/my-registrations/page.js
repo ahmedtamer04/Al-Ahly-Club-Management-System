@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { registrationAPI, getUser } from '@/utils/api';
 import StudentLayout from '@/app/components/StudentLayout';
+import AddToCalendar from '@/app/components/AddToCalendar';
 import '@/app/dashboard.css';
 
 export default function MyRegistrationsPage() {
@@ -257,17 +258,22 @@ export default function MyRegistrationsPage() {
                             </span>
                           </td>
                           <td>
-                            {registration.status === 'registered' && (
-                              <button 
-                                className="btn-secondary btn-sm"
-                                onClick={() => handleCancelRegistration(
-                                  registration._id, 
-                                  registration.event?.name || 'Unknown Event'
-                                )}
-                              >
-                                Cancel
-                              </button>
-                            )}
+                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                              {registration.status === 'registered' && registration.event && (
+                                <>
+                                  <AddToCalendar event={registration.event} />
+                                  <button 
+                                    className="btn-secondary btn-sm"
+                                    onClick={() => handleCancelRegistration(
+                                      registration._id, 
+                                      registration.event?.name || 'Unknown Event'
+                                    )}
+                                  >
+                                    Cancel
+                                  </button>
+                                </>
+                              )}
+                            </div>
                           </td>
                         </tr>
                       ))

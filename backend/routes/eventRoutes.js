@@ -20,6 +20,7 @@ import {
 } from "../controllers/eventController.js";
 
 import { messageParticipants } from "../controllers/eventMessageController.js";
+import { generateCalendar } from "../controllers/calendarController.js";
 
 import {auth, requireStudentOrAbove, requireAdminOrEventsOffice} from "../middleware/auth.js";
 
@@ -79,5 +80,8 @@ router.delete("/:eventId/comments/:commentId", auth, requireStudentOrAbove, dele
 
 // POST message all registered participants (event creator, Admin, or EventsOffice only)
 router.post("/:eventId/message-participants", auth, messageParticipants);
+
+// GET calendar .ics file for registered event
+router.get("/:eventId/calendar", auth, requireStudentOrAbove, generateCalendar);
 
 export default router;
