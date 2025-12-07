@@ -4,7 +4,10 @@ import Link from 'next/link';
 import { useState, useEffect, useCallback } from 'react';
 import { eventAPI, registrationAPI, getUser } from '@/utils/api';
 import PaymentModal from '@/app/components/PaymentModal';
+import Breadcrumb from '@/app/components/Breadcrumb';
+import { ToastProvider, useToast } from '@/app/components/ToastContainer';
 import '@/app/dashboard.css';
+import '@/app/utilities.css';
 
 export default function BrowseEventsPage() {
   const [filter, setFilter] = useState('all');
