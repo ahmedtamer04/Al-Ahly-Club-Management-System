@@ -35,6 +35,7 @@ import recommendationRoutes from "./routes/recommendationRoutes.js";
 
 
 const app = express();
+const databaseDisabled = process.env.DATABASE_DISABLED === "true";
 
 // Debug: Check if environment variables are loaded
 console.log("MONGO_URI:", process.env.MONGO_URI ? "✅ Loaded" : "❌ Not found");
@@ -47,25 +48,37 @@ console.log("STRIPE_SECRET_KEY:", process.env.STRIPE_SECRET_KEY ? `✅ Loaded ($
 app.use(cors());
 app.use(express.json());
 
-// Connect to MongoDB and start server after successful connection
+app.use("/api", (req, res, next) => {
+  if (databaseDisabled) {
+    return res.status(503).json({ error: "Database is temporarily disabled" });
+  }
+
+  next();
+});
+
+// Connect to MongoDB unless database access is explicitly disabled.
 const startServer = async () => {
   try {
-    await connectDB();
+    if (databaseDisabled) {
+      console.warn("DATABASE_DISABLED=true; database-backed API routes and jobs are disabled.");
+    } else {
+      await connectDB();
+    }
 
     const PORT = process.env.PORT || 5001;
 
     app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
-      
-      // ✅ Start reminder scheduler after server starts
-      startReminderScheduler();
-      
-      // ✅ Start waitlist expired promotions checker (runs every 15 minutes)
-      cron.schedule('*/15 * * * *', async () => {
-        console.log('Running scheduled expired promotions check...');
-        await checkExpiredPromotions();
-      });
-      console.log('✅ Waitlist expired promotions cron job scheduled (every 15 minutes)');
+
+      if (!databaseDisabled) {
+        startReminderScheduler();
+
+        cron.schedule('*/15 * * * *', async () => {
+          console.log('Running scheduled expired promotions check...');
+          await checkExpiredPromotions();
+        });
+        console.log('✅ Waitlist expired promotions cron job scheduled (every 15 minutes)');
+      }
     });
   } catch (err) {
     console.error('Failed to start server due to DB connection error:', err.message);
@@ -80,6 +93,7 @@ app.get("/", (req, res) => {
   res.json({ 
     message: "Al-Ahly Club Management System API",
     status: "running",
+    database: databaseDisabled ? "disabled" : "connected",
     version: "1.0.0"
   });
 });
@@ -111,5 +125,5 @@ app.use("/api/recommendations", recommendationRoutes);
 
 
 
-// Note: server is started in startServer() after DB connection
+// Note: server starts after DB connection unless DATABASE_DISABLED=true.
 

@@ -1118,6 +1118,17 @@ Default admin credentials:
 
 #### 2.7 Start Backend Server
 
+To run the project temporarily without MongoDB, enable the database bypass in PowerShell:
+
+```powershell
+$env:DATABASE_DISABLED = "true"
+npm run dev
+```
+
+In this mode, the backend starts without connecting to MongoDB, database-backed API requests return `503`, and database-dependent background jobs are not started. The frontend can still be opened, but features that need the API will be unavailable. Close the terminal or set `$env:DATABASE_DISABLED = "false"` to restore normal database startup.
+
+For normal operation, start the backend without setting `DATABASE_DISABLED`:
+
 ```bash
 npm run dev
 ```
