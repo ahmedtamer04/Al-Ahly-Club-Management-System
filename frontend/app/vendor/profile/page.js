@@ -42,14 +42,10 @@ export default function VendorProfilePage() {
           businessType: userData.vendor_info?.business_type || '',
           businessDescription: userData.vendor_info?.business_description || ''
         });
-        // helper: normalize file URLs returned by backend (they are stored as '/uploads/...')
-        const API_ORIGIN = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api').replace(/\/api$/, '');
         const normalizeUrl = (url) => {
           if (!url) return '';
-          // if already absolute, return as-is
           if (url.startsWith('http://') || url.startsWith('https://')) return url;
-          // otherwise assume it's a backend-relative path and prepend origin
-          return `${API_ORIGIN}${url.startsWith('/') ? '' : '/'}${url}`;
+          return url.startsWith('/') ? url : `/${url}`;
         };
 
         // set previews if URLs available
@@ -276,11 +272,10 @@ export default function VendorProfilePage() {
 
                         // update local user vendor_info if available and normalize URLs
                         const localUser = getUser();
-                        const API_ORIGIN = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api').replace(/\/api$/, '');
                         const normalizeUrl = (url) => {
                           if (!url) return '';
                           if (url.startsWith('http://') || url.startsWith('https://')) return url;
-                          return `${API_ORIGIN}${url.startsWith('/') ? '' : '/'}${url}`;
+                          return url.startsWith('/') ? url : `/${url}`;
                         };
 
                         if (localUser) {

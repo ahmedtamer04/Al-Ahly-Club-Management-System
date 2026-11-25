@@ -32,7 +32,7 @@ export default function TAMyEventsPage() {
       const userId = user._id;
 
       // Use the /:user_id/events endpoint since /my-events might not exist
-      const response = await fetch(`http://localhost:5001/api/registration/${userId}/events`, {
+      const response = await fetch(`/api/registration/${userId}/events`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -92,7 +92,7 @@ export default function TAMyEventsPage() {
 
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:5001/api/registration/cancel/${registrationId}`, {
+      const response = await fetch(`/api/registration/cancel/${registrationId}`, {
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${token}`,

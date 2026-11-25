@@ -12,7 +12,7 @@ export default function AddToCalendar({ event }) {
       setDownloading(true);
       const token = localStorage.getItem('token');
       
-      const response = await fetch(`http://localhost:5000/api/events/${event._id}/calendar`, {
+      const response = await fetch(`/api/events/${event._id}/calendar`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }

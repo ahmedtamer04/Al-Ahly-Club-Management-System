@@ -16,7 +16,7 @@ export default function StaffLoyaltyProgramPage() {
   const fetchPartners = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:5001/api/loyalty/partners', {
+      const response = await fetch('/api/loyalty/partners', {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'

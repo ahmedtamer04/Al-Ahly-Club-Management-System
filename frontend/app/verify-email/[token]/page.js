@@ -33,7 +33,7 @@ export default function VerifyEmailPage() {
         }
 
         console.log('Calling API...');
-        const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api';
+        const API_BASE_URL = '/api';
         const apiResponse = await fetch(`${API_BASE_URL}/admin/verify-email/${token}`);
         console.log('HTTP Status:', apiResponse.status);
         console.log('HTTP OK:', apiResponse.ok);

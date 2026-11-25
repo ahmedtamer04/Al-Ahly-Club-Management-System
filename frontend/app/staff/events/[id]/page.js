@@ -82,7 +82,7 @@ export default function StaffEventDetails({ params }) {
         return;
       }
 
-      const response = await fetch('http://localhost:5001/api/registration/register', {
+      const response = await fetch('/api/registration/register', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
@@ -144,7 +144,7 @@ export default function StaffEventDetails({ params }) {
       // User closed modal without paying - cancel the pending registration
       try {
         const token = localStorage.getItem('token');
-        await fetch(`http://localhost:5001/api/registration/cancel-unpaid/${paymentData.registrationId}`, {
+        await fetch(`/api/registration/cancel-unpaid/${paymentData.registrationId}`, {
           method: 'DELETE',
           headers: {
             'Authorization': `Bearer ${token}`,

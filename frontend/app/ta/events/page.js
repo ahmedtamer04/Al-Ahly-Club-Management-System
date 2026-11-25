@@ -52,7 +52,7 @@ export default function TAEventsPage() {
           return;
         }
 
-        const response = await fetch('http://localhost:5001/api/events/upcoming', {
+        const response = await fetch('/api/events/upcoming', {
           method: 'GET',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -92,7 +92,7 @@ export default function TAEventsPage() {
         return;
       }
 
-      const response = await fetch(`http://localhost:5001/api/registration/${user._id}/events`, {
+      const response = await fetch(`/api/registration/${user._id}/events`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -128,7 +128,7 @@ export default function TAEventsPage() {
       const token = localStorage.getItem('token');
       if (!token) return;
 
-      const response = await fetch('http://localhost:5001/api/favorites', {
+      const response = await fetch('/api/favorites', {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -152,7 +152,7 @@ export default function TAEventsPage() {
       const isFav = favorites.has(event._id);
 
       if (isFav) {
-        const response = await fetch(`http://localhost:5001/api/favorites/${event._id}`, {
+        const response = await fetch(`/api/favorites/${event._id}`, {
           method: 'DELETE',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -172,7 +172,7 @@ export default function TAEventsPage() {
           setTimeout(() => notification.remove(), 3000);
         }
       } else {
-        const response = await fetch('http://localhost:5001/api/favorites', {
+        const response = await fetch('/api/favorites', {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -207,7 +207,7 @@ export default function TAEventsPage() {
       setLoadingComments(true);
       const token = localStorage.getItem('token');
 
-      const response = await fetch(`http://localhost:5001/api/events/${eventId}/comments`, {
+      const response = await fetch(`/api/events/${eventId}/comments`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -260,7 +260,7 @@ export default function TAEventsPage() {
 
       const user = JSON.parse(userStr);
       
-      const response = await fetch('http://localhost:5001/api/registration/register', {
+      const response = await fetch('/api/registration/register', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -322,7 +322,7 @@ export default function TAEventsPage() {
       // User closed modal without paying - cancel the pending registration
       try {
         const token = localStorage.getItem('token');
-        await fetch(`http://localhost:5001/api/registration/cancel-unpaid/${paymentData.registrationId}`, {
+        await fetch(`/api/registration/cancel-unpaid/${paymentData.registrationId}`, {
           method: 'DELETE',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -503,7 +503,7 @@ export default function TAEventsPage() {
       }
 
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:5001/api/registration/cancel/${registrationId}`, {
+      const response = await fetch(`/api/registration/cancel/${registrationId}`, {
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${token}`,

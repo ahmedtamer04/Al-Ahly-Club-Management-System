@@ -271,7 +271,7 @@ export default function ProfessorEvents() {
       const token = localStorage.getItem('token');
       if (!token) return;
 
-      const response = await fetch('http://localhost:5001/api/favorites', {
+      const response = await fetch('/api/favorites', {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -297,7 +297,7 @@ export default function ProfessorEvents() {
 
       if (isFav) {
         // Remove from favorites
-        const response = await fetch(`http://localhost:5001/api/favorites/${event._id}`, {
+        const response = await fetch(`/api/favorites/${event._id}`, {
           method: 'DELETE',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -319,7 +319,7 @@ export default function ProfessorEvents() {
         }
       } else {
         // Add to favorites
-        const response = await fetch('http://localhost:5001/api/favorites', {
+        const response = await fetch('/api/favorites', {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -804,7 +804,7 @@ export default function ProfessorEvents() {
       // User closed modal without paying - cancel the pending registration
       try {
         const token = localStorage.getItem('token');
-        await fetch(`http://localhost:5001/api/registration/cancel-unpaid/${paymentData.registrationId}`, {
+        await fetch(`/api/registration/cancel-unpaid/${paymentData.registrationId}`, {
           method: 'DELETE',
           headers: {
             'Authorization': `Bearer ${token}`,

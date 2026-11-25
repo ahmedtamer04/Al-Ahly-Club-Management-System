@@ -105,7 +105,7 @@ export default function EventDetailsPage({ params }) {
         return;
       }
 
-      const response = await fetch('http://localhost:5000/api/registration/register', {
+      const response = await fetch('/api/registration/register', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
@@ -163,7 +163,7 @@ export default function EventDetailsPage({ params }) {
     if (paymentData?.registrationId) {
       try {
         const token = localStorage.getItem('token');
-        await fetch(`http://localhost:5000/api/registration/cancel-unpaid/${paymentData.registrationId}`, {
+        await fetch(`/api/registration/cancel-unpaid/${paymentData.registrationId}`, {
           method: 'DELETE',
           headers: {
             'Authorization': `Bearer ${token}`,

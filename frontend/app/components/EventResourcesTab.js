@@ -34,7 +34,7 @@ export default function EventResourcesTab({ eventId, canUpload = false }) {
         throw new Error('Invalid event ID');
       }
       
-      const response = await fetch(`http://localhost:5001/api/event-resources/${eventId}`, {
+      const response = await fetch(`/api/event-resources/${eventId}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -76,7 +76,7 @@ export default function EventResourcesTab({ eventId, canUpload = false }) {
       formData.append('title', title || file.name);
       formData.append('description', description);
 
-      const response = await fetch(`http://localhost:5001/api/event-resources/${eventId}/upload`, {
+      const response = await fetch(`/api/event-resources/${eventId}/upload`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -113,7 +113,7 @@ export default function EventResourcesTab({ eventId, canUpload = false }) {
       setUploading(true);
       const token = localStorage.getItem('token');
       
-      const response = await fetch(`http://localhost:5001/api/event-resources/${eventId}/link`, {
+      const response = await fetch(`/api/event-resources/${eventId}/link`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -143,7 +143,7 @@ export default function EventResourcesTab({ eventId, canUpload = false }) {
     try {
       const token = localStorage.getItem('token');
       
-      const response = await fetch(`http://localhost:5001/api/event-resources/download/${resourceId}`, {
+      const response = await fetch(`/api/event-resources/download/${resourceId}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -177,7 +177,7 @@ export default function EventResourcesTab({ eventId, canUpload = false }) {
     try {
       const token = localStorage.getItem('token');
       
-      const response = await fetch(`http://localhost:5001/api/event-resources/${resourceId}`, {
+      const response = await fetch(`/api/event-resources/${resourceId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`

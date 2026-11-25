@@ -23,7 +23,7 @@ export default function AdminLoyaltyProgramPage() {
       const token = localStorage.getItem('token');
 
       // Load stats
-      const statsResponse = await fetch('http://localhost:5001/api/admin/loyalty-program/applications/stats', {
+      const statsResponse = await fetch('/api/admin/loyalty-program/applications/stats', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const statsData = await statsResponse.json();
@@ -31,7 +31,7 @@ export default function AdminLoyaltyProgramPage() {
 
       // Load applications
       const queryString = filter !== 'all' ? `?status=${filter}` : '';
-      const appsResponse = await fetch(`http://localhost:5001/api/admin/loyalty-program/applications${queryString}`, {
+      const appsResponse = await fetch(`/api/admin/loyalty-program/applications${queryString}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const appsData = await appsResponse.json();
@@ -53,7 +53,7 @@ export default function AdminLoyaltyProgramPage() {
 
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:5001/api/admin/loyalty-program/applications/${applicationId}/accept`, {
+      const response = await fetch(`/api/admin/loyalty-program/applications/${applicationId}/accept`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -88,7 +88,7 @@ export default function AdminLoyaltyProgramPage() {
 
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:5001/api/admin/loyalty-program/applications/${applicationId}/reject`, {
+      const response = await fetch(`/api/admin/loyalty-program/applications/${applicationId}/reject`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -116,7 +116,7 @@ export default function AdminLoyaltyProgramPage() {
   const viewDetails = async (applicationId) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:5001/api/admin/loyalty-program/applications/${applicationId}`, {
+      const response = await fetch(`/api/admin/loyalty-program/applications/${applicationId}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const data = await response.json();

@@ -34,7 +34,7 @@ export default function TAFavoritesPage() {
         return;
       }
 
-      const response = await fetch('http://localhost:5001/api/favorites', {
+      const response = await fetch('/api/favorites', {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -57,7 +57,7 @@ export default function TAFavoritesPage() {
     try {
       const token = localStorage.getItem('token');
 
-      const response = await fetch(`http://localhost:5001/api/favorites/${eventId}`, {
+      const response = await fetch(`/api/favorites/${eventId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -80,7 +80,7 @@ export default function TAFavoritesPage() {
       setLoadingComments(true);
       const token = localStorage.getItem('token');
 
-      const response = await fetch(`http://localhost:5001/api/events/${eventId}/comments`, {
+      const response = await fetch(`/api/events/${eventId}/comments`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -145,7 +145,7 @@ export default function TAFavoritesPage() {
 
       const user = JSON.parse(userStr);
       
-      const response = await fetch('http://localhost:5001/api/registration/register', {
+      const response = await fetch('/api/registration/register', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
